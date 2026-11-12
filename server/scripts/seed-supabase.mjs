@@ -15,6 +15,7 @@ const sql = connect(url, 1);
 try {
   const done = await seedDatabase(sql, await buildSeed());
   console.log(`Seeded ${done.households} Households (${done.bills} Bills), ${done.accounts} test logins, ${done.links} link(s).`);
+  console.log(`Reference data: ${done.readings} smart meter readings, ${done.outages} outages, ${done.rateSchedules} Rate Schedules, ${done.weatherDays} weather days, ${done.rewards} Rewards.`);
 } finally {
   await sql.end({ timeout: 5 });
 }

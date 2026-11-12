@@ -24,5 +24,5 @@ How a day is counted:
 - Points for a smart meter Household can differ from what its Bill would have given: the daily price is a flat per-kWh rate without tiers or lifeline, and days without data earn nothing. This is accepted for the faster feedback.
 - The first daily savings unlock Welcome Points ([ADR-0004](0004-setup-earns-locked-welcome-points.md)), as the first Bill savings do.
 - The reference stays the 28 days before the first start. A household whose habits drift over many months is still compared with that start, adjusted only for heat.
-- The demo smart meter simulates a household that follows its plan: after Missions start, the aircon goes off at 5 AM instead of 6 AM (labelled simulated), which earns about 10 points a day.
+- The demo smart meter simulates a household that follows its current plan: after Missions start, each Mission lowers the readings by its own kWh per day (its `kwhSaved` over the days in the plan's period), in the hours it applies to — the aircon's last hours, the evening, or the whole day for the ref, iron and laundry (labelled simulated). A plan without an aircon Mission saves nothing on the simulated aircon. The base simulated household (an aircon at night, evening use) stays the same whatever appliances were entered.
 - The ledger has a `meter_verified` source with a `day`; the database allows one per Household per day.

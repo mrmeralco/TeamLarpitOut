@@ -43,3 +43,5 @@ export const DATABASE = Symbol("DATABASE");
 export const KNOWLEDGE_SOURCE = Symbol("KNOWLEDGE_SOURCE");
 /** Wall clock for Mission Plans and daily Points (see common/clock.ts). */
 export const CLOCK = Symbol("CLOCK");
+/** The partner Rewards catalog (`public.rewards`, or the sample list without a database). */
+export const REWARDS_CATALOG = Symbol("REWARDS_CATALOG");

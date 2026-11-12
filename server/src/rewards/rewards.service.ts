@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from "@nestjs/common";
-import { POINTS_REPOSITORY } from "../common/injection-tokens.js";
-import { findReward, SAMPLE_REWARDS_CATALOG } from "../domain/rewards.js";
+import { POINTS_REPOSITORY, REWARDS_CATALOG } from "../common/injection-tokens.js";
+import { findReward, type RewardsCatalog } from "../domain/rewards.js";
 import type { PointsEntry, PointsRepository } from "../usage-plan/points-repository.interface.js";
 import { UsagePlanService } from "../usage-plan/usage-plan.service.js";
 
@@ -9,6 +9,7 @@ export class RewardsService {
   constructor(
     private readonly usagePlan: UsagePlanService,
     @Inject(POINTS_REPOSITORY) private readonly pointsRepo: PointsRepository,
+    @Inject(REWARDS_CATALOG) private readonly rewards: RewardsCatalog,
   ) {}
 
   async getCatalog(sin: string) {
@@ -16,7 +17,7 @@ export class RewardsService {
     const balance = pointsData.balance;
     const spendable = pointsData.spendable;
 
-    const catalog = SAMPLE_REWARDS_CATALOG.map((item) => {
+    const catalog = (await this.rewards.list()).map((item) => {
       const affordable = spendable >= item.pointsCost;
       const progressPercent = Math.min(100, Math.floor((balance / item.pointsCost) * 100));
       const pointsNeeded = Math.max(0, item.pointsCost - balance);
@@ -54,7 +55,7 @@ export class RewardsService {
   }
 
   async redeem(sin: string, rewardId: string) {
-    const reward = findReward(rewardId);
+    const reward = await findReward(this.rewards, rewardId);
     if (!reward) {
       throw new BadRequestException({ error: "Unknown reward." });
     }

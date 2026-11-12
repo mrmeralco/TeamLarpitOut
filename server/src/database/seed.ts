@@ -5,7 +5,14 @@ import { DEMO_ACCOUNTS } from "../bills/meralco-accounts.js";
 import { recordFromBill, type MeralcoHouseholdRecord } from "../bills/meralco-records.js";
 import { meralcoAccountOf, readLocalSeed, realBillHousehold, type LocalSeed } from "../bills/real-bill-household.js";
 import demo from "../data/meralco-demo.json" with { type: "json" };
+import rateTable from "../data/rate-schedules.json" with { type: "json" };
 import type { Bill } from "../domain/bill.js";
+import { datesBetween } from "../domain/daily-points.js";
+import { DEMO_CLIMATE_DATES, DEMO_SMART_SIN, demoTemperatureC } from "../domain/demo-climate.js";
+import type { HourlyReading } from "../domain/meter-reading.js";
+import type { RateSchedule } from "../domain/rate-schedule.js";
+import { SAMPLE_REWARDS_CATALOG, type RewardItem } from "../domain/rewards.js";
+import { MockReadingSource } from "../smart-meter/mock-reading-source.provider.js";
 import type { HouseholdLink } from "../households/household-link.repository.js";
 import type { Sql } from "./database.module.js";
 
@@ -15,7 +22,44 @@ export interface SeedData {
   links: HouseholdLink[];
   /** Households whose links the seed resets, so re-seeding gives the demo its starting state. */
   resetLinksFor: string[];
+  /** Data that used to live in code or JSON (migration 20261113000400). */
+  reference: ReferenceData;
 }
+
+export interface SampleOutage { sin: string; period: string; date: string; durationHours: number; description: string }
+
+export interface ReferenceData {
+  /** Sample smart meter readings, by Household. */
+  readings: { sin: string; rows: HourlyReading[] }[];
+  /** Sample outages on Meralco's record, by Household. */
+  outages: SampleOutage[];
+  /** Meralco's Rate Schedules, the same for every customer. */
+  rateSchedules: (RateSchedule & { _note?: string })[];
+  /** Sample daily temperatures, by area. */
+  weather: { area: string; date: string; temperatureC: number }[];
+  /** Partner Rewards. */
+  rewards: readonly RewardItem[];
+}
+
+/** The simulated year (Dec 2025–Nov 2026) the mock smart meter and daily weather used, now stored. */
+export async function buildReferenceData(areas: string[]): Promise<ReferenceData> {
+  const year = { from: `${DEMO_CLIMATE_DATES.from}T00:00:00+08:00`, to: `${DEMO_CLIMATE_DATES.to}T00:00:00+08:00` };
+  return {
+    // Without a plan the mock gives the household's usual use; following Missions is applied when read.
+    readings: [{ sin: DEMO_SMART_SIN, rows: await new MockReadingSource().readings(DEMO_SMART_SIN, year) }],
+    outages: [
+      { sin: "1234567890", period: "2026-06", date: "2026-06-18", durationHours: 4, description: "Scheduled maintenance (sample)" },
+      { sin: DEMO_SMART_SIN, period: "2026-08", date: "2026-08-14", durationHours: 3, description: "Feeder repair (sample)" },
+    ],
+    rateSchedules: rateTable.schedules as (RateSchedule & { _note?: string })[],
+    weather: [...new Set(areas)].flatMap((area) => datesBetween(DEMO_CLIMATE_DATES.from, DEMO_CLIMATE_DATES.to)
+      .map((date) => ({ area, date, temperatureC: demoTemperatureC(date) }))),
+    rewards: SAMPLE_REWARDS_CATALOG,
+  };
+}
+
+const chunks = <T>(items: T[], size = 2000): T[][] =>
+  Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size));
 
 /** What `pnpm db:seed` loads: the real-Bill Household, the two sample Households, the test logins. */
 export async function buildSeed(local: LocalSeed = readLocalSeed()): Promise<SeedData> {
@@ -30,6 +74,7 @@ export async function buildSeed(local: LocalSeed = readLocalSeed()): Promise<See
     accounts: await demoAccounts(),
     links: demoLinks(meralcoAccountOf(real)),
     resetLinksFor: [real.account.sin],
+    reference: await buildReferenceData([real, ...samples].map((h) => h.account.area)),
   };
 }
 
@@ -87,6 +132,50 @@ export async function seedDatabase(sql: Sql, data: SeedData) {
         insert into public.household_links (owner_id, sin, can, status) values (${l.ownerId}, ${l.sin}, ${l.can}, ${l.status})
         on conflict (owner_id, sin) do update set can = excluded.can, status = excluded.status`;
     }
+    await seedReferenceData(tx, data.reference);
   });
-  return { households: data.households.length, bills, accounts: data.accounts.length, links: data.links.length };
+  const ref = data.reference;
+  return {
+    households: data.households.length, bills, accounts: data.accounts.length, links: data.links.length,
+    readings: ref.readings.reduce((s, r) => s + r.rows.length, 0), outages: ref.outages.length,
+    rateSchedules: ref.rateSchedules.length, weatherDays: ref.weather.length, rewards: ref.rewards.length,
+  };
+}
+
+/**
+ * Readings and outages belong to seeded Households, so re-seeding a Household (which deletes its
+ * Meralco records) replaces them. Rate Schedules, weather and Rewards are replaced by key.
+ */
+async function seedReferenceData(tx: Sql, ref: ReferenceData) {
+  for (const { sin, rows } of ref.readings) {
+    await tx`delete from meralco.meter_readings where sin = ${sin}`;
+    for (const part of chunks(rows.map((r) => ({ sin, hour_start: new Date(r.from), wh: r.wh, provenance: "sample" })))) {
+      await tx`insert into meralco.meter_readings ${tx(part)}`;
+    }
+  }
+  for (const sin of new Set(ref.outages.map((o) => o.sin))) await tx`delete from meralco.outages where sin = ${sin} and provenance = 'sample'`;
+  if (ref.outages.length) {
+    await tx`insert into meralco.outages ${tx(ref.outages.map((o) => ({
+      sin: o.sin, period: o.period, outage_date: o.date, duration_hours: o.durationHours, description: o.description, provenance: "sample",
+    })))}`;
+  }
+  for (const s of ref.rateSchedules) {
+    await tx`
+      insert into meralco.rate_schedules (period, per_kwh, fixed, lifeline, note, provenance)
+      values (${s.period}, ${tx.json(s.perKwh as never)}, ${tx.json(s.fixed as never)}, ${s.lifeline ? tx.json(s.lifeline as never) : null}, ${s._note ?? null}, 'sample')
+      on conflict (period) do update set per_kwh = excluded.per_kwh, fixed = excluded.fixed, lifeline = excluded.lifeline,
+        note = excluded.note, provenance = excluded.provenance`;
+  }
+  for (const part of chunks(ref.weather.map((w) => ({ area: w.area, date: w.date, temperature_c: w.temperatureC, provenance: "sample" })))) {
+    await tx`
+      insert into public.weather_daily ${tx(part)}
+      on conflict (area, date) do update set temperature_c = excluded.temperature_c, provenance = excluded.provenance`;
+  }
+  for (const [i, r] of ref.rewards.entries()) {
+    await tx`
+      insert into public.rewards (id, name, category, partner_name, points_cost, description, is_sample, active, sort_order)
+      values (${r.id}, ${r.name}, ${r.category}, ${r.partnerName}, ${r.pointsCost}, ${r.description}, ${r.isSampleReward}, true, ${i})
+      on conflict (id) do update set name = excluded.name, category = excluded.category, partner_name = excluded.partner_name,
+        points_cost = excluded.points_cost, description = excluded.description, is_sample = excluded.is_sample, sort_order = excluded.sort_order`;
+  }
 }

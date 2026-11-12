@@ -178,13 +178,48 @@ describe("Daily Points for smart meter Households (ADR-0008)", () => {
 describe("Mock smart meter after Missions start", () => {
   const range = { from: new Date(at("2026-11-11")).toISOString(), to: new Date(at("2026-11-12")).toISOString() };
   const wh = (rows: HourlyReading[], hour: number) => rows.find((r) => r.from === new Date(at("2026-11-11", hour)).toISOString())!.wh;
+  const total = (rows: HourlyReading[]) => rows.reduce((s, r) => s + r.wh, 0);
+  const STARTED = "2026-11-10T01:00:00.000Z";
+  // A 30-day period, so a Mission's kWh per day is kwhSaved / 30.
+  const plan = (missions: { id: string; kwhSaved: number }[], startedAt = STARTED) => ({
+    period: "2026-11", createdAt: startedAt, startedAt,
+    missions: missions.map((m) => ({ ...m, title: m.id, pesoValue: 0 })),
+  });
+  const read = (p?: ReturnType<typeof plan>) => new MockReadingSource(p ? { find: async () => p as never } : undefined).readings(SMART, range);
 
-  it("turns the simulated aircon off at 5 AM instead of 6 AM once Missions started", async () => {
-    const before = await new MockReadingSource().readings(SMART, range);
-    const plan = { createdAt: "2026-11-10T01:00:00.000Z", startedAt: "2026-11-10T01:00:00.000Z" };
-    const after = await new MockReadingSource({ find: async () => plan as never }).readings(SMART, range);
-    expect(wh(after, 5)).toBeLessThan(wh(before, 5));
+  it("lowers only the hours a Mission applies to, by its own kWh per day", async () => {
+    const before = await read();
+    // Aircon off 1 hour earlier: 15 kWh over 30 days = 500 Wh, all in the aircon's last hour (5 AM).
+    const after = await read(plan([{ id: "aircon-off-1h", kwhSaved: 15 }]));
+    expect(wh(before, 5) - wh(after, 5)).toBe(500);
     expect(wh(after, 4)).toBe(wh(before, 4));
-    expect(wh(after, 6)).toBe(wh(before, 6));
+    expect(wh(after, 20)).toBe(wh(before, 20));
+    expect(total(before) - total(after)).toBe(500);
+  });
+
+  it("saves nothing on the aircon when the plan has no aircon Mission", async () => {
+    const before = await read();
+    // Ref at medium: 7.2 kWh over 30 days = 240 Wh a day, spread over 24 hours (10 Wh each).
+    const after = await read(plan([{ id: "ref-medium", kwhSaved: 7.2 }]));
+    for (const hour of [0, 5, 12, 20]) expect(wh(before, hour) - wh(after, hour)).toBe(10);
+    expect(total(before) - total(after)).toBe(240);
+  });
+
+  it("saves what the whole plan promises, each Mission in its own hours", async () => {
+    const before = await read();
+    const after = await read(plan([
+      { id: "aircon-timer-2h", kwhSaved: 30 }, // 1,000 Wh: 500 at 4 AM and 500 at 5 AM
+      { id: "lights-off", kwhSaved: 3.6 }, // 120 Wh: 30 an hour, 6–10 PM
+    ]));
+    expect(wh(before, 4) - wh(after, 4)).toBe(500);
+    expect(wh(before, 19) - wh(after, 19)).toBe(30);
+    expect(wh(after, 12)).toBe(wh(before, 12));
+    expect(total(before) - total(after)).toBe(1120);
+  });
+
+  it("leaves the days before Missions started as they were", async () => {
+    const before = await read();
+    const later = await read(plan([{ id: "aircon-off-1h", kwhSaved: 15 }], "2026-11-12T01:00:00.000Z"));
+    expect(later).toEqual(before);
   });
 });
