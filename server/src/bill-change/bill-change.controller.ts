@@ -1,6 +1,9 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Header, HttpCode, Param, Post, UseGuards } from "@nestjs/common";
 import { BillChangeService } from "./bill-change.service.js";
 import { BillChangeRequestDto } from "./dto/bill-change-request.dto.js";
+
+import { SessionGuard } from "../auth/session.guard.js";
+import { HouseholdAccessGuard } from "../households/household-access.guard.js";
 
 /** "Bakit ganito?": why the Bill changed. */
 @Controller()
@@ -16,6 +19,8 @@ export class BillChangeController {
 
   /** From a Household's two latest Bills in its Bill source. */
   @Get("households/:sin/bakit-ganito")
+  @Header("Cache-Control", "no-store")
+  @UseGuards(SessionGuard, HouseholdAccessGuard)
   forHousehold(@Param("sin") sin: string) {
     return this.billChange.explainForHousehold(sin);
   }

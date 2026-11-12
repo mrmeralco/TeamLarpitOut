@@ -13,7 +13,9 @@ import { configureApp } from "../../src/app.setup.js";
 import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
-import { BILL_SOURCE, RATE_SCHEDULES, VISION_PROVIDER } from "../../src/common/injection-tokens.js";
+import { AUTH_CLOCK, BILL_SOURCE, MY_MERALCO_SOURCE, RATE_SCHEDULES, VISION_PROVIDER } from "../../src/common/injection-tokens.js";
+import type { AuthClock } from "../../src/auth/auth.service.js";
+import { mockMyMeralcoSource, type MockMeralcoLogin, type MyMeralcoSource } from "../../src/bills/myMeralcoSource.js";
 import type { RawBillReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
 
 /** A small, round-number schedule so expected pesos are easy to check by hand. */
@@ -40,7 +42,25 @@ export function bill(period: string, kwh: number, billingDays: number, chargeLin
   return { period, kwh, billingDays, chargeLines };
 }
 
+/** Synthetic accounts independent of the public demo login. */
+export const testLogins: MockMeralcoLogin[] = [
+  {
+    ownerId: "owner-a", email: "owner-a@example.test", password: "test-password-a",
+    households: [
+      { sin: "1234567890", masked_address: "••• City A", meter_type: "traditional" },
+      { sin: "9876543210", masked_address: "••• City B", meter_type: "smart" },
+    ],
+  },
+  {
+    ownerId: "owner-b", email: "owner-b@example.test", password: "test-password-b",
+    households: [{ sin: "5555555555", masked_address: "••• City C", meter_type: "traditional" }],
+  },
+  { ownerId: "owner-empty", email: "empty@example.test", password: "test-password-empty", households: [] },
+];
+
 export interface HarnessOptions {
+  myMeralco?: MyMeralcoSource;
+  clock?: AuthClock;
   schedules?: RateSchedule[];
   /** Bills per Service ID Number, served by a fake Bill source. */
   bills?: Record<string, Bill[]>;
@@ -75,6 +95,10 @@ export async function harness(opts: HarnessOptions = {}) {
     .useValue(rateScheduleTable(opts.schedules ?? [schedule("2026-09", 10), schedule("2026-10", 11)]))
     .overrideProvider(BILL_SOURCE)
     .useValue(opts.billSource ?? inMemoryBillSource(opts.bills ?? {}))
+    .overrideProvider(MY_MERALCO_SOURCE)
+    .useValue(opts.myMeralco ?? mockMyMeralcoSource(testLogins))
+    .overrideProvider(AUTH_CLOCK)
+    .useValue(opts.clock ?? { now: () => Date.now() })
     .overrideProvider(VISION_PROVIDER)
     .useValue(
       isProvider(opts.vision)
@@ -90,8 +114,15 @@ export async function harness(opts: HarnessOptions = {}) {
 
   return {
     app,
-    async post(path: string, body: unknown) {
-      const res = await request(server).post(path).send(body as object);
+    async login(email = testLogins[0]!.email, password = testLogins[0]!.password): Promise<string> {
+      const res = await request(server).post("/api/auth/login").send({ email, password });
+      if (res.status !== 200) throw new Error(`Test login failed: HTTP ${res.status}`);
+      return res.body.token;
+    },
+    async post(path: string, body: unknown, token?: string) {
+      const req = request(server).post(path);
+      if (token !== undefined) req.set("Authorization", `Bearer ${token}`);
+      const res = await req.send(body as object);
       return { status: res.status, body: res.body as any };
     },
     /** Upload a photo as multipart form data, like the PWA does. */
@@ -99,8 +130,10 @@ export async function harness(opts: HarnessOptions = {}) {
       const res = await request(server).post(path).attach("photo", photo, { filename: "bill.jpg", contentType: mimeType });
       return { status: res.status, body: res.body as any };
     },
-    async get(path: string) {
-      const res = await request(server).get(path);
+    async get(path: string, token?: string) {
+      const req = request(server).get(path);
+      if (token !== undefined) req.set("Authorization", `Bearer ${token}`);
+      const res = await req;
       return { status: res.status, body: res.body as any };
     },
   };

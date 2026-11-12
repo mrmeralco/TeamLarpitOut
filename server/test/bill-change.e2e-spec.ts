@@ -124,7 +124,7 @@ describe("GET /api/households/:sin/bakit-ganito (injected Bill source)", () => {
         "1234567890": [bill("2026-10", 240, 32), bill("2026-09", 200, 30)],
       },
     });
-    const { status, body } = await api.get("/api/households/1234567890/bakit-ganito");
+    const { status, body } = await api.get("/api/households/1234567890/bakit-ganito", await api.login());
     expect(status).toBe(200);
     expect(body.before.period).toBe("2026-09");
     expect(body.total).toBe(64_000);
@@ -135,13 +135,14 @@ describe("GET /api/households/:sin/bakit-ganito (injected Bill source)", () => {
     const api = await harness({
       billSource: { bills: async () => [bill("2026-09", 100, 30), bill("2026-10", 100, 30)] },
     });
-    const { body } = await api.get("/api/households/any/bakit-ganito");
+    const { body } = await api.get("/api/households/1234567890/bakit-ganito", await api.login());
     expect(amount(body, "habit")).toBe(0);
   });
 
   it("404s when the Household has fewer than two Bills", async () => {
-    const api = await harness({ bills: { "1": [bill("2026-10", 240, 32)] } });
-    const { status } = await api.get("/api/households/1/bakit-ganito");
+    const api = await harness({ bills: { "1234567890": [bill("2026-10", 240, 32)] } });
+    const { status, body } = await api.get("/api/households/1234567890/bakit-ganito", await api.login());
     expect(status).toBe(404);
+    expect(body.error).toBe("Kailangan ng dalawang Bill");
   });
 });

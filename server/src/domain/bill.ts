@@ -15,6 +15,8 @@ export interface Bill {
   dueDate?: string;
   previousReading?: number;
   presentReading?: number;
+  /** Fixture provenance, never inferred from a photo. */
+  provenance?: { kind: string; note: string };
   /** The Bill says its reading was estimated, not read from the meter. */
   estimated?: boolean;
   /** The household is registered for the lifeline discount. */

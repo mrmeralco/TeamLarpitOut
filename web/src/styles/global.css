@@ -254,3 +254,13 @@ label.check input { width: auto; accent-color: var(--primary); }
 .extras p { margin: 0 0 8px; font-size: 0.85rem; }
 .extras ul { list-style: none; margin: 0 0 8px; padding: 0; }
 .extras li { padding: 6px 0; border-bottom: 1px solid var(--border); }
+
+.demo-login { margin-top: 12px; overflow-wrap: anywhere; }
+.history .notice { border-left: 3px solid var(--primary); padding: 8px 10px; font-size: .85rem; }
+.table-scroll { overflow-x: auto; }
+.history table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.history caption { text-align: left; color: var(--muted-foreground); margin-bottom: 10px; }
+.history th, .history td { padding: 10px 5px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+.history th:first-child { text-align: left; }
+.history small { display: block; color: var(--muted-foreground); font-weight: normal; }
+.history tbody th { font-weight: 500; }

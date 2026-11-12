@@ -3,6 +3,8 @@ import type { Bill, ChargeLine } from "../domain/bill.js";
 import { VISION_PROVIDER } from "../common/injection-tokens.js";
 import type { BillImage, RawBillReading, VisionProvider } from "../vision/vision-provider.interface.js";
 
+import { ScanContextStore } from "../vision/scan-context.store.js";
+
 export type DraftBill = Partial<Bill>;
 
 /** A Bill as read from a photo. Not used anywhere until the user confirms it. */
@@ -95,9 +97,11 @@ export function toScanResult(raw: RawBillReading): ScanResult {
 
 @Injectable()
 export class BillScanService {
-  constructor(@Inject(VISION_PROVIDER) private readonly vision: VisionProvider) {}
+  constructor(@Inject(VISION_PROVIDER) private readonly vision: VisionProvider, private readonly contexts: ScanContextStore) {}
 
-  async scan(image: BillImage): Promise<ScanResult> {
-    return toScanResult(await this.vision.readBill(image));
+  async scan(image: BillImage) {
+    const raw = await this.vision.readBill(image);
+    const result = toScanResult(raw);
+    return result.status === "read" ? { ...result, scanToken: this.contexts.create(raw.serviceIdNumber) } : result;
   }
 }

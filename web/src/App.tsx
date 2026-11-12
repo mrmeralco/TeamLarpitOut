@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   api,
+  ApiError,
   fetchBillBreakdown,
   scanBill,
+  type LoginResult,
   type BakitGanito,
   type BillBreakdown as BillBreakdownData,
   type BillInput,
@@ -11,13 +13,12 @@ import {
   type ExtraLineItem,
   type ScanOutcome,
 } from "./api/client";
-import { peso } from "./lib/format";
+import { MyMeralcoLogin } from "./components/MyMeralcoLogin";
+import { HouseholdPicker } from "./components/HouseholdPicker";
+import { BillHistory } from "./components/BillHistory";
+import { ScanLinkageNotice } from "./components/ScanLinkageNotice";
 import { BillBreakdown } from "./components/BillBreakdown";
-
-const monthLabel = (period: string) =>
-  /^\d{4}-\d{2}$/.test(period)
-    ? new Date(`${period}-01T00:00:00`).toLocaleDateString("en-PH", { month: "long", year: "numeric" })
-    : period;
+import { peso, monthLabel } from "./lib/format";
 
 const EFFECT_HINT: Record<string, string> = {
   rate: "Nagbago ang singil kada kWh. Hindi mo ito kontrolado.",
@@ -316,11 +317,24 @@ interface ScanState {
   serviceIdMasked: string | null;
   note: string | null;
   problem: { slot: Slot; text: string; unreadable: boolean } | null;
+  references: Partial<Record<Slot, string>>;
 }
 
-const noScan: ScanState = { pending: false, serviceIdMasked: null, note: null, problem: null };
+const noScan: ScanState = { pending: false, serviceIdMasked: null, note: null, problem: null, references: {} };
 
 export function App() {
+  const [session, setSession] = useState<LoginResult | null>(null);
+  const [selectedSin, setSelectedSin] = useState("");
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+  const selected = session?.households.find((h) => h.sin === selectedSin);
+  const onExpired = useCallback(() => {
+    setSession(null); setSelectedSin(""); setSessionNotice("Nag-expire ang session. Mag-login ulit gamit ang My Meralco.");
+  }, []);
+  useEffect(() => {
+    if (!session) return;
+    const timer = window.setTimeout(onExpired, 60 * 60 * 1000);
+    return () => window.clearTimeout(timer);
+  }, [session, onExpired]);
   const [periods, setPeriods] = useState<string[]>([]);
   const [before, setBefore] = useState<FormBill>(emptyBill());
   const [now, setNow] = useState<FormBill>(emptyBill());
@@ -330,6 +344,8 @@ export function App() {
   const [breakdown, setBreakdown] = useState<BillBreakdownData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const scanVersion = useRef(0);
+  const verdictVersion = useRef(0);
 
   useEffect(() => {
     api
@@ -343,14 +359,20 @@ export function App() {
   }, []);
 
   async function onScan(slot: Slot, photo: File) {
+    const version = ++scanVersion.current;
+    verdictVersion.current++;
     setScanning(slot);
     setResult(null);
+    setBreakdown(null);
+    setScan((st) => ({ ...st, pending: true, references: { ...st.references, [slot]: undefined }, problem: null }));
     const out: ScanOutcome = await scanBill(photo);
+    if (version !== scanVersion.current) return;
     setScanning(null);
 
     if (out.kind !== "read") {
       setScan((st) => ({
         ...st,
+        pending: false,
         problem: { slot, text: out.kind === "unreadable" ? out.problem : out.error, unreadable: out.kind === "unreadable" },
       }));
       return;
@@ -367,22 +389,29 @@ export function App() {
         note = "Walang history na naka-print. I-scan o i-type ang nakaraang Bill.";
       }
     }
-    setScan({ pending: true, serviceIdMasked: out.serviceIdMasked ?? scan.serviceIdMasked, note, problem: null });
+    setScan((st) => ({
+      pending: true, serviceIdMasked: slot === "now" ? out.serviceIdMasked : st.serviceIdMasked ?? out.serviceIdMasked,
+      note, problem: null,
+      references: { ...st.references, [slot]: out.scanToken, ...(slot === "now" && out.before ? { before: out.scanToken } : {}) },
+    }));
   }
 
   /** Editing a field clears a stale result. */
   const edit = (set: (b: FormBill) => void) => (b: FormBill) => {
+    verdictVersion.current++;
     set(b);
     setResult(null);
+    setBreakdown(null);
   };
 
   const b = toInput(before);
   const n = toInput(now);
-  const canDecode = Boolean(b && n) && !scan.pending && !busy;
+  const canDecode = Boolean(b && n) && !scan.pending && !busy && scanning === null;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!b || !n || scan.pending) return;
+    if (!b || !n || scan.pending || scanning !== null) return;
+    const version = ++verdictVersion.current;
     setBusy(true);
     setError(null);
     try {
@@ -390,12 +419,16 @@ export function App() {
         api.bakitGanito(b, n),
         n.chargeLines.length ? fetchBillBreakdown(n, b) : Promise.resolve(null),
       ]);
-      setResult(r);
-      setBreakdown(l);
+      if (version === verdictVersion.current) {
+        setResult(r);
+        setBreakdown(l);
+      }
     } catch (err) {
-      setResult(null);
-      setBreakdown(null);
-      setError((err as Error).message);
+      if (version === verdictVersion.current) {
+        setResult(null);
+        setBreakdown(null);
+        setError((err as Error).message);
+      }
     } finally {
       setBusy(false);
     }
@@ -408,9 +441,20 @@ export function App() {
         <p>Bakit ganito ang bill ko?</p>
       </header>
 
+      {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
+      {session ? <HouseholdPicker households={session.households} selected={selectedSin} onSelect={setSelectedSin} onLogout={() => {
+        const token = session.token;
+        setSession(null); setSelectedSin(""); setSessionNotice(null);
+        void api.logout(token).catch((err) => {
+          if (!(err instanceof ApiError && err.status === 401)) setSessionNotice("Hindi makumpirma ang logout sa server. Na-clear na ang session sa device na ito; mag-e-expire ang token sa loob ng isang oras.");
+        });
+      }} /> : <MyMeralcoLogin onLogin={(next) => { setSession(next); setSelectedSin(""); setSessionNotice(null); }} />}
+      {session && selected && <BillHistory key={`${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <Result r={r} />} />}
+
       <section className="card hero-scan">
+        <h2>Quick verdict · walang login</h2>
         <p>Kunan ng litrato ang Bill mo. Babasahin namin, at ikaw ang magkukumpirma.</p>
-        <ScanButton label="📷 I-scan ang Bill" busy={scanning === "now"} onPhoto={(f) => onScan("now", f)} />
+        <ScanButton label="📷 I-scan ang Bill" busy={scanning !== null} onPhoto={(f) => onScan("now", f)} />
       </section>
 
       {scan.problem && (
@@ -440,7 +484,7 @@ export function App() {
           <button
             type="button"
             className="primary"
-            disabled={!b || !n}
+            disabled={!b || !n || scanning !== null}
             onClick={() => {
               setScan((st) => ({ ...st, pending: false }));
               setBefore((x) => ({ ...x, missing: [], estimated: [] }));
@@ -458,7 +502,7 @@ export function App() {
           title="Nakaraang Bill"
           bill={before}
           periods={periods}
-          scanning={scanning === "before"}
+          scanning={scanning !== null}
           onScan={(f) => onScan("before", f)}
           onChange={edit(setBefore)}
         />
@@ -466,7 +510,7 @@ export function App() {
           title="Bill ngayon"
           bill={now}
           periods={periods}
-          scanning={scanning === "now"}
+          scanning={scanning !== null}
           onScan={(f) => onScan("now", f)}
           onChange={edit(setNow)}
         />
@@ -477,6 +521,9 @@ export function App() {
       {error && <p className="error">{error}</p>}
       {result && <Result r={result} />}
       {result && <BillBreakdown data={breakdown} missingLines={!n?.chargeLines.length} />}
+      {session && !scan.pending && scanning === null && (scan.references.now || scan.references.before) &&
+        <ScanLinkageNotice key={`${session.token}:${scan.references.now}:${scan.references.before}`} token={session.token}
+          now={scan.references.now} before={scan.references.before} onExpired={onExpired} onSelect={setSelectedSin} />}
     </main>
   );
 }
