@@ -4,8 +4,8 @@
   "description": "Bakit ganito ang bill ko?",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fffaf5",
-  "theme_color": "#f26f21",
+  "background_color": "#ffffff",
+  "theme_color": "#ca3500",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
