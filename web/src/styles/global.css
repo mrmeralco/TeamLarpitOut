@@ -335,13 +335,83 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 /* Rewards, laid out like Missions: Eelio hero + next-reward meter on top, the shop as quest rows below.
    Built on .hero, .goal-meter, .quests-card, .mission-quest and .coin from the Missions styles. */
-.rewards-dash .hero h2 { font-size: 1.15rem; }
+.rewards-dash .hero h2 { font-size: 1rem; opacity: 0.9; }
+.rewards-dash .hero-amount { align-items: center; }
 .rewards-dash .hero-amount-unit { font-size: 1rem; font-weight: 700; letter-spacing: 0; opacity: 0.9; }
-.rewards-hero-chip { align-self: flex-start; }
+.rewards-coin {
+  width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex: none;
+  background: #F5B301; color: #fff; font-size: 1.1rem; letter-spacing: 0;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 0 0 3px rgba(255, 255, 255, 0.25), 0 0 18px rgba(252, 211, 77, 0.6);
+  animation: coin-spin 3.5s ease-in-out infinite;
+}
+@keyframes coin-spin { 0%, 70%, 100% { transform: rotateY(0); } 85% { transform: rotateY(180deg); } }
+.rewards-balance-pop { animation: quest-pop 0.5s cubic-bezier(.2, .9, .3, 1.3) both; }
+
+/* Player badge: level shield, rank and XP bar */
+.player-card {
+  align-self: flex-start; display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; border-radius: 16px;
+  background: rgba(0, 0, 0, 0.18); border: 1px solid rgba(255, 255, 255, 0.22); min-width: 230px;
+}
+.player-level { position: relative; flex: none; width: 42px; height: 46px; display: flex; align-items: center; justify-content: center; color: #FCD34D; }
+.player-level svg { position: absolute; inset: 0; width: 100%; height: 100%; fill: #FFF8F1; stroke: #FCD34D; stroke-width: 1.5; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, 0.2)); }
+.player-level b { position: relative; font-size: 1rem; font-weight: 900; color: #8A3A08; margin-top: -2px; }
+.player-info { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.player-rank { font-size: 0.85rem; font-weight: 800; white-space: nowrap; }
+.player-lv { padding: 1px 6px; margin-right: 4px; border-radius: 6px; background: #FCD34D; color: #5A3500; font-size: 0.68rem; font-weight: 900; letter-spacing: 0.04em; }
+.player-xp { display: block; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.22); overflow: hidden; }
+.player-xp span { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #FCD34D, #F59E0B); box-shadow: 0 0 10px rgba(252, 211, 77, 0.7); transform-origin: left; animation: wr-grow 0.8s cubic-bezier(.2, .8, .2, 1) 0.2s both; }
+.player-xp-text { font-size: 0.68rem; font-weight: 700; opacity: 0.85; font-variant-numeric: tabular-nums; }
+
+/* Stat tiles */
+.rewards-stats { list-style: none; margin: 2px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-width: 380px; }
+.rewards-stats li {
+  display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.22); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.12);
+  animation: tile-in 0.35s ease both;
+}
+.rewards-stats li:nth-child(2) { animation-delay: 80ms; }
+.rewards-stats li:nth-child(3) { animation-delay: 160ms; }
+.rewards-stats li.on { background: #FFF8F1; color: var(--ok); border-color: #FFF8F1; }
+.rewards-stats strong { font-size: 1.15rem; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.rewards-stats span { font-size: 0.7rem; font-weight: 700; opacity: 0.85; line-height: 1.2; }
 .rewards-locked { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 12px; background: rgba(0, 0, 0, 0.16); font-size: 0.82rem; }
 .rewards-lock { display: inline-flex; }
 .rewards-lock svg { width: 16px; height: 16px; }
-.rewards-earn-note { font-size: 0.78rem; opacity: 0.85; }
+.rewards-earn-note { font-size: 0.75rem; opacity: 0.8; }
+
+/* Side card: the next reward as loot to unlock */
+.loot-card { gap: 12px; }
+.loot-kicker { font-size: 0.72rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-foreground); }
+.goal-meter.reached .loot-kicker { color: var(--ok); }
+.loot-row { display: flex; align-items: center; gap: 12px; }
+.loot-icon {
+  position: relative; flex: none; width: 58px; height: 58px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: #fff;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.18), 0 3px 8px rgba(31, 27, 22, 0.15);
+}
+.loot-icon svg { width: 28px; height: 28px; }
+.loot-icon.tone-0 { background: var(--primary); }
+.loot-icon.tone-1 { background: #D9822B; }
+.loot-icon.tone-2 { background: var(--info); }
+.loot-icon.trophy { background: linear-gradient(160deg, #FCD34D, #F59E0B); color: #7A4A00; animation: quest-pop 0.5s ease both; }
+.loot-icon-lock {
+  position: absolute; right: -6px; bottom: -6px; width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; background: var(--foreground); color: #fff; border: 2px solid var(--card);
+}
+.loot-icon-lock svg { width: 12px; height: 12px; }
+.loot-info { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.loot-info strong { font-size: 1.02rem; line-height: 1.25; }
+.loot-status { justify-content: space-between; font-size: 0.85rem; }
+.loot-claim { width: 100%; padding: 10px 18px; --tone: var(--primary); --tone-dark: var(--primary-hover); }
+
+@media (max-width: 600px) {
+  .player-card { min-width: 0; }
+  .rewards-stats { gap: 6px; }
+  .rewards-stats li { padding: 6px 8px; }
+  .rewards-stats strong { font-size: 1rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rewards-coin, .rewards-balance-pop, .player-xp span, .rewards-stats li, .loot-icon.trophy { animation: none !important; }
+}
 .rewards-disclaimer { margin: 0; font-size: 0.78rem; line-height: 1.45; }
 .sample-rewards-tag {
   margin-left: 2px; padding: 1px 6px; border-radius: 999px; background: var(--muted); border: 1px solid var(--border);
@@ -351,7 +421,7 @@ button.wide { width: 100%; margin-top: 10px; }
 /* Filter (and history tabs): one segmented control on its own row */
 .rewards-history-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
 .rewards-filter {
-  display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 2px; padding: 4px;
+  display: inline-flex; align-self: center; max-width: 100%; overflow-x: auto; gap: 2px; padding: 4px;
   border-radius: 14px; background: var(--muted); box-shadow: inset 0 2px 4px rgba(31, 27, 22, 0.06);
 }
 .rewards-filter button {
@@ -363,20 +433,90 @@ button.wide { width: 100%; margin-top: 10px; }
 .rewards-filter-count { min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--border); font-size: 0.7rem; line-height: 18px; text-align: center; }
 .rewards-filter button.active .rewards-filter-count { background: var(--brand-soft); color: var(--brand-ink); }
 
-/* Reward quest rows (not a button themselves: the action sits on the right) */
-.reward-quest { cursor: default; }
-.reward-quest:hover { transform: none; box-shadow: 0 4px 0 var(--border); border-color: var(--border); }
-.reward-quest.affordable { border-color: var(--primary); box-shadow: 0 4px 0 rgba(194, 80, 12, 0.35); }
-.reward-quest.affordable:hover { border-color: var(--primary); box-shadow: 0 4px 0 rgba(194, 80, 12, 0.35); }
-.reward-quest.affordable:hover .mission-quest-icon { animation: quest-wiggle 0.4s ease; }
-.reward-quest.unaffordable .mission-quest-icon { filter: grayscale(0.35); opacity: 0.85; }
-.reward-progress-box { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-width: 360px; }
-.goal-track.reward-track { height: 12px; padding: 2px; border-radius: 8px; }
-.goal-track.reward-track .goal-seg { border-radius: 6px; }
-.reward-progress-text { display: flex; justify-content: space-between; gap: 8px; font-size: 0.74rem; font-weight: 700; color: var(--muted-foreground); }
-.reward-redeem { min-width: 110px; padding: 8px 16px; border-radius: 999px; font-weight: 800; box-shadow: 0 3px 0 var(--primary-hover); }
-.reward-redeem:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--primary-hover); }
-@media (max-width: 600px) { .reward-progress-box { max-width: none; } }
+/* Reward cards: collectible game cards (art panel, rarity, price coin, 3D redeem button) */
+.rewards-shop-head { display: flex; justify-content: center; text-align: center; }
+.reward-grid {
+  list-style: none; margin: 4px 0 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px;
+}
+.reward-grid li { display: flex; animation: tile-in 0.35s ease both; }
+.reward-card {
+  --tone: var(--primary); --tone-dark: #8A3A08;
+  position: relative; width: 100%; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 20px; border: 2px solid var(--border); background: var(--card);
+  box-shadow: 0 5px 0 var(--border); transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.reward-card.tone-1 { --tone: #D9822B; --tone-dark: #8A5A08; }
+.reward-card.tone-2 { --tone: #0F6E68; --tone-dark: #094845; }
+.reward-card.affordable { border-color: var(--tone); box-shadow: 0 5px 0 var(--tone-dark); }
+.reward-card.affordable:hover { transform: translateY(-4px); box-shadow: 0 9px 0 var(--tone-dark), 0 14px 24px rgba(31, 27, 22, 0.14); }
+.reward-card.affordable:hover .reward-card-icon { animation: quest-wiggle 0.45s ease; }
+
+.reward-card-art {
+  position: relative; height: 128px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  color: #fff; overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 120%, rgba(255, 255, 255, 0.28), transparent 60%),
+    radial-gradient(rgba(255, 255, 255, 0.14) 1.2px, transparent 1.4px) 0 0 / 14px 14px,
+    linear-gradient(160deg, var(--tone) 0%, var(--tone-dark) 100%);
+}
+.reward-card.affordable .reward-card-art::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-100%); animation: reward-shine 3.2s ease-in-out infinite;
+}
+@keyframes reward-shine { 0%, 55% { transform: translateX(-100%); } 85%, 100% { transform: translateX(100%); } }
+.reward-card.locked .reward-card-art { filter: saturate(0.45) brightness(0.92); }
+.reward-card-icon {
+  width: 54px; height: 54px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+  background: #FFF8F1; color: var(--tone); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.18);
+}
+.reward-card-icon svg { width: 28px; height: 28px; }
+.reward-card-value { font-size: 1.35rem; font-weight: 900; letter-spacing: -0.02em; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18); }
+
+.reward-tier {
+  position: absolute; top: 10px; left: 10px; padding: 3px 9px; border-radius: 999px;
+  font-size: 0.66rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.28); color: #fff; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+.reward-tier.rare { background: #E3F2F0; color: #0F6E68; }
+.reward-tier.epic { background: #EEE7FA; color: #5B3FA3; }
+.reward-tier.legendary { background: #FFF4CC; color: #8A5A00; }
+.reward-ribbon {
+  position: absolute; top: 10px; right: 10px; padding: 3px 9px; border-radius: 999px;
+  font-size: 0.66rem; font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--ok); color: #fff; box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+.reward-lock {
+  position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.32); color: #fff;
+}
+.reward-lock svg { width: 16px; height: 16px; }
+
+.reward-card-body { flex: 1; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px 14px; }
+.reward-card-name { font-size: 1rem; line-height: 1.25; }
+.reward-card-partner { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.78rem; color: var(--muted-foreground); }
+.reward-xp { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
+.reward-xp-bar { height: 12px; padding: 2px; border-radius: 8px; background: var(--muted); box-shadow: inset 0 2px 3px rgba(31, 27, 22, 0.1); overflow: hidden; }
+.reward-xp-bar span {
+  display: block; height: 100%; border-radius: 6px; transform-origin: left; animation: wr-grow 0.6s cubic-bezier(.2, .8, .2, 1) both;
+  background: linear-gradient(90deg, #FCD34D, var(--tone)); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+}
+.reward-xp-text { display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 800; color: var(--muted-foreground); }
+.reward-card-foot { margin-top: auto; padding-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.reward-card.locked .reward-card-foot .goal-reward { opacity: 0.75; }
+.reward-redeem {
+  padding: 8px 18px; border-radius: 999px; font-weight: 900; letter-spacing: 0.01em;
+  background: var(--tone); border-color: var(--tone); box-shadow: 0 4px 0 var(--tone-dark);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.reward-redeem:hover:not(:disabled) { filter: brightness(1.08); }
+.reward-redeem:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--tone-dark); }
+@media (max-width: 480px) { .reward-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .reward-card-art { height: 104px; } .reward-redeem { padding: 7px 12px; } .reward-card-foot { flex-wrap: wrap; } }
+@media (prefers-reduced-motion: reduce) {
+  .reward-grid li, .reward-card-art::after, .reward-xp-bar span, .reward-card-icon { animation: none !important; }
+  .reward-card { transition: none; }
+}
 
 /* Redemption confirmation */
 .redeem-sheet-backdrop {
@@ -407,7 +547,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .history-pts { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 800; }
 .history-pts.plus { color: var(--ok); }
 
-@media (prefers-reduced-motion: reduce) { .redeem-sheet, .reward-quest .mission-quest-icon { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .redeem-sheet { animation: none !important; } }
 
 /* Sign-in and link flow (one screen at a time) */
 .flow {

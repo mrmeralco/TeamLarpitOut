@@ -46,7 +46,24 @@ const ICON = {
   bolt: "M13 2 4 14h7l-1 8 9-12h-7z",
   gift: "M3 8h18v4H3zM5 12v9h14v-9M12 8v13M12 8S10 3 7.5 4.5 9 8 12 8zM12 8s2-5 4.5-3.5S15 8 12 8z",
   off: "M5 12h14",
+  shield: "M12 2 4 5v6c0 5 3.4 9.3 8 11 4.6-1.7 8-6 8-11V5z",
+  trophy: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3",
 };
+
+/** Player level: one level per 500 Points ever earned, with a rank name as you go up. */
+const XP_PER_LEVEL = 500;
+const RANKS = [
+  { from: 1, name: "Spark" },
+  { from: 3, name: "Watt Watcher" },
+  { from: 6, name: "Power Saver" },
+  { from: 10, name: "Grid Guardian" },
+  { from: 20, name: "Eelio Legend" },
+] as const;
+
+const TIERS = ["Common", "Rare", "Epic", "Legendary"] as const;
+
+/** The peso amount in a reward's name ("₱50 Mobile Load" → "₱50"), shown big on its card. */
+const pesoValue = (name: string) => name.match(/₱[\d,]+/)?.[0] ?? null;
 
 const Svg = ({ d }: { d: string }) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -140,6 +157,9 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
   const filters = FILTERS.map((f) => ({ ...f, count: f.id === "all" ? catalog.length : catalog.filter((i) => i.category === f.id).length }))
     .filter((f) => f.count > 0);
   const visible = catalog.filter((i) => filter === "all" || i.category === filter);
+  /** Rarity by price within the catalog: the cheapest rewards are Common, the priciest Legendary. */
+  const costs = [...new Set(catalog.map((i) => i.pointsCost))].sort((a, b) => a - b);
+  const tierOf = (cost: number) => TIERS[costs.length < 2 ? 0 : Math.round((costs.indexOf(cost) / (costs.length - 1)) * (TIERS.length - 1))]!;
   const smart = household.meter_type === "smart";
   const hasEarned = (data?.earned?.length ?? 0) > 0;
   const hasRedeemed = (data?.redemptions?.length ?? 0) > 0;
@@ -158,26 +178,58 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
   }
 
   const mood: Mood = readyCount > 0 ? "charged" : (data?.balance ?? 0) > 0 ? "detective" : "sleepy";
-  const sinceLast = data?.earned?.[0];
+  const sinceLast = data?.earned?.find((e) => e.points > 0);
+  const redeemedCount = data?.redemptions?.length ?? 0;
+  /** XP = every Point ever earned: what's left plus what was spent on Rewards. */
+  const xp = (data?.balance ?? 0) + (data?.redemptions ?? []).reduce((s, r) => s + Math.abs(r.points), 0);
+  const level = Math.floor(xp / XP_PER_LEVEL) + 1;
+  const levelXp = xp % XP_PER_LEVEL;
+  const rank = RANKS.filter((r) => level >= r.from).at(-1)!.name;
+  /** With everything unlocked, the priciest reward is the one to claim. */
+  const topLoot = catalog.filter((i) => i.affordable).reduce<CatalogRewardItem | null>((a, b) => (!a || b.pointsCost > a.pointsCost ? b : a), null);
 
   return (
     <section className="dash mission-dash rewards-dash anchor" id="rewards" aria-labelledby="rewards-heading">
       <div className="dash-main">
         <div className={`hero mood-${mood}`}>
           <div className="hero-copy" data-testid="rewards-balance">
+            <div className="player-card">
+              <span className="player-level" aria-label={`Level ${level}`}>
+                <Svg d={ICON.shield} />
+                <b>{level}</b>
+              </span>
+              <span className="player-info">
+                <span className="player-rank"><span className="player-lv">LV {level}</span> {rank}</span>
+                <span className="player-xp" role="progressbar" aria-label="XP to next level" aria-valuemin={0} aria-valuemax={XP_PER_LEVEL} aria-valuenow={levelXp}>
+                  <span style={{ width: `${Math.max((levelXp / XP_PER_LEVEL) * 100, 3)}%` }} />
+                </span>
+                <span className="player-xp-text">{levelXp} / {XP_PER_LEVEL} XP</span>
+              </span>
+            </div>
+
             <h2 id="rewards-heading">Rewards</h2>
-            <p className="hero-amount">
+            <p className="hero-amount rewards-balance-pop">
+              <span className="rewards-coin" aria-hidden="true">★</span>
               {data ? data.balance.toLocaleString("en-PH") : "–"} <span className="hero-amount-unit">Points</span>
             </p>
+
             {data && (
-              <span className="hero-change rewards-hero-chip">
-                {readyCount > 0
-                  ? `${readyCount} ready to redeem`
-                  : nextGoal
-                    ? `${nextGoal.pointsNeeded} pts to next reward`
-                    : "Save to earn Points"}
-              </span>
+              <ul className="rewards-stats">
+                <li className={readyCount > 0 ? "on" : ""}>
+                  <strong>{readyCount}/{catalog.length}</strong>
+                  <span>{readyCount > 0 ? `${readyCount} ready to redeem` : "unlocked"}</span>
+                </li>
+                <li>
+                  <strong>{redeemedCount}</strong>
+                  <span>redeemed</span>
+                </li>
+                <li>
+                  <strong>{sinceLast ? `+${sinceLast.points}` : "0"}</strong>
+                  <span>last earned</span>
+                </li>
+              </ul>
             )}
+
             {data && (data.lockedPoints ?? 0) > 0 && (
               <p className="hero-line rewards-locked" data-testid="locked-points">
                 <span className="rewards-lock" aria-hidden="true"><Svg d={ICON.lock} /></span>
@@ -191,28 +243,49 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
       </div>
 
       <aside className="dash-side" aria-label="Next reward">
-        <div className={`card goal-meter${data && !nextGoal ? " reached" : ""}`}>
-          <div className="goal-head">
-            <div>
-              <h3>{nextGoal ? "Next reward" : "All unlocked"}</h3>
-              {nextGoal && <span className="muted small">{nextGoal.name}</span>}
-            </div>
-            {nextGoal && (
-              <span className="goal-reward"><span className="coin" aria-hidden="true">★</span>{nextGoal.pointsCost} pts</span>
-            )}
-          </div>
-          {nextGoal && (
+        <div className={`card goal-meter loot-card${data && !nextGoal ? " reached" : ""}`}>
+          {nextGoal ? (
             <>
+              <span className="loot-kicker">Next reward</span>
+              <div className="loot-row">
+                <span className={`loot-icon tone-${CATEGORY_TONE[nextGoal.category]}`} aria-hidden="true">
+                  <Svg d={CATEGORY_ICON[nextGoal.category]} />
+                  <span className="loot-icon-lock"><Svg d={ICON.lock} /></span>
+                </span>
+                <span className="loot-info">
+                  <strong>{nextGoal.name}</strong>
+                  <span className="goal-reward"><span className="coin" aria-hidden="true">★</span>{nextGoal.pointsCost} pts</span>
+                </span>
+              </div>
               <div className="goal-track" role="progressbar" aria-label={`Progress to ${nextGoal.name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={nextGoal.progressPercent}>
                 <span className="goal-seg tone-0" style={{ width: `${Math.max(nextGoal.progressPercent, 3)}%` }} />
               </div>
-              <p className="goal-status">{nextGoal.pointsNeeded} pts to go</p>
+              <p className="goal-status loot-status">
+                <span>{nextGoal.progressPercent}%</span>
+                <span>{nextGoal.pointsNeeded} pts to go</span>
+              </p>
             </>
-          )}
-          {sinceLast && sinceLast.points > 0 && (
-            <div className="daily-score">
-              <span className="daily-streak on">Last earned +{sinceLast.points} pts</span>
-            </div>
+          ) : (
+            <>
+              <span className="loot-kicker">Vault cleared</span>
+              <div className="loot-row">
+                <span className="loot-icon trophy" aria-hidden="true"><Svg d={ICON.trophy} /></span>
+                <span className="loot-info">
+                  <strong>Every reward unlocked</strong>
+                  {topLoot && <span className="muted small">Top pick: {topLoot.name}</span>}
+                </span>
+              </div>
+              {topLoot && (
+                <button
+                  type="button"
+                  className="primary reward-redeem loot-claim"
+                  disabled={redeemingId !== null}
+                  onClick={() => setConfirmingItem(topLoot)}
+                >
+                  Claim top reward
+                </button>
+              )}
+            </>
           )}
           <p className="muted small rewards-disclaimer">Sample partner rewards. Not a Meralco bill discount.</p>
         </div>
@@ -231,7 +304,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
 
         {data && (
           <div className="card quests-card">
-            <div className="quests-card-head">
+            <div className="quests-card-head rewards-shop-head">
               <h3>Rewards shop</h3>
             </div>
             {filters.length > 2 && (
@@ -250,50 +323,63 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
               </div>
             )}
 
-            <ul className="mission-quests rewards-list">
-              {visible.map((item, i) => (
-                <li key={item.id} style={{ animationDelay: `${i * 60}ms` }}>
-                  <div
-                    className={`mission-quest reward-quest ${item.affordable ? "affordable" : "unaffordable"}`}
-                    data-testid={`reward-card-${item.id}`}
-                  >
-                    <span className={`mission-quest-icon tone-${CATEGORY_TONE[item.category]}`} aria-hidden="true">
-                      <Svg d={item.affordable ? CATEGORY_ICON[item.category] : ICON.lock} />
-                    </span>
-                    <span className="mission-quest-body">
-                      <span className="mission-quest-n">
-                        {item.partnerName}
-                        <span className="tag sample-rewards-tag">sample rewards</span>
-                      </span>
-                      <strong className="mission-quest-title">{item.name}</strong>
-                      {!item.affordable && (
-                        <span className="reward-progress-box" data-testid={`progress-${item.id}`}>
-                          <span className="goal-track reward-track" aria-hidden="true">
-                            <span className={`goal-seg tone-${CATEGORY_TONE[item.category]}`} style={{ width: `${Math.max(item.progressPercent, 3)}%` }} />
-                          </span>
-                          <span className="reward-progress-text">
-                            <span>{item.progressPercent}%</span>
-                            <span>{item.pointsNeeded} pts to go</span>
-                          </span>
+            <ul className="reward-grid">
+              {visible.map((item, i) => {
+                const tier = tierOf(item.pointsCost);
+                const value = pesoValue(item.name);
+                return (
+                  <li key={item.id} style={{ animationDelay: `${i * 60}ms` }}>
+                    <div
+                      className={`reward-card tone-${CATEGORY_TONE[item.category]} ${item.affordable ? "affordable" : "locked"}`}
+                      data-testid={`reward-card-${item.id}`}
+                    >
+                      <div className="reward-card-art">
+                        <span className={`reward-tier ${tier.toLowerCase()}`}>{tier}</span>
+                        {item.affordable ? (
+                          <span className="reward-ribbon">Unlocked</span>
+                        ) : (
+                          <span className="reward-lock" aria-label="Locked"><Svg d={ICON.lock} /></span>
+                        )}
+                        <span className="reward-card-icon" aria-hidden="true"><Svg d={CATEGORY_ICON[item.category]} /></span>
+                        {value && <span className="reward-card-value">{value}</span>}
+                      </div>
+
+                      <div className="reward-card-body">
+                        <strong className="reward-card-name">{item.name}</strong>
+                        <span className="reward-card-partner">
+                          {item.partnerName} <span className="tag sample-rewards-tag">sample rewards</span>
                         </span>
-                      )}
-                    </span>
-                    <span className="mission-quest-side">
-                      <span className="mission-quest-pts"><span className="coin" aria-hidden="true">★</span>{item.pointsCost} pts</span>
-                      {item.affordable ? (
-                        <button
-                          type="button"
-                          className="primary reward-redeem"
-                          disabled={redeemingId !== null}
-                          onClick={() => setConfirmingItem(item)}
-                        >
-                          I-redeem
-                        </button>
-                      ) : null}
-                    </span>
-                  </div>
-                </li>
-              ))}
+
+                        {!item.affordable && (
+                          <div className="reward-xp" data-testid={`progress-${item.id}`}>
+                            <div className="reward-xp-bar" aria-hidden="true">
+                              <span style={{ width: `${Math.max(item.progressPercent, 4)}%` }} />
+                            </div>
+                            <div className="reward-xp-text">
+                              <span>{item.progressPercent}%</span>
+                              <span>{item.pointsNeeded} pts to go</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="reward-card-foot">
+                          <span className="goal-reward"><span className="coin" aria-hidden="true">★</span>{item.pointsCost}</span>
+                          {item.affordable && (
+                            <button
+                              type="button"
+                              className="primary reward-redeem"
+                              disabled={redeemingId !== null}
+                              onClick={() => setConfirmingItem(item)}
+                            >
+                              I-redeem
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
