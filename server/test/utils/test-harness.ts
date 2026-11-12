@@ -14,7 +14,7 @@ import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
 import { inMemoryOutageSource, type OutageRecord, type OutageSource } from "../../src/bills/outage-source.js";
-import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, EMAIL_SENDER, HOUSEHOLD_LINKS, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
+import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, DAILY_WEATHER_SOURCE, EMAIL_SENDER, HOUSEHOLD_LINKS, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
 import { inMemoryReadingSource, type ReadingSource } from "../../src/smart-meter/reading-source.interface.js";
 import type { HourlyReading } from "../../src/domain/meter-reading.js";
 import type { CoachProvider } from "../../src/coach/coach-provider.interface.js";
@@ -27,6 +27,7 @@ import { InMemoryHouseholdLinkRepository, type HouseholdLink } from "../../src/h
 import type { RawBillReading, RawEnergyLabelReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
 import { FakeWeatherProvider } from "../../src/weather/fake-weather.provider.js";
 import type { WeatherProvider } from "../../src/weather/weather-provider.interface.js";
+import { inMemoryDailyWeatherSource, type DailyTemperature, type DailyWeatherSource } from "../../src/weather/daily-weather-source.interface.js";
 
 /** A small, round-number schedule so expected pesos are easy to check by hand. */
 export function schedule(period: string, perKwh: number, fixed = 50): RateSchedule {
@@ -112,6 +113,9 @@ export interface HarnessOptions {
   vision?: RawBillReading | VisionProvider;
   /** Fake weather observations or a custom weather provider. */
   weather?: WeatherProvider | Record<string, number>;
+  /** Daily heat per SIN, independent of monthly weather and reading fixtures. */
+  dailyWeather?: Record<string, DailyTemperature[]>;
+  dailyWeatherSource?: DailyWeatherSource;
   /** Outage records or custom outage source for brownouts. */
   outages?: OutageRecord[] | OutageSource;
   outageSource?: OutageSource;
@@ -162,6 +166,8 @@ export async function harness(opts: HarnessOptions = {}) {
     .useValue(email)
     .overrideProvider(SIGN_IN_CODE_GENERATOR)
     .useValue(opts.codes ?? (() => TEST_CODE))
+    .overrideProvider(DAILY_WEATHER_SOURCE)
+    .useValue(opts.dailyWeatherSource ?? inMemoryDailyWeatherSource(opts.dailyWeather ?? {}))
     .overrideProvider(AUTH_CLOCK)
     .useValue(opts.clock ?? { now: () => Date.now() })
     .overrideProvider(VISION_PROVIDER)
@@ -191,6 +197,7 @@ export async function harness(opts: HarnessOptions = {}) {
   await app.init();
   open.push(app);
   const server = app.getHttpServer();
+  let cachedToken: string | undefined;
 
   return {
     app,
@@ -210,6 +217,25 @@ export async function harness(opts: HarnessOptions = {}) {
       if (token !== undefined) req.set("Authorization", `Bearer ${token}`);
       const res = await req.send(body as object);
       return { status: res.status, body: res.body as any };
+    },
+    /** POST as the default signed-in test login (owner-a). */
+    async userPost(path: string, body: unknown) {
+      return this.post(path, body, await this.userToken());
+    },
+    /** Upload as the default signed-in test login (owner-a). */
+    async userUpload(path: string, photo?: Buffer, mimeType?: string, fields: Record<string, string> = {}) {
+      return this.upload(path, photo, mimeType, await this.userToken(), fields);
+    },
+    async userToken(): Promise<string> {
+      cachedToken ??= await this.login();
+      return cachedToken;
+    },
+    /** Household Setup's household and routine steps (appliances are saved by the test itself). */
+    async completeSetup(sin: string, token: string) {
+      const household = await this.put(`/api/households/${sin}/setup/household`, { size: 4 }, token);
+      const routine = await this.put(`/api/households/${sin}/setup/routine`, { home: "eveningsWeekends", aircon: "sleeping" }, token);
+      if (household.status !== 200 || routine.status !== 200) throw new Error(`Test setup failed: HTTP ${household.status}/${routine.status}`);
+      return routine.body;
     },
     async put(path: string, body: unknown, token?: string) {
       const req = request(server).put(path);
