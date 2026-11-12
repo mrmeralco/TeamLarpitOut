@@ -278,17 +278,27 @@ export interface CatalogAppliance {
   routine: RoutineKind;
   questions: { key: string; label: string; options: { value: string; label: string }[] }[];
 }
+/** Confirmed label values for one aircon or refrigerator; normalized by the server. */
+export interface EnergyLabelInput {
+  consumptionKwh: number;
+  period: "monthly" | "daily";
+  referenceDays?: number;
+  referenceHoursPerDay?: number;
+  confirmed: true;
+}
 export interface ApplianceInput {
   type: string;
   quantity?: number;
   answers?: Record<string, string>;
   timeRanges?: TimeRange[];
   usesPerWeek?: number;
+  energyLabel?: EnergyLabelInput;
 }
 export interface SavedAppliance extends ApplianceInput {
+  energyLabel?: EnergyLabelInput & { kwhPerHour: number };
   label: string;
   routine: RoutineKind;
-  source: "answers" | "default";
+  source: "label" | "answers" | "default";
   sourceLabel: string;
   hoursPerDay: number | null;
   estimatedKwhPerDay: number;

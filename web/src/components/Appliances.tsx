@@ -261,7 +261,16 @@ export function Appliances({ token, household, onExpired, onSaved }: {
         ]);
         setCatalog(cat.appliances);
         if (mine.saved) {
-          setSaved(mine.appliances.map(({ type, quantity, answers, timeRanges, usesPerWeek }) => ({ type, quantity, answers, timeRanges, usesPerWeek })));
+          setSaved(mine.appliances.map(({ type, quantity, answers, timeRanges, usesPerWeek, energyLabel }) => ({
+            type, quantity, answers, timeRanges, usesPerWeek,
+            ...(energyLabel ? { energyLabel: {
+              consumptionKwh: energyLabel.consumptionKwh,
+              period: energyLabel.period,
+              referenceDays: energyLabel.referenceDays,
+              referenceHoursPerDay: energyLabel.referenceHoursPerDay,
+              confirmed: energyLabel.confirmed,
+            } } : {}),
+          })));
           await loadBreakdown(controller.signal);
         } else {
           setSaved([]);

@@ -36,6 +36,117 @@ async function savedHousehold() {
 
 const byType = (list: any[], type: string) => list.find((a) => a.type === type);
 
+const airconLabel = { consumptionKwh: 270, period: "monthly", referenceDays: 30, referenceHoursPerDay: 9, confirmed: true };
+const refLabel = { consumptionKwh: 30, period: "monthly", referenceDays: 30, confirmed: true };
+
+describe("Confirmed appliance energy labels", () => {
+  it("prefers the label to conflicting answers and normalizes one appliance before multiplying quantity", async () => {
+    const { api, token } = await savedHousehold();
+    const saved = await api.put(`/api/households/${SIN}/appliances`, { appliances: [
+      { ...survey.appliances[0], quantity: 2, energyLabel: { ...airconLabel, kwhPerHour: 999 } },
+      { type: "refrigerator", quantity: 3, answers: { inverter: "yes", size: "large" }, energyLabel: refLabel },
+    ] }, token);
+    expect(saved.status).toBe(200);
+    expect(saved.body.appliances[0]).toMatchObject({
+      energyLabel: { ...airconLabel, kwhPerHour: 1 }, source: "label", sourceLabel: "Mula sa energy label",
+      hoursPerDay: 8, estimatedKwhPerDay: 16,
+    });
+    expect(saved.body.appliances[1]).toMatchObject({
+      energyLabel: refLabel, source: "label", sourceLabel: "Mula sa energy label", estimatedKwhPerDay: 3,
+    });
+    expect(saved.body.appliances[1].energyLabel.kwhPerHour).toBeCloseTo(1 / 24, 12);
+
+    const rows = (await api.get(`/api/households/${SIN}/appliances/breakdown`, token)).body;
+    expect(byType(rows.rows, "aircon")).toMatchObject({ source: "label", estimatedKwh: 16 * 31 });
+    expect(byType(rows.rows, "refrigerator")).toMatchObject({ source: "label", estimatedKwh: 3 * 31 });
+    expect(rows.rows.reduce((s: number, r: any) => s + Math.round(r.kwh * 100), 0)).toBe(23_740);
+    expect(rows.rows.reduce((s: number, r: any) => s + r.pesos, 0)).toBe(261_140);
+    expect(rows.totals).toEqual({ kwh: 237.4, perKwhCharges: 261_140, fixedCharges: 5_000 });
+  });
+
+  it("uses the confirmed reference hours rather than assuming a 9-hour day", async () => {
+    const { api, token } = await savedHousehold();
+    const { status, body } = await api.put(`/api/households/${SIN}/appliances`, { appliances: [
+      { ...survey.appliances[0], energyLabel: { ...airconLabel, referenceHoursPerDay: 6 } },
+      { type: "refrigerator", energyLabel: { consumptionKwh: 1.2, period: "daily", confirmed: true } },
+      { ...survey.appliances[0], energyLabel: { consumptionKwh: 9, period: "daily", referenceHoursPerDay: 9, confirmed: true } },
+    ] }, token);
+    expect(status).toBe(200);
+    expect(body.appliances[0]).toMatchObject({ energyLabel: { kwhPerHour: 1.5 }, estimatedKwhPerDay: 12 });
+    expect(body.appliances[1].estimatedKwhPerDay).toBe(1.2);
+    expect(body.appliances[2]).toMatchObject({ energyLabel: { kwhPerHour: 1 }, estimatedKwhPerDay: 8 });
+  });
+
+  it("round-trips per household, survives editing, and falls back to answers/default when omitted", async () => {
+    const { api, token } = await savedHousehold();
+    await api.put(`/api/households/${SIN}/appliances`, { appliances: [
+      { ...survey.appliances[0], energyLabel: airconLabel },
+      { type: "refrigerator", energyLabel: refLabel },
+    ] }, token);
+    const read = await api.get(`/api/households/${SIN}/appliances`, token);
+    expect(read.body.appliances[0].energyLabel).toEqual({ ...airconLabel, kwhPerHour: 1 });
+    expect(read.body.appliances[1].energyLabel).toMatchObject(refLabel);
+    expect((await api.get(`/api/households/${OTHER_OWN_SIN}/appliances`, token)).body.saved).toBe(false);
+    const edited = read.body.appliances.map((a: any) => ({ ...a, quantity: 2 }));
+    const saved = await api.put(`/api/households/${SIN}/appliances`, { appliances: edited }, token);
+    expect(saved.status).toBe(200);
+    expect(saved.body.appliances[0]).toMatchObject({ energyLabel: airconLabel, estimatedKwhPerDay: 16 });
+    const removed = edited.map(({ energyLabel: _label, ...a }: any) => a);
+    const fallback = await api.put(`/api/households/${SIN}/appliances`, { appliances: removed }, token);
+    expect(fallback.status).toBe(200);
+    expect(fallback.body.appliances[0]).toMatchObject({ source: "answers", sourceLabel: "Tantya mula sa sagot mo", estimatedKwhPerDay: 12.32 });
+    expect(fallback.body.appliances[1]).toMatchObject({ source: "default", sourceLabel: "Hula (default)", estimatedKwhPerDay: 2.2 });
+    expect(fallback.body.appliances.every((a: any) => a.energyLabel === undefined)).toBe(true);
+  });
+
+  it.each([
+    ["unconfirmed", { ...airconLabel, confirmed: false }],
+    ["missing confirmation", { ...airconLabel, confirmed: undefined }],
+    ["string confirmation", { ...airconLabel, confirmed: "true" }],
+    ["incomplete", {}],
+    ["null", null],
+    ["array", []],
+    ["string", "270 kWh"],
+    ["missing consumption", { ...airconLabel, consumptionKwh: undefined }],
+    ["zero consumption", { ...airconLabel, consumptionKwh: 0 }],
+    ["negative consumption", { ...airconLabel, consumptionKwh: -1 }],
+    ["string consumption", { ...airconLabel, consumptionKwh: "270" }],
+    ["non-finite consumption", { ...airconLabel, consumptionKwh: Infinity }],
+    ["wrong units", { ...airconLabel, period: "watts" }],
+    ["missing period", { ...airconLabel, period: undefined }],
+    ["missing days", { ...airconLabel, referenceDays: undefined }],
+    ["zero days", { ...airconLabel, referenceDays: 0 }],
+    ["negative days", { ...airconLabel, referenceDays: -30 }],
+    ["null days", { ...airconLabel, referenceDays: null }],
+    ["missing hours", { ...airconLabel, referenceHoursPerDay: undefined }],
+    ["zero hours", { ...airconLabel, referenceHoursPerDay: 0 }],
+    ["negative hours", { ...airconLabel, referenceHoursPerDay: -9 }],
+    ["hours over a day", { ...airconLabel, referenceHoursPerDay: 25 }],
+    ["null hours", { ...airconLabel, referenceHoursPerDay: null }],
+    ["conflicting daily basis", { ...airconLabel, period: "daily" }],
+    ["overflow", { ...airconLabel, referenceDays: Number.MIN_VALUE }],
+    ["underflow", { ...airconLabel, consumptionKwh: Number.MIN_VALUE }],
+  ])("rejects %s label input without replacing any stored appliances", async (_name, energyLabel) => {
+    const { api, token, saved } = await savedHousehold();
+    const result = await api.put(`/api/households/${SIN}/appliances`, { appliances: [
+      { type: "wifi", quantity: 4 }, { ...survey.appliances[0], energyLabel },
+    ] }, token);
+    expect(result.status).toBe(400);
+    expect((await api.get(`/api/households/${SIN}/appliances`, token)).body).toEqual(saved.body);
+  });
+
+  it("rejects unsupported appliance types and a refrigerator basis shorter than 24 hours", async () => {
+    const { api, token, saved } = await savedHousehold();
+    for (const appliance of [
+      { type: "wifi", energyLabel: refLabel },
+      { type: "refrigerator", energyLabel: { ...refLabel, referenceHoursPerDay: 9 } },
+    ]) {
+      expect((await api.put(`/api/households/${SIN}/appliances`, { appliances: [appliance] }, token)).status).toBe(400);
+    }
+    expect((await api.get(`/api/households/${SIN}/appliances`, token)).body).toEqual(saved.body);
+  });
+});
+
 describe("GET /api/appliances/catalog", () => {
   it("lists the visual questions, each with a 'Hindi ko alam' option", async () => {
     const api = await harness();

@@ -69,6 +69,30 @@ describe("GET /api/households/:sin/target", () => {
 });
 
 describe("GET /api/households/:sin/missions", () => {
+  it("keeps label ratings in hourly aircon and daily refrigerator units for Missions", async () => {
+    const { api, token } = await setup();
+    const saved = await api.put(`/api/households/${SIN}/appliances`, { appliances: [
+      { ...survey.appliances[0], quantity: 2, energyLabel: {
+        consumptionKwh: 270, period: "monthly", referenceDays: 30, referenceHoursPerDay: 9, confirmed: true,
+      } },
+      { type: "refrigerator", quantity: 3, energyLabel: {
+        consumptionKwh: 30, period: "monthly", referenceDays: 30, confirmed: true,
+      } },
+      survey.appliances[5], // Stand fan, 0.06 kW.
+    ] }, token);
+    expect(saved.status).toBe(200);
+    expect(saved.body.appliances.map((a: any) => a.estimatedKwhPerDay)).toEqual([16, 3, 0.24]);
+    const breakdown = (await api.get(`/api/households/${SIN}/appliances/breakdown`, token)).body;
+    const aircon = breakdown.rows.find((r: any) => r.type === "aircon").kwh;
+    const ref = breakdown.rows.find((r: any) => r.type === "refrigerator").kwh;
+    expect(aircon / ref).toBeCloseTo(16 / 3, 2);
+    const { status, body } = await api.get(`/api/households/${SIN}/missions`, token);
+    expect(status).toBe(200);
+    expect(find(body.missions, "aircon-timer-2h").kwhSaved).toBe(Math.round(aircon / 4 * 100) / 100);
+    expect(find(body.missions, "fan-first-hour").kwhSaved).toBe(Math.round((aircon / (8 * 30) - 0.06) * 30 * 100) / 100);
+    expect(find(body.missions, "ref-medium").kwhSaved).toBe(Math.round(ref * 0.1 * 100) / 100);
+  });
+
   it("ranks Missions by their computed peso value", async () => {
     const { api, token } = await setup();
     const { status, body } = await api.get(`/api/households/${SIN}/missions`, token);
