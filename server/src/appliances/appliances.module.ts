@@ -1,6 +1,8 @@
 import { Module } from "@nestjs/common";
 import { BillsModule } from "../bills/bills.module.js";
-import { APPLIANCE_REPOSITORY } from "../common/injection-tokens.js";
+import { APPLIANCE_REPOSITORY, DATABASE } from "../common/injection-tokens.js";
+import type { Sql } from "../database/database.module.js";
+import { PgApplianceRepository } from "../database/pg-appliance.repository.js";
 import { HouseholdsModule } from "../households/households.module.js";
 import { RateSchedulesModule } from "../rate-schedules/rate-schedules.module.js";
 import { WeatherModule } from "../weather/weather.module.js";
@@ -17,6 +19,6 @@ import { AirconPatternService } from "./aircon-pattern.service.js";
   imports: [HouseholdsModule, BillsModule, RateSchedulesModule, WeatherModule, VisionModule, SmartMeterModule],
   controllers: [ApplianceCatalogController, AppliancesController],
   exports: [AppliancesService, AirconPatternService],
-  providers: [AppliancesService, ApplianceLabelScanService, AirconPatternService, { provide: APPLIANCE_REPOSITORY, useFactory: () => new InMemoryApplianceRepository() }],
+  providers: [AppliancesService, ApplianceLabelScanService, AirconPatternService, { provide: APPLIANCE_REPOSITORY, inject: [DATABASE], useFactory: (db: Sql | null) => (db ? new PgApplianceRepository(db) : new InMemoryApplianceRepository()) }],
 })
 export class AppliancesModule {}
