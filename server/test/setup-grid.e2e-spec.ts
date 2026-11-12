@@ -60,6 +60,54 @@ describe("Household Setup: tap grid and one routine", () => {
     expect(done.body).toMatchObject({ complete: true, routine: { aircon: null } });
   });
 
+  describe("editing appliances after setup is complete", () => {
+    const types = (list: { type: string; quantity: number }[]) => list.map((a) => [a.type, a.quantity]);
+    const step = (body: { steps: { key: string; done: boolean }[] }, key: string) => body.steps.find((s) => s.key === key)!.done;
+
+    it("changing counts replaces the list; setup stays complete and Welcome Points are not granted again", async () => {
+      const { api, token } = await start();
+      await api.put(`${setup}/appliances`, { counts: { aircon: 1, refrigerator: 1, electric_fan: 2, tv: 1 } }, token);
+      await api.put(`${setup}/routine`, { home: "allDay", aircon: "sleeping" }, token);
+
+      const edit = await api.put(`${setup}/appliances`, { counts: { aircon: 1, refrigerator: 1, electric_fan: 3, computer: 1 } }, token);
+      expect(edit.status).toBe(200);
+      expect(edit.body).toMatchObject({ complete: true, doneCount: 3, grid: { aircon: 1, refrigerator: 1, electric_fan: 3, computer: 1 }, routine: { aircon: "sleeping" } });
+      const list = (await api.get(`/api/households/${SIN}/appliances`, token)).body.appliances;
+      expect(types(list)).toEqual([["aircon", 1], ["refrigerator", 1], ["electric_fan", 3], ["computer", 1], ["lights", 1]]);
+      expect(list.find((a: { type: string }) => a.type === "aircon").hoursPerDay).toBe(8);
+      const points = await api.get(`/api/households/${SIN}/points`, token);
+      expect(points.body.history.filter((e: { source: string }) => e.source === "welcome")).toHaveLength(1);
+    });
+
+    it("removing the aircon clears its schedule and keeps every step done", async () => {
+      const { api, token } = await start();
+      await api.put(`${setup}/appliances`, { counts: { aircon: 1, refrigerator: 1 } }, token);
+      await api.put(`${setup}/routine`, { home: "allDay", aircon: "mostOfDay" }, token);
+
+      const edit = await api.put(`${setup}/appliances`, { counts: { refrigerator: 1, electric_fan: 1 } }, token);
+      expect(edit.body).toMatchObject({ complete: true, hasAircon: false, routine: { home: "allDay", aircon: null } });
+      expect(step(edit.body, "routine")).toBe(true);
+      const list = (await api.get(`/api/households/${SIN}/appliances`, token)).body.appliances;
+      expect(list.map((a: { type: string }) => a.type)).not.toContain("aircon");
+    });
+
+    it("adding an aircon leaves the routine step open until its schedule is answered", async () => {
+      const { api, token } = await start();
+      await api.put(`${setup}/appliances`, { counts: { refrigerator: 1 } }, token);
+      await api.put(`${setup}/routine`, { home: "eveningsWeekends" }, token);
+
+      const edit = await api.put(`${setup}/appliances`, { counts: { refrigerator: 1, aircon: 1 } }, token);
+      // Still complete (Missions stay unlocked), but the routine step asks for the aircon's schedule.
+      expect(edit.body).toMatchObject({ complete: true, hasAircon: true, routine: { aircon: null } });
+      expect(step(edit.body, "routine")).toBe(false);
+
+      const answered = await api.put(`${setup}/routine`, { home: "eveningsWeekends", aircon: "sleeping" }, token);
+      expect(step(answered.body, "routine")).toBe(true);
+      const aircon = (await api.get(`/api/households/${SIN}/appliances`, token)).body.appliances.find((a: { type: string }) => a.type === "aircon");
+      expect(aircon.hoursPerDay).toBe(8);
+    });
+  });
+
   it.each([
     [{ counts: {} }], [{ counts: { aircon: 0 } }], [{ counts: { jacuzzi: 1 } }], [{ counts: { tv: 10 } }],
     [{ counts: { tv: 1.5 } }], [{ counts: { tv: -1 } }], [{}],

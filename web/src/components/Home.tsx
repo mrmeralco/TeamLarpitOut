@@ -174,12 +174,18 @@ function ChargesBreakdown({ data, onAsk }: { data: HomeSummary; onAsk?: (line: H
 }
 
 /** Where the Bill's kWh went, by appliance; shown only after the appliances are set up. */
-function AppliancesCard({ data }: { data: ApplianceBreakdown }) {
+function AppliancesCard({ data, onEdit }: { data: ApplianceBreakdown; onEdit?: () => void }) {
   const rows = [...data.rows].sort((a, b) => b.kwh - a.kwh);
   const top = rows[0]?.share || 1;
   return (
     <div className="card appliances-card">
-      <div className="usage-head"><h3>Your appliances</h3><span className="muted small">{month(data.bill.period)} bill · {Math.round(data.bill.kwh)} kWh</span></div>
+      <div className="usage-head">
+        <h3>Your appliances</h3>
+        <span className="usage-head-side">
+          <span className="muted small">{month(data.bill.period)} bill · {Math.round(data.bill.kwh)} kWh</span>
+          {onEdit && <button type="button" className="edit-link" onClick={onEdit}>Edit</button>}
+        </span>
+      </div>
       <ul className="appliance-bars">
         {rows.map((r) => (
           <li key={r.index}>
@@ -210,10 +216,12 @@ export const clearHomeCache = () => homeCache.clear();
  * Meralco charge grouped by who gets the money. The bill's full story opens as "Wrapped".
  * Parent keys it by session and SIN.
  */
-export function Home({ token, household, onExpired, onAskCharge, onSave, saveCard, setup }: {
+export function Home({ token, household, onExpired, onAskCharge, onSave, onEditAppliances, saveCard, setup }: {
   token: string;
   household: Household;
   onExpired: () => void;
+  /** "Edit" on the appliances card → the tap grid in edit mode. */
+  onEditAppliances?: () => void;
   /** Opens the charge chat for one line (#50). */
   onAskCharge?: (line: HomeChargeLine, summary: HomeSummary) => void;
   /** "Want to save on your next bill?" in the bill's Wrapped → Eelio's onboarding in Missions (#51). */
@@ -338,7 +346,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
 
       <div className="dash-wide">
         <ChargesBreakdown data={data} onAsk={(line) => onAskCharge?.(line, data)} />
-        {appliances && <AppliancesCard data={appliances} />}
+        {appliances && <AppliancesCard data={appliances} onEdit={onEditAppliances} />}
       </div>
 
       {playing && (

@@ -159,7 +159,8 @@ export function App() {
       <main>
         {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
         {tab === "home" && <>
-          <Home key={`home:${key}`} token={session.token} household={selected} onExpired={onExpired} onSave={() => go("missions", "save")}
+          <Home key={`home:${key}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} onSave={() => go("missions", "save")}
+            onEditAppliances={() => go("missions", "setup", "appliances", "home")}
             saveCard={setup?.complete ? <PlanSummaryCard token={session.token} sin={selected.sin} onOpen={() => go("missions")} /> : undefined}
             setup={setup}
             onAskCharge={(line, summary) => setAsking({
@@ -170,12 +171,12 @@ export function App() {
             previousMonth={asking.previousMonth} onClose={() => setAsking(null)} onExpired={onExpired} />}
         </>}
         {tab === "missions" && <MissionsTab token={session.token} household={selected} sub={route.sub} go={go}
-          setup={setup} onSetup={(s) => { setSetup(s); setApplianceVersion((v) => v + 1); }} onExpired={onExpired}
-          appliancesStep={(done, back) => setup && <SetupAppliances token={session.token} sin={selected.sin} status={setup} onSaved={done} onBack={back} onExpired={onExpired} />}
+          setup={setup} onSetup={(s) => { setSetup(s); clearPlanCache(); setApplianceVersion((v) => v + 1); }} onExpired={onExpired}
+          appliancesStep={(done, back, editing) => setup && <SetupAppliances token={session.token} sin={selected.sin} status={setup} mode={editing ? "edit" : "setup"} onSaved={done} onBack={back} onExpired={onExpired} />}
           routineAgreement={(aircon) => <AirconAgreement token={session.token} sin={selected.sin} aircon={aircon} />}>
           <MissionPlan key={`plan:${key}:${applianceVersion}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired}
             missionId={route.sub[0] === "m" ? route.sub[1] : undefined} onOpen={(id) => go("missions", "m", id)} onBack={() => go("missions")}
-            onRewards={() => go("rewards")} />
+            onRewards={() => go("rewards")} onEditAppliances={() => go("missions", "setup", "appliances")} />
         </MissionsTab>}
         {tab === "rewards" && <Rewards key={`rewards:${key}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => { clearPlanCache(); setRewardsVersion((v) => v + 1); }} />}
         {tab === "leaderboards" && <Leaderboards key={`lb:${key}:${applianceVersion}:${rewardsVersion}`} token={session.token} household={selected} setup={setup} />}
