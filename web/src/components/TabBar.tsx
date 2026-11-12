@@ -11,7 +11,7 @@ const LABELS: Record<Tab, string> = { home: "Home", missions: "Missions", reward
 export function TabBar({ tab, onLogout }: { tab: Tab; onLogout?: () => void }) {
   return <nav className="tabbar" aria-label="Main">
     <div className="tabbar-brand" aria-hidden="true">
-      <span className="brand-mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></svg></span>
+      <span className="brand-mark"><img src="/icon-192.png" alt="" /></span>
       Eelio
     </div>
     {(Object.keys(LABELS) as Tab[]).map((t) => (

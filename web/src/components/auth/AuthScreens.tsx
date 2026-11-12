@@ -22,7 +22,7 @@ export const BackButton = ({ onClick, label = "Back" }: { onClick: () => void; l
 export { ICON };
 
 function Brand() {
-  return <div className="brand"><span className="brand-mark"><Icon d={ICON.bolt} width={2.2} /></span>Eelio</div>;
+  return <div className="brand"><span className="brand-mark"><img src="/icon-192.png" alt="" /></span>Eelio</div>;
 }
 
 const message = (err: unknown, fallback: string) => (err instanceof Error ? err.message : fallback);

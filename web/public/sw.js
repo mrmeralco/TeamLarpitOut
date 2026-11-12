@@ -3,7 +3,7 @@
 const CACHE = "kuryenteko-shell-v1";
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/", "/manifest.webmanifest", "/icon.svg"])));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/", "/manifest.webmanifest", "/icon.svg", "/icon-192.png", "/icon-512.png", "/favicon.png"])));
   self.skipWaiting();
 });
 
