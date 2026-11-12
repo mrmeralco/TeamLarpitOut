@@ -14,7 +14,7 @@ const eligible = { lifelineEligible: true };
 describe("lifeline line", () => {
   it("shows the discount gained when usage drops under the threshold, and still reconciles", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bakit-ganito", {
+    const { body } = await api.userPost("/api/bakit-ganito", {
       before: { ...bill("2026-09", 150, 30), ...eligible }, // ₱1,550, no discount
       now: { ...bill("2026-10", 90, 30), ...eligible }, //     ₱1,040 − 20% × ₱990 = ₱842
     });
@@ -30,7 +30,7 @@ describe("lifeline line", () => {
 
   it("shows the discount lost when usage crosses above the threshold", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bakit-ganito", {
+    const { body } = await api.userPost("/api/bakit-ganito", {
       before: { ...bill("2026-09", 40, 30), ...eligible }, // ₱450 − 50% × ₱400 = ₱250
       now: { ...bill("2026-10", 120, 30), ...eligible }, //  ₱1,370, no discount
     });
@@ -41,7 +41,7 @@ describe("lifeline line", () => {
 
   it("is absent for a household not registered for lifeline, even under the threshold", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bakit-ganito", {
+    const { body } = await api.userPost("/api/bakit-ganito", {
       before: bill("2026-09", 150, 30),
       now: bill("2026-10", 40, 30),
     });
@@ -51,7 +51,7 @@ describe("lifeline line", () => {
 
   it("is absent when neither Bill gets a discount", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bakit-ganito", {
+    const { body } = await api.userPost("/api/bakit-ganito", {
       before: { ...bill("2026-09", 150, 30), ...eligible },
       now: { ...bill("2026-10", 180, 30), ...eligible },
     });
@@ -62,7 +62,7 @@ describe("lifeline line", () => {
 describe("catch-up line", () => {
   it("separates last month's under-estimate from this month's usage (estimated then actual)", async () => {
     const api = await harness({ schedules: [schedule("2026-09", 10), schedule("2026-10", 10)] });
-    const { body } = await api.post("/api/bakit-ganito", {
+    const { body } = await api.userPost("/api/bakit-ganito", {
       before: { ...bill("2026-09", 150, 30), estimated: true }, // estimated low
       now: bill("2026-10", 250, 30), //                           actual reading catches up
     });
@@ -70,7 +70,7 @@ describe("catch-up line", () => {
     // 400 kWh over 60 days → 200 + 200. 50 kWh of this Bill belong to September.
     expect(line(body, "catchUp")).toEqual({
       key: "catchUp",
-      label: "Catch-up mula sa tantyang Bill",
+      label: "Catch-up from an estimated Bill",
       amount: 100_000,
       kwh: 50,
     });
@@ -82,7 +82,7 @@ describe("catch-up line", () => {
 
   it("is negative when last month was over-estimated", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bakit-ganito", {
+    const { body } = await api.userPost("/api/bakit-ganito", {
       before: { ...bill("2026-09", 300, 30), estimated: true },
       now: bill("2026-10", 160, 32),
     });
@@ -97,7 +97,7 @@ describe("catch-up line", () => {
       [bill("2026-09", 200, 30), { ...bill("2026-10", 240, 32), estimated: true }],
       [bill("2026-09", 200, 30), bill("2026-10", 240, 32)],
     ]) {
-      const { body } = await api.post("/api/bakit-ganito", { before: b, now: n });
+      const { body } = await api.userPost("/api/bakit-ganito", { before: b, now: n });
       expect(body.lines).toEqual([]);
       expect(body.habitMeasurable).toBe(true);
     }
@@ -111,7 +111,7 @@ describe("catch-up line", () => {
       [18, 64.5],
       [88.8, 101],
     ]) {
-      const { body } = await api.post("/api/bakit-ganito", {
+      const { body } = await api.userPost("/api/bakit-ganito", {
         before: { ...bill("2026-09", kb!, 29), estimated: true, ...eligible },
         now: { ...bill("2026-10", kn!, 33), ...eligible },
       });
@@ -131,11 +131,11 @@ describe("credits, refunds, adjustments and prior balances", () => {
 
   it("are listed separately and never change the four effects", async () => {
     const api = await harness();
-    const plain = await api.post("/api/bakit-ganito", {
+    const plain = await api.userPost("/api/bakit-ganito", {
       before: bill("2026-09", 200, 30, charges(1200, 800)),
       now: bill("2026-10", 240, 32, charges(1584, 1056)),
     });
-    const withExtras = await api.post("/api/bakit-ganito", {
+    const withExtras = await api.userPost("/api/bakit-ganito", {
       before: bill("2026-09", 200, 30, [...charges(1200, 800), { label: "Bill Deposit Refund", amount: -100 }]),
       now: bill("2026-10", 240, 32, [
         ...charges(1584, 1056),
@@ -159,7 +159,7 @@ describe("credits, refunds, adjustments and prior balances", () => {
 
   it("reconcile with the effects to the real printed change", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bakit-ganito", {
+    const { body } = await api.userPost("/api/bakit-ganito", {
       before: bill("2026-09", 200, 30, charges(1200, 800)),
       now: bill("2026-10", 240, 32, [...charges(1584, 1056), { label: "Previous Balance", amount: 500 }]),
     });
@@ -170,7 +170,7 @@ describe("credits, refunds, adjustments and prior balances", () => {
 
   it("leave nothing extra when there are none (lines appear only when they apply)", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bakit-ganito", {
+    const { body } = await api.userPost("/api/bakit-ganito", {
       before: bill("2026-09", 200, 30),
       now: bill("2026-10", 240, 32),
     });

@@ -1,8 +1,8 @@
 # Eelio · Team LarpItOut
 
-*Bakit ganito ang bill ko?* A phone-first PWA that explains why a household's Meralco Bill changed, split exactly into Rate, Billing Days, Weather and Habit Effects, with **Eelio** as the household's electric eel bill and usage companion.
+*Why is my bill like this?* A phone-first PWA that explains why a household's Meralco Bill changed, split exactly into Rate, Billing Days, Weather and Habit Effects, with **Eelio** as the household's electric eel bill and usage companion.
 
-Plan: [`docs/challenge-2/KuryenteKo.md`](docs/challenge-2/KuryenteKo.md) · Mascot & Brand: [`docs/mascot/mascot-branding-eelio.md`](docs/mascot/mascot-branding-eelio.md) · Vocabulary: [`GLOSSARY.md`](GLOSSARY.md) · Decisions: [`docs/adr/`](docs/adr/) (ADR-0001 to ADR-0004) · Challenge: [`docs/challenge-2/Challenge-2-Official-Description.md`](docs/challenge-2/Challenge-2-Official-Description.md). Copied from the planning repo `99lash/meralco-idol-2026` on 2026-11-12; update both when the plan changes.
+Plan: [`docs/challenge-2/KuryenteKo.md`](docs/challenge-2/KuryenteKo.md) · Mascot & Brand: [`docs/mascot/mascot-branding-eelio.md`](docs/mascot/mascot-branding-eelio.md) · Vocabulary: [`GLOSSARY.md`](GLOSSARY.md) · Decisions: [`docs/adr/`](docs/adr/) (ADR-0001 to ADR-0007) · Challenge: [`docs/challenge-2/Challenge-2-Official-Description.md`](docs/challenge-2/Challenge-2-Official-Description.md). Copied from the planning repo `99lash/meralco-idol-2026` on 2026-11-12; update both when the plan changes.
 
 ## Layout
 
@@ -15,8 +15,8 @@ server/src/
   data/rate-schedules.json                 the one Rate Schedule table (SAMPLE values; replace with real Bill lines)
   rate-schedules/                          GET /api/rate-schedules
   bills/                                   Bill DTOs and the Household Bill source
-  bill-change/                             "Bakit ganito?"  POST /api/bakit-ganito, GET /api/households/:sin/bakit-ganito
-  bill-breakdown/                          "Ano'ng laman?"  POST /api/bills/laman
+  bill-change/                             "Why this bill?"  POST /api/bakit-ganito, GET /api/households/:sin/bakit-ganito
+  bill-breakdown/                          "What's on my bill?"  POST /api/bills/laman
   bill-scan/                               bill photo -> draft  POST /api/bills/scan
   vision/                                  VisionProvider interface + Gemini provider
   health/                                  GET /api/health
@@ -50,20 +50,31 @@ pnpm typecheck
 
 ## API
 
+- `POST /api/auth/email/start` `{ email }` → `202 { sent, expiresInSeconds }`: sends a 6-digit code (demo sender logs only the code; `AUTH_FIXED_CODE` makes every code that value). Same answer for every email.
+- `POST /api/auth/email/verify` `{ email, code }` → `{ token }`, or `401` for a wrong, used or expired (10 min) code. Codes are stored hashed and work once; 5 wrong tries lock the code until a new start. A new login has no Households until one is linked.
+- `POST /api/auth/logout` (Bearer token) → `204`, revokes the session.
+- `GET  /api/households` (Bearer token) → the login's active Households.
+- `POST /api/households/link` `{ can }` (Bearer token) → masked summary `{ status: "pending", canMasked, area, meterType, billsOnRecord, firstPeriod, lastPeriod }` (never amounts, kWh or the address); `409` when another login holds the active link, `404` unknown CAN. `GET /api/households/link` → `{ pending }`.
+- Account Linking: a signed-in `POST /api/bills/scan` reads the Bill's CAN and adds `link`: `active` when it matches the pending CAN, `pending` with reason `differentAccount` or `canUnread`, or `refused`. When the CAN was unread, `POST /api/households/link/confirm` `{ scanToken, can }` checks the CAN typed from the Bill. Until the link is active every per-Household route returns `403`.
 - `GET  /api/rate-schedules` → `{ periods }`
-- `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` → effects, total (centavos)
-- `POST /api/bills/laman` `{ now: Bill, before?: Bill }` → grouped charge lines, pass-through vs Meralco distribution split
-- `POST /api/bills/check` `{ now: Bill, before?: Bill, tolerancePesos?: number, payments?: PaymentRecord[] }` → Bill Checks ("Tama ba ito?"): line sum, reading continuity, rate schedule fidelity, payment reflection (overall green / red, disagreeing figures, copyable summary)
+- `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` (Bearer token) → effects, total (centavos)
+- `POST /api/bills/laman` `{ now: Bill, before?: Bill }` (Bearer token) → grouped charge lines, pass-through vs Meralco distribution split
+- `POST /api/bills/check` (Bearer token) `{ now: Bill, before?: Bill, tolerancePesos?: number, payments?: PaymentRecord[] }` → Bill Checks ("Is it right?"): line sum, reading continuity, rate schedule fidelity, payment reflection (overall green / red, disagreeing figures, copyable summary)
 - `GET  /api/households/:sin/check` → same Bill Checks for a Household's latest Bill in the Bill source
-- `POST /api/bills/scan` (multipart, field `photo`) → editable draft: `now`, `before` (from printed history), `missing`, `estimated`, masked Service ID Number. `422` unreadable, `503` no vision key. Nothing is used until the PWA confirms and posts to `/api/bakit-ganito`.
+- `POST /api/bills/scan` (Bearer token, multipart, field `photo`) → editable draft: `now`, `before` (from printed history), `missing`, `estimated`, masked Service ID Number and CAN, and `link` (Account Linking). `401` signed out, `422` unreadable, `503` no vision key. There is no anonymous scan: sign-in comes first (ADR-0005).
 - `POST /api/households/:sin/appliances/scan-label` (authenticated multipart, fields `photo` and `type`: `aircon` or `refrigerator`) → editable energy-label draft; see below.
+- `GET  /api/households/:sin/home` → the Home tab: amount due, badge, masked CAN, the four effects with `addsUp`, and `chargeLines` (`featured`: Generation, Distribution, System loss, Transmission, Taxes; `all`: every printed line with a stable `id`, amount, change vs. last month and `goesTo`).
+- `POST /api/households/:sin/charges/:lineId/ask` `{ question }` → `{ lineId, kind: answer | askMeralco | redirect, source: ai | template, answer, summary? }`. Stateless charge chat: code builds that one line's facts (amounts, kWh, per-kWh rate, usage vs rate split, payee, Bill Check result); the coach provider sees only those facts and the question. Any ₱ or kWh figure not in the facts falls back to the template answer; complaint questions get "Ask Meralco" and the copyable summary; off-topic questions are redirected.
+- `GET  /api/households/:sin/setup` → Household Setup checklist (`household`, `appliances`, `routine`), `complete`, `welcomePoints { points, granted, locked }`. `PUT .../setup/household` `{ size }` and `PUT .../setup/routine` `{ home, aircon }` (aircon only when the home has one). Finishing grants 100 Welcome Points once per Household; they show in the balance as `lockedPoints` until the first Verified Savings, and `PUT .../usage-plan` returns `409` until setup is complete.
+- Household Setup by tap grid and one routine (ADR-0006): `PUT .../setup/appliances` `{ counts: { aircon: 1, electric_fan: 2, … } }` writes typical-value appliances (plus lights) from the grid; `PUT .../setup/routine` maps "someone home" and "aircon on" presets to hours per appliance (`domain/routine-presets.ts`); calibration to the Bill's kWh is unchanged. `POST .../setup/aircon-photo` (multipart `photo`) estimates the aircon's size, tagged "Estimated from photo". `GET .../setup/aircon-check?aircon=sleeping` compares the pick with the 12-bill estimate (traditional) or the smart meter pattern. Detailed appliance editing and the DOE label scan stay under Account → Appliances and are never overwritten by a later routine change.
+- 5% Mission Plan (ADR-0007): `GET .../missions/plan` (after Household Setup, else `409`) → `{ goal: { cut: 5, kwh, pesos }, covered, coveredPercent, source: ai | fallback, missions: [{ id, title, why, how, percent, share, kwhSaved, pesoValue, effort, basis, assumptions }] }`. Code computes every candidate (`domain/mission-plan.ts`); the coach provider gets only the candidates and may return up to five ids plus wording. Unknown ids, repeated habits, invented figures or a plan short of 5% (when reachable) fall back to a greedy, appliance-mixed pick. `POST .../missions/plan/shuffle` asks for another combination; `POST .../missions/:id/swap` replaces one and keeps the others. `GET .../target` now offers only the 5% option; Points stay on the whole Bill.
 - `GET  /api/households/:sin/bakit-ganito` → same, from the Household's two latest Bills in the Bill source
 
 `Bill = { period: "YYYY-MM", kwh, billingDays, chargeLines?: [{ label, amount }] }`
 
 ### DOE energy labels
 
-In the appliance survey, aircon and refrigerator cards offer photo upload/capture. Review the stated kWh, its daily/monthly period, and its reference basis, then choose **Tama, gamitin ang energy label**. This changes only the local survey; the existing **I-save** action persists it. Retaking or cancelling a scan keeps any previously confirmed value. Removing a label restores visual answers or the default estimate. Unconfirmed drafts never enter the save payload.
+In the appliance survey, aircon and refrigerator cards offer photo upload/capture. Review the stated kWh, its daily/monthly period, and its reference basis, then choose **Correct, use the energy label**. This changes only the local survey; the existing **Save** action persists it. Retaking or cancelling a scan keeps any previously confirmed value. Removing a label restores visual answers or the default estimate. Unconfirmed drafts never enter the save payload.
 
 The scan endpoint uses the existing session and Household membership guards. Upload a JPEG, PNG, WebP, HEIC, or HEIF photo of at most 10 MiB. Successful responses use `Cache-Control: no-store` and contain:
 
@@ -172,15 +183,10 @@ The bounded analysis ends at the reading source's advertised end and looks back 
 
 At least seven nights must share the same window, covering at least 70% of complete frames. Daily temperatures are joined by Manila date across midnight and averaged over the proposed hours. At least seven paired nights, at least 1°C of heat variation, a slope of at least 0.02 kW/°C, and correlation of at least 0.5 are required. These are project heuristics for a tentative question, not validated appliance identification. Daily heat is independently injectable through `DAILY_WEATHER_SOURCE`; its default mock uses the same invented climate as the simulated readings. Synthetic readings are never paired with observed weather.
 
-In the smart Household's appliance survey, add one aircon to see **“Aircon ba ito?”** when evidence supports a proposal. **Oo** fills the returned window into the local routine editor. **Hindi** opens manual routine questions without adopting the proposal. Use the existing **I-save** action to persist. Previously entered or saved routines stay intact; **Tingnan ang pattern sa smart meter** explicitly requests a new suggestion. Multiple aircon cards use individual manual routines because attribution would be ambiguous. Missing evidence and reading failures leave manual entry usable. The current readings and temperatures are labeled as simulated.
+In the smart Household's appliance survey, add one aircon to see **“Is this the aircon?”** when evidence supports a proposal. **Yes** fills the returned window into the local routine editor. **No** opens manual routine questions without adopting the proposal. Use the existing **Save** action to persist. Previously entered or saved routines stay intact; **Check the smart meter pattern** explicitly requests a new suggestion. Multiple aircon cards use individual manual routines because attribution would be ambiguous. Missing evidence and reading failures leave manual entry usable. The current readings and temperatures are labeled as simulated.
 
 Changing the rating answers, quantity, or confirmed label cancels an outstanding suggestion. Card removal, Household/session changes, logout, and manual entry also cancel it; delayed results are ignored. The traditional-meter Bill History proposal, Bill calibration, Missions, and Points keep their existing behavior. Tests use independent reading and daily-weather fakes and exercise confirmation/save/reopen, rejection/manual entry, errors, expiry, and delayed-response isolation. No database migration or new network service is required.
 
-### Scan linkage
+### Account Linking
 
-A successful public `POST /api/bills/scan` now includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized Service ID Number is retained server-side, with a maximum of 1,000 active references; no photo or scanned Bill is saved. Complete ten-digit identifiers are required for matching; whitespace and hyphens are accepted. Missing or partial identifiers cannot identify a Household.
-
-- `POST /api/bills/scan-linkage` `{ scanToken }`, with `Authorization: Bearer <login token>`, returns `{ status: "linked", householdSin }`, `{ status: "unlinked" }` or `{ status: "unknown" }`.
-- Matching uses the full identifier and the current login's linked Households, never a masked suffix or a client-supplied SIN. Invalid input returns 400; missing/expired login returns 401; expired or unknown references return the same 404. A scan reference cannot be used as a login token.
-- The PWA resolves linkage after the existing “Tama ba?” confirmation, including when login happens after the scan. Unlinked Bills keep their quick verdict with “Hindi naka-link ang account na ito sa My Meralco mo.” A linked scan offers its matching Household explicitly; it never automatically saves or assigns a Bill. Choosing another linked Household in the picker separately opens that Household's own history.
-- `pnpm test` runs the backend HTTP suite plus frontend DOM tests for login, stale responses, Household switching, logout, expiry, errors and scan linkage. Manual browser verification requires a connected browser.
+A signed-in `POST /api/bills/scan` includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized CAN printed on the Bill is retained server-side (at most 1,000 active references); no photo or scanned Bill is saved. Complete ten-digit CANs are required; whitespace and hyphens are accepted. The scan activates the login's pending link only when the CAN matches; a scan reference is never a login token. The old `POST /api/bills/scan-linkage` and the anonymous quick verdict were removed with ADR-0005.

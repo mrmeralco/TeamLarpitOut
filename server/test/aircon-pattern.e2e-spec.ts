@@ -4,9 +4,9 @@ import { MockReadingSource } from "../src/smart-meter/mock-reading-source.provid
 import { inMemoryReadingSource } from "../src/smart-meter/reading-source.interface.js";
 import { MockDailyWeatherProvider } from "../src/weather/mock-daily-weather.provider.js";
 import { inMemoryDailyWeatherSource } from "../src/weather/daily-weather-source.interface.js";
-import { mockMyMeralcoSource } from "../src/bills/myMeralcoSource.js";
+import { ownerIdForEmail } from "../src/auth/auth.service.js";
 import { patternFixture } from "./utils/aircon-pattern-fixture.js";
-import { bill, harness, testLogins } from "./utils/test-harness.js";
+import { bill, harness, testAccounts, testLogins } from "./utils/test-harness.js";
 
 const SMART = "9876543210";
 const path = (sin = SMART) => `/api/households/${sin}/appliances/aircon-pattern-proposal`;
@@ -30,8 +30,8 @@ describe("POST aircon-pattern-proposal", () => {
     expect(response.body).toMatchObject({ status: "proposal", canPropose: true, timeZone: "Asia/Manila", hours: 8,
       routine: { start: "21:00", end: "05:00", days: "everyday" },
       provenance: { readings: { kind: "synthetic" }, weather: { kind: "synthetic" } } });
-    expect(response.body.prompt).toContain("mula 9 PM hanggang 5 AM");
-    expect(response.body.prompt).toContain("Aircon ba ito?");
+    expect(response.body.prompt).toContain("from 9 PM to 5 AM");
+    expect(response.body.prompt).toContain("Is this the aircon?");
     expect(source.readings).toHaveBeenCalledWith(SMART, fixture.range);
     expect(daily.daily).toHaveBeenCalledWith(SMART, { from: "2026-11-01", to: "2026-11-16" });
     expect((await api.get(`/api/households/${SMART}/appliances`, token)).body.saved).toBe(false);
@@ -68,7 +68,7 @@ describe("POST aircon-pattern-proposal", () => {
     expect((await api.post(path(), {}, "invalid")).status).toBe(401);
     for (const sin of ["5555555555", "unknown"]) expect((await api.post(path(sin), {}, token)).status).toBe(404);
     expect((await api.post(path("1234567890"), {}, token)).status).toBe(422);
-    const foreign = await api.login("owner-b@example.test", "test-password-b");
+    const foreign = await api.login("owner-b@example.test");
     expect((await api.post(path(), {}, foreign)).status).toBe(404);
     expect(source.describe).not.toHaveBeenCalled();
     expect(daily.daily).not.toHaveBeenCalled();
@@ -91,30 +91,30 @@ describe("POST aircon-pattern-proposal", () => {
   it("rechecks current membership and server Meter Type, and rejects expired sessions", async () => {
     const memory = inMemoryReadingSource();
     const describe = vi.fn(memory.describe);
-    const base = mockMyMeralcoSource(testLogins);
     let meterType: "smart" | "traditional" = "traditional";
-    let linked = true;
     let now = 0;
-    const api = await harness({ readingSource: { describe, readings: memory.readings }, clock: { now: () => now }, myMeralco: {
-      login: base.login,
-      households: async () => linked ? [{ sin: SMART, masked_address: "••• City", meter_type: meterType }] : [],
+    const account = () => ({ can: "1000000002", sin: SMART, area: "City", meter_type: meterType });
+    const api = await harness({ readingSource: { describe, readings: memory.readings }, clock: { now: () => now }, meralco: {
+      findByCan: async () => account(),
+      household: async (sin) => (sin === SMART ? account() : null),
     } });
     const token = await api.login();
     expect((await api.post(path(), { meter_type: "smart" }, token)).status).toBe(422);
-    meterType = "smart"; linked = false;
+    meterType = "smart";
+    const link = (await api.links.forOwner(ownerIdForEmail(testLogins[0]!.email))).find((l) => l.sin === SMART)!;
+    await api.links.remove(link.ownerId, SMART);
     expect((await api.post(path(), {}, token)).status).toBe(404);
-    linked = true; now = 60 * 60 * 1000;
+    await api.links.save(link); now = 60 * 60 * 1000;
     expect((await api.post(path(), {}, token)).status).toBe(401);
     expect(describe).not.toHaveBeenCalled();
   });
 
   it("isolates proposal evidence between two linked smart Households", async () => {
     const second = "1111111111";
-    const accounts = structuredClone(testLogins);
-    accounts[0]!.households.push({ sin: second, masked_address: "••• Other City", meter_type: "smart" });
+    const accounts = [...testAccounts, { can: "1000000011", sin: second, area: "Other City", meter_type: "smart" as const }];
     const fixture = patternFixture();
     const nonmatching = patternFixture({ step: () => 0.4 });
-    const api = await harness({ myMeralco: mockMyMeralcoSource(accounts),
+    const api = await harness({ accounts, links: { [testLogins[0]!.email]: [SMART, second] },
       readings: { [SMART]: fixture.rows, [second]: nonmatching.rows },
       dailyWeather: { [SMART]: fixture.weather, [second]: nonmatching.weather } });
     const token = await api.login();

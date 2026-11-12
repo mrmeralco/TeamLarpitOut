@@ -1,59 +1,106 @@
-import { describe, expect, it } from "vitest";
-import { mockMyMeralcoSource } from "../src/bills/myMeralcoSource.js";
-import { bill, harness, testLogins } from "./utils/test-harness.js";
+import { describe, expect, it, vi } from "vitest";
+import { ownerIdForEmail } from "../src/auth/auth.service.js";
+import { LogEmailSender } from "../src/auth/email-sender.interface.js";
+import { bill, harness, TEST_CODE, testLogins } from "./utils/test-harness.js";
 
 const householdPath = (sin: string) => `/api/households/${sin}/bakit-ganito`;
 const pair = [bill("2026-09", 100, 30), bill("2026-10", 100, 30)];
+const MINUTE = 60 * 1000;
 
-describe("mock My Meralco login", () => {
-  it("returns a token and only the login's linked Households, with masked addresses and Meter Types", async () => {
+describe("email code sign-in", () => {
+  it("start → verify with the right code returns only a token; the code went to that email", async () => {
     const api = await harness();
-    const { status, body } = await api.post("/api/auth/login", {
-      email: testLogins[0]!.email, password: testLogins[0]!.password,
-      ownerId: "owner-b", households: testLogins[1]!.households,
-    });
+    const start = await api.post("/api/auth/email/start", { email: "Someone@Example.test" });
+    expect(start).toEqual({ status: 202, body: { sent: true, expiresInSeconds: 600 } });
+    expect(api.email.sent).toEqual([{ email: "someone@example.test", code: TEST_CODE }]);
+    const { status, body } = await api.post("/api/auth/email/verify", { email: "someone@example.test", code: TEST_CODE });
     expect(status).toBe(200);
+    expect(Object.keys(body)).toEqual(["token"]);
     expect(body.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(body.households).toEqual(testLogins[0]!.households);
-    expect(Object.keys(body).sort()).toEqual(["households", "token"]);
-    expect(JSON.stringify(body)).not.toContain(testLogins[0]!.password);
-    expect((await api.get("/api/households", body.token)).body).toEqual(body.households);
   });
 
-  it("supports the fixed public demo credentials", async () => {
-    const api = await harness({ myMeralco: mockMyMeralcoSource() });
-    const { status, body } = await api.post("/api/auth/login", {
-      email: "demo@example.com", password: "kuryenteko-demo",
-    });
-    expect(status).toBe(200);
-    expect(body.households.map((h: any) => h.meter_type)).toEqual(["traditional", "smart"]);
-  });
-
-  it("uses the same 401 response for an unknown email and a wrong password", async () => {
+  it("a new login has an empty Household list", async () => {
     const api = await harness();
-    const wrong = await api.post("/api/auth/login", { email: testLogins[0]!.email, password: "wrong" });
-    const unknown = await api.post("/api/auth/login", { email: "unknown@example.test", password: "wrong" });
-    expect(wrong).toEqual(unknown);
+    const token = await api.login("new-person@example.test");
+    expect(await api.get("/api/households", token)).toEqual({ status: 200, body: [] });
+    expect((await api.get(householdPath("1234567890"), token)).status).toBe(404);
+  });
+
+  it("returns 401 for a wrong code, an unknown email and an expired (10 min) code", async () => {
+    let now = 0;
+    const api = await harness({ clock: { now: () => now } });
+    await api.post("/api/auth/email/start", { email: "a@example.test" });
+    const wrong = await api.post("/api/auth/email/verify", { email: "a@example.test", code: "000000" });
+    const unknown = await api.post("/api/auth/email/verify", { email: "b@example.test", code: TEST_CODE });
     expect(wrong.status).toBe(401);
+    expect(unknown).toEqual(wrong);
     expect(wrong.body.token).toBeUndefined();
-    expect(wrong.body.households).toBeUndefined();
+    now = 10 * MINUTE;
+    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: TEST_CODE })).status).toBe(401);
+    now = 20 * MINUTE;
+    await api.post("/api/auth/email/start", { email: "a@example.test" });
+    now = 30 * MINUTE - 1;
+    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: TEST_CODE })).status).toBe(200);
+  });
+
+  it("codes are single-use", async () => {
+    const api = await harness();
+    await api.post("/api/auth/email/start", { email: "a@example.test" });
+    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: TEST_CODE })).status).toBe(200);
+    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: TEST_CODE })).status).toBe(401);
+  });
+
+  it("locks the code after 5 wrong tries for one email; a new start issues a new one", async () => {
+    let next = 0;
+    const codes = ["111111", "222222"];
+    const api = await harness({ codes: () => codes[next++]! });
+    await api.post("/api/auth/email/start", { email: "a@example.test" });
+    for (let i = 0; i < 5; i++) {
+      expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "999999" })).status).toBe(401);
+    }
+    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "111111" })).status).toBe(401);
+    await api.post("/api/auth/email/start", { email: "a@example.test" });
+    expect(api.email.sent.map((m) => m.code)).toEqual(["111111", "222222"]);
+    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "111111" })).status).toBe(401);
+    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "222222" })).status).toBe(200);
+  });
+
+  it("a new start replaces the previous code", async () => {
+    let next = 0;
+    const api = await harness({ codes: () => ["111111", "222222"][next++]! });
+    await api.post("/api/auth/email/start", { email: "a@example.test" });
+    await api.post("/api/auth/email/start", { email: "a@example.test" });
+    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "111111" })).status).toBe(401);
+    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "222222" })).status).toBe(200);
+  });
+
+  it("the same email always maps to the same login, ignoring case and spaces", async () => {
+    expect(ownerIdForEmail(" Owner-A@Example.TEST")).toBe(ownerIdForEmail("owner-a@example.test"));
+    const api = await harness();
+    const token = await api.login("OWNER-A@example.test");
+    expect((await api.get("/api/households", token)).body).toEqual(testLogins[0]!.households);
   });
 
   it.each([
-    {}, { email: "invalid", password: "password" }, { email: testLogins[0]!.email },
-    { email: testLogins[0]!.email, password: "" },
-    { email: testLogins[0]!.email, password: 123 },
-    { email: testLogins[0]!.email, password: "x".repeat(257) },
-  ])("rejects malformed login input: %j", async (body) => {
+    ["/api/auth/email/start", {}], ["/api/auth/email/start", { email: "invalid" }], ["/api/auth/email/start", { email: `${"x".repeat(250)}@a.test` }],
+    ["/api/auth/email/verify", { email: "a@example.test" }], ["/api/auth/email/verify", { email: "a@example.test", code: "12345" }],
+    ["/api/auth/email/verify", { email: "a@example.test", code: "abcdef" }], ["/api/auth/email/verify", { email: "a@example.test", code: 123456 }],
+  ])("rejects malformed input to %s: %j", async (path, body) => {
     const api = await harness();
-    expect((await api.post("/api/auth/login", body)).status).toBe(400);
+    expect((await api.post(path, body)).status).toBe(400);
   });
 
-  it("allows a login with no linked Households", async () => {
+  it("the old password login endpoint is gone", async () => {
     const api = await harness();
-    const token = await api.login(testLogins[2]!.email, testLogins[2]!.password);
-    expect(await api.get("/api/households", token)).toEqual({ status: 200, body: [] });
-    expect((await api.get(householdPath("1234567890"), token)).status).toBe(404);
+    expect((await api.post("/api/auth/login", { email: testLogins[0]!.email, password: "anything" })).status).toBe(404);
+  });
+
+  it("the demo sender logs the code and nothing about the person", async () => {
+    const log = vi.fn();
+    await new LogEmailSender(log).sendSignInCode("rosa.delacruz@example.test", "482017");
+    const written = log.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(written).toContain("482017");
+    expect(written).not.toMatch(/rosa|delacruz|example\.test|@/i);
   });
 });
 
@@ -63,7 +110,7 @@ describe("sessions and Household access", () => {
     for (const path of ["/api/households", householdPath("1234567890"), householdPath("unknown")]) {
       const response = await api.get(path, token);
       expect(response.status).toBe(401);
-      expect(response.body.error).toBe("Mag-login muna gamit ang My Meralco.");
+      expect(response.body.error).toBe("Please sign in first.");
       expect(response.body.effects).toBeUndefined();
     }
     expect((await api.post("/api/auth/logout", {}, token)).status).toBe(401);
@@ -76,7 +123,7 @@ describe("sessions and Household access", () => {
       "5555555555": pair,
     } });
     const a = await api.login();
-    const b = await api.login(testLogins[1]!.email, testLogins[1]!.password);
+    const b = await api.login(testLogins[1]!.email);
     const first = await api.get(householdPath("1234567890"), a);
     const second = await api.get(householdPath("9876543210"), a);
     expect(first.status).toBe(200);
@@ -88,20 +135,17 @@ describe("sessions and Household access", () => {
     expect((await api.get(householdPath("5555555555"), b)).status).toBe(200);
     const forbidden = await api.get(householdPath("5555555555"), a);
     expect(forbidden).toEqual(await api.get(householdPath("unknown"), a));
-    expect(forbidden).toEqual({ status: 404, body: { error: "Hindi makita ang Household." } });
+    expect(forbidden).toEqual({ status: 404, body: { error: "Household not found." } });
     expect((await api.get(householdPath("1234567890"), b)).status).toBe(404);
   });
 
   it("checks current membership rather than trusting a previously returned Household list", async () => {
-    const source = mockMyMeralcoSource(testLogins);
-    let linked = true;
-    const api = await harness({
-      myMeralco: { login: source.login, households: (id) => linked ? source.households(id) : Promise.resolve([]) },
-      bills: { "1234567890": pair },
-    });
+    const api = await harness({ bills: { "1234567890": pair } });
     const token = await api.login();
     expect((await api.get(householdPath("1234567890"), token)).status).toBe(200);
-    linked = false;
+    const owner = ownerIdForEmail(testLogins[0]!.email);
+    await api.links.remove(owner, "1234567890");
+    await api.links.remove(owner, "9876543210");
     expect((await api.get(householdPath("1234567890"), token)).status).toBe(404);
     expect((await api.get("/api/households", token)).body).toEqual([]);
   });
@@ -131,14 +175,23 @@ describe("sessions and Household access", () => {
     expect((await otherApp.get("/api/households", another)).status).toBe(401);
   });
 
-  it("keeps the typed-Bill quick verdict and fake-vision scan public", async () => {
+  it("the scan and decode endpoints return 401 without a token; a signed-in scan gets the full verdict", async () => {
     const api = await harness({ vision: { readable: true, serviceIdNumber: "1234567890", period: "2026-10", kwh: 100, billingDays: 30 } });
-    const verdict = await api.post("/api/bakit-ganito", { before: pair[0], now: pair[1] });
+    expect((await api.upload("/api/bills/scan")).status).toBe(401);
+    for (const [path, body] of [
+      ["/api/bakit-ganito", { before: pair[0], now: pair[1] }],
+      ["/api/bills/laman", { now: { chargeLines: [{ label: "Generation", amount: 1 }] } }],
+      ["/api/bills/check", { now: pair[1], before: pair[0] }],
+    ] as const) {
+      const res = await api.post(path, body);
+      expect([path, res.status, res.body.error]).toEqual([path, 401, "Please sign in first."]);
+    }
+    expect((await api.post("/api/bills/scan-linkage", { scanToken: "a".repeat(43) }, await api.userToken())).status).toBe(404);
+    const verdict = await api.userPost("/api/bakit-ganito", { before: pair[0], now: pair[1] });
     expect(verdict.status).toBe(200);
-    expect(verdict.body.total).toBe(10_000);
-    const scan = await api.upload("/api/bills/scan");
+    expect(verdict.body.effects.map((e: { key: string }) => e.key)).toEqual(["rate", "billingDays", "weather", "habit"]);
+    const scan = await api.userUpload("/api/bills/scan");
     expect(scan.status).toBe(200);
     expect(scan.body.serviceIdMasked).toBe("••••••7890");
-    expect((await api.get(householdPath("1234567890"))).status).toBe(401);
   });
 });

@@ -1,7 +1,7 @@
 import { IsNotEmpty, IsString } from "class-validator";
 
 export class RedeemRewardDto {
-  @IsString({ message: "Dapat string ang rewardId." })
-  @IsNotEmpty({ message: "Kailangan ang rewardId para makapag-redeem." })
+  @IsString({ message: "rewardId must be a string." })
+  @IsNotEmpty({ message: "rewardId is required to redeem." })
   rewardId: string;
 }

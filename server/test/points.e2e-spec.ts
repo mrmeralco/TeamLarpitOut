@@ -86,30 +86,32 @@ describe("Verified Savings and Points (traditional)", () => {
     const api = await harness({ bills, weather, schedules });
     const token = await api.login();
     await api.put(`/api/households/${SIN}/appliances`, survey, token);
+    await api.completeSetup(SIN, token);
 
     // Save a plan first
     const putRes = await api.put(
       `/api/households/${SIN}/usage-plan`,
-      { cut: 10, missionIds: ["aircon-timer-2h"] },
+      { cut: 5, missionIds: ["aircon-timer-2h"] },
       token,
     );
     expect(putRes.status).toBe(200);
 
-    // Household self-reports "tapos na" on a mission
+    // Household self-reports "done" on a mission
     const res = await api.post(
       `/api/households/${SIN}/usage-plan/self-report`,
-      { missionId: "aircon-timer-2h", status: "tapos na" },
+      { missionId: "aircon-timer-2h", status: "done" },
       token,
     );
 
     expect(res.status).toBe(201);
     expect(res.body.awardedPoints).toBe(0);
-    expect(res.body.balance).toBe(0);
-    expect(res.body.message).toContain("hindi sa self-report");
+    // Only the (locked) Welcome Points from finishing setup; the self-report added nothing.
+    expect(res.body.balance).toBe(100);
+    expect(res.body.message).toContain("not from self-reports");
 
-    // Balance remains 0
+    // Balance is still only the locked Welcome Points: nothing spendable
     const pointsRes = await api.get(`/api/households/${SIN}/points`, token);
-    expect(pointsRes.body.balance).toBe(0);
+    expect(pointsRes.body).toMatchObject({ balance: 100, lockedPoints: 100, spendable: 0 });
   });
 
   it("awards 1 Point per ₱1 of Verified Savings when habits change and shows where each Point came from", async () => {
@@ -141,7 +143,7 @@ describe("Verified Savings and Points (traditional)", () => {
       hasOutage: false,
       source: "bill_verified",
     });
-    expect(body.history[0].description).toContain("30 kWh natipid");
+    expect(body.history[0].description).toContain("30 kWh saved");
   });
 
   it("needs login and household ownership", async () => {

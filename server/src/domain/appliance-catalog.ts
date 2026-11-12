@@ -4,7 +4,7 @@
  *
  * Power figures are TYPICAL values in the range of Meralco's appliance
  * calculator; confirm them against the calculator before the demo.
- * "Hindi ko alam" (or no answer) falls back to the type's default.
+ * "I don't know" (or no answer) falls back to the type's default.
  */
 
 export type ApplianceType =
@@ -16,7 +16,9 @@ export type ApplianceType =
   | "lights"
   | "washing_machine"
   | "flat_iron"
-  | "rice_cooker";
+  | "rice_cooker"
+  | "computer"
+  | "other";
 
 /** How hours of use are asked: never as hours, always as a routine. */
 export type RoutineKind = "alwaysOn" | "timeRanges" | "usesPerWeek";
@@ -31,7 +33,7 @@ export interface QuestionOption {
 export interface VisualQuestion {
   key: string;
   label: string;
-  /** "Hindi ko alam" is always offered on top of these. */
+  /** "I don't know" is always offered on top of these. */
   options: QuestionOption[];
 }
 
@@ -50,8 +52,8 @@ export interface ApplianceDefinition {
 }
 
 const YES_NO: QuestionOption[] = [
-  { value: "yes", label: "Oo" },
-  { value: "no", label: "Hindi" },
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
 ];
 
 const pick = <T extends string>(value: string, table: Record<T, number>): number | null =>
@@ -63,15 +65,15 @@ export const APPLIANCE_CATALOG: ApplianceDefinition[] = [
     label: "Aircon",
     routine: "timeRanges",
     questions: [
-      { key: "mount", label: "Split o window type?", options: [{ value: "split", label: "Split" }, { value: "window", label: "Window" }] },
-      { key: "inverter", label: "May nakasulat bang \"Inverter\"?", options: YES_NO },
+      { key: "mount", label: "Split or window type?", options: [{ value: "split", label: "Split" }, { value: "window", label: "Window" }] },
+      { key: "inverter", label: "Does it say \"Inverter\"?", options: YES_NO },
       {
         key: "room",
-        label: "Gaano kalaki ang kwarto?",
+        label: "How big is the room?",
         options: [
-          { value: "small", label: "Maliit (kwarto)" },
-          { value: "medium", label: "Katamtaman" },
-          { value: "large", label: "Malaki (sala)" },
+          { value: "small", label: "Small (bedroom)" },
+          { value: "medium", label: "Medium" },
+          { value: "large", label: "Large (living room)" },
         ],
       },
     ],
@@ -90,13 +92,13 @@ export const APPLIANCE_CATALOG: ApplianceDefinition[] = [
     label: "Refrigerator",
     routine: "alwaysOn",
     questions: [
-      { key: "inverter", label: "Inverter ba ang ref?", options: YES_NO },
+      { key: "inverter", label: "Is the ref an inverter?", options: YES_NO },
       {
         key: "size",
-        label: "Gaano kalaki?",
+        label: "How big?",
         options: [
-          { value: "small", label: "Maliit (isang pinto)" },
-          { value: "large", label: "Malaki (dalawang pinto)" },
+          { value: "small", label: "Small (one door)" },
+          { value: "large", label: "Large (two doors)" },
         ],
       },
     ],
@@ -120,7 +122,7 @@ export const APPLIANCE_CATALOG: ApplianceDefinition[] = [
     label: "Electric fan",
     routine: "timeRanges",
     questions: [
-      { key: "kind", label: "Anong klase?", options: [{ value: "stand", label: "Stand o desk" }, { value: "ceiling", label: "Ceiling" }] },
+      { key: "kind", label: "What kind?", options: [{ value: "stand", label: "Stand or desk" }, { value: "ceiling", label: "Ceiling" }] },
     ],
     rating: ({ kind }) => pick(kind!, { stand: 0.06, ceiling: 0.075 }),
     defaultRating: 0.065,
@@ -130,26 +132,26 @@ export const APPLIANCE_CATALOG: ApplianceDefinition[] = [
     label: "TV",
     routine: "timeRanges",
     questions: [
-      { key: "size", label: "Gaano kalaki?", options: [{ value: "small", label: "32 pulgada pababa" }, { value: "large", label: "Mas malaki sa 32" }] },
+      { key: "size", label: "How big?", options: [{ value: "small", label: "32 inches or smaller" }, { value: "large", label: "Bigger than 32 inches" }] },
     ],
     rating: ({ size }) => pick(size!, { small: 0.06, large: 0.12 }),
     defaultRating: 0.09,
   },
   {
     type: "lights",
-    label: "Mga ilaw",
+    label: "Lights",
     routine: "timeRanges",
     questions: [
       {
         key: "count",
-        label: "Ilang ilaw ang sabay na bukas?",
+        label: "How many lights are on at the same time?",
         options: [
           { value: "few", label: "1–4" },
           { value: "some", label: "5–9" },
-          { value: "many", label: "10 o higit pa" },
+          { value: "many", label: "10 or more" },
         ],
       },
-      { key: "led", label: "LED ba ang mga ilaw?", options: YES_NO },
+      { key: "led", label: "Are the lights LED?", options: YES_NO },
     ],
     rating: ({ count, led }) => {
       const bulbs = pick(count!, { few: 3, some: 7, many: 12 });
@@ -163,14 +165,14 @@ export const APPLIANCE_CATALOG: ApplianceDefinition[] = [
     label: "Washing machine",
     routine: "usesPerWeek",
     questions: [
-      { key: "kind", label: "Anong klase?", options: [{ value: "twin_tub", label: "Twin tub" }, { value: "automatic", label: "Automatic" }] },
+      { key: "kind", label: "What kind?", options: [{ value: "twin_tub", label: "Twin tub" }, { value: "automatic", label: "Automatic" }] },
     ],
     rating: ({ kind }) => pick(kind!, { twin_tub: 0.4, automatic: 0.6 }),
     defaultRating: 0.5,
   },
   {
     type: "flat_iron",
-    label: "Plantsa",
+    label: "Flat iron",
     routine: "usesPerWeek",
     questions: [],
     rating: () => null,
@@ -184,6 +186,24 @@ export const APPLIANCE_CATALOG: ApplianceDefinition[] = [
     rating: () => null,
     defaultRating: 0.35,
   },
+  {
+    type: "computer",
+    label: "Computer",
+    routine: "timeRanges",
+    questions: [
+      { key: "kind", label: "What kind?", options: [{ value: "laptop", label: "Laptop" }, { value: "desktop", label: "Desktop" }] },
+    ],
+    rating: ({ kind }) => pick(kind!, { laptop: 0.05, desktop: 0.15 }),
+    defaultRating: 0.1,
+  },
+  {
+    type: "other",
+    label: "Other",
+    routine: "timeRanges",
+    questions: [],
+    rating: () => null,
+    defaultRating: 0.05,
+  },
 ];
 
 export function findAppliance(type: string): ApplianceDefinition | undefined {
@@ -196,6 +216,6 @@ export function catalogForClient() {
     type: d.type,
     label: d.label,
     routine: d.routine,
-    questions: d.questions.map((q) => ({ ...q, options: [...q.options, { value: UNKNOWN, label: "Hindi ko alam" }] })),
+    questions: d.questions.map((q) => ({ ...q, options: [...q.options, { value: UNKNOWN, label: "I don't know" }] })),
   }));
 }

@@ -5,9 +5,10 @@ import type { BillSource } from "../bills/bill-source.js";
 import { BILL_SOURCE } from "../common/injection-tokens.js";
 import type { Bill } from "../domain/bill.js";
 import { BADGE_LABEL, bakitGanitoSentence, homeAction, homeBadge } from "../domain/home-summary.js";
+import { homeChargeLines } from "../domain/charge-lines.js";
 import { HouseholdsService } from "../households/households.service.js";
 
-const MONTHS = ["Enero", "Pebrero", "Marso", "Abril", "Mayo", "Hunyo", "Hulyo", "Agosto", "Setyembre", "Oktubre", "Nobyembre", "Disyembre"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const monthName = (period: string) => MONTHS[Number(period.slice(5, 7)) - 1] ?? period;
 
 /** The amount due as Meralco printed it: the total, else the sum of the printed lines (centavos). */
@@ -17,7 +18,7 @@ function amountDue(bill: Bill): number | null {
   return lines.length ? lines.reduce((s, l) => s + Math.round(l.amount * 100), 0) : null;
 }
 
-/** Home: pay-ready summary + "Bakit ganito? · Tama ba ito? · Ano ang gagawin ko?" */
+/** Home: pay-ready summary + "Why this bill? · Is it right? · What should I do?" */
 @Injectable()
 export class HomeService {
   constructor(
@@ -31,31 +32,55 @@ export class HomeService {
     const household = (await this.households.list(ownerId)).find((h) => h.sin === sin)!;
     const history = await this.bills.bills(sin);
     const latest = history.at(-1);
-    if (!latest) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    if (!latest) throw new NotFoundException({ error: "There is no Bill for this Household." });
 
     const checks = await this.billChecks.checkForHousehold(sin);
     const badge = homeBadge({ checksOverall: checks.overall });
 
-    let bakitGanito: { sentence: string; total: number; screen: "bakit-ganito" } | null = null;
-    let bakitGanitoUnavailable: string | null = history.length < 2 ? "Kailangan ng dalawang Bill para maikumpara." : null;
+    let bakitGanito: {
+      sentence: string;
+      total: number;
+      screen: "bakit-ganito";
+      previousPeriod: string;
+      /** Rate, Billing Days, Weather, Habit: they and `lines` add up to `total` exactly (ADR-0001). */
+      effects: { key: string; label: string; amount: number }[];
+      lines: { key: string; label: string; amount: number }[];
+      addsUp: boolean;
+      habit: number;
+    } | null = null;
+    let bakitGanitoUnavailable: string | null = history.length < 2 ? "Two Bills are needed to compare." : null;
     if (history.length >= 2) {
       try {
         const change = await this.billChange.explainForHousehold(sin);
         const parts = [...change.effects, ...change.lines].map((p) => ({ key: p.key, amount: p.amount }));
+        const effects = change.effects.map((e) => ({ key: e.key, label: e.label, amount: e.amount }));
+        const lines = change.lines.map((l) => ({ key: l.key, label: l.label, amount: l.amount }));
         bakitGanito = {
           sentence: bakitGanitoSentence(change.total, parts, monthName(history.at(-2)!.period)),
           total: change.total,
           screen: "bakit-ganito",
+          previousPeriod: history.at(-2)!.period,
+          effects,
+          lines,
+          addsUp: [...effects, ...lines].reduce((s, p) => s + p.amount, 0) === change.total,
+          habit: effects.find((e) => e.key === "habit")?.amount ?? 0,
         };
       } catch (err) {
         if (!(err instanceof HttpException)) throw err;
-        bakitGanitoUnavailable = "Hindi pa maipaliwanag ang pagbabago ng Bill na ito.";
+        bakitGanitoUnavailable = "This Bill's change can't be explained yet.";
       }
     }
+
+    const previous = history.at(-2);
+    const charges = homeChargeLines(latest.chargeLines ?? [], previous?.chargeLines ?? []);
 
     return {
       currency: "PHP-centavos",
       meterType: household.meter_type,
+      canMasked: await this.households.canMasked(ownerId, sin),
+      area: household.masked_address.replace(/^•+\s*/, ""),
+      /** Every printed line with a stable id, amount, change and who gets the money. */
+      chargeLines: { featured: charges.featured, all: charges.all },
       bill: {
         period: latest.period,
         amountDue: amountDue(latest),
@@ -73,7 +98,7 @@ export class HomeService {
         screen: "tama-ba" as const,
       },
       action: homeAction(badge, checks.summary),
-      /** Smart meter extras ("Ngayong buwan hanggang ngayon") arrive with the smart meter readings (#10). */
+      /** Smart meter extras ("This month so far") arrive with the smart meter readings (#10). */
       smartMeter: household.meter_type === "smart" ? { monthToDateKwh: null } : null,
     };
   }

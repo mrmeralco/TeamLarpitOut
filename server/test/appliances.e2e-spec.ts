@@ -48,11 +48,11 @@ describe("Confirmed appliance energy labels", () => {
     ] }, token);
     expect(saved.status).toBe(200);
     expect(saved.body.appliances[0]).toMatchObject({
-      energyLabel: { ...airconLabel, kwhPerHour: 1 }, source: "label", sourceLabel: "Mula sa energy label",
+      energyLabel: { ...airconLabel, kwhPerHour: 1 }, source: "label", sourceLabel: "From the energy label",
       hoursPerDay: 8, estimatedKwhPerDay: 16,
     });
     expect(saved.body.appliances[1]).toMatchObject({
-      energyLabel: refLabel, source: "label", sourceLabel: "Mula sa energy label", estimatedKwhPerDay: 3,
+      energyLabel: refLabel, source: "label", sourceLabel: "From the energy label", estimatedKwhPerDay: 3,
     });
     expect(saved.body.appliances[1].energyLabel.kwhPerHour).toBeCloseTo(1 / 24, 12);
 
@@ -94,8 +94,8 @@ describe("Confirmed appliance energy labels", () => {
     const removed = edited.map(({ energyLabel: _label, ...a }: any) => a);
     const fallback = await api.put(`/api/households/${SIN}/appliances`, { appliances: removed }, token);
     expect(fallback.status).toBe(200);
-    expect(fallback.body.appliances[0]).toMatchObject({ source: "answers", sourceLabel: "Tantya mula sa sagot mo", estimatedKwhPerDay: 12.32 });
-    expect(fallback.body.appliances[1]).toMatchObject({ source: "default", sourceLabel: "Hula (default)", estimatedKwhPerDay: 2.2 });
+    expect(fallback.body.appliances[0]).toMatchObject({ source: "answers", sourceLabel: "Estimated from your answers", estimatedKwhPerDay: 12.32 });
+    expect(fallback.body.appliances[1]).toMatchObject({ source: "default", sourceLabel: "Typical value", estimatedKwhPerDay: 2.2 });
     expect(fallback.body.appliances.every((a: any) => a.energyLabel === undefined)).toBe(true);
   });
 
@@ -148,14 +148,14 @@ describe("Confirmed appliance energy labels", () => {
 });
 
 describe("GET /api/appliances/catalog", () => {
-  it("lists the visual questions, each with a 'Hindi ko alam' option", async () => {
+  it("lists the visual questions, each with an 'I don't know' option", async () => {
     const api = await harness();
     const { status, body } = await api.get("/api/appliances/catalog");
     expect(status).toBe(200);
     const aircon = byType(body.appliances, "aircon");
     expect(aircon.routine).toBe("timeRanges");
     expect(aircon.questions.map((q: any) => q.key)).toEqual(["mount", "inverter", "room"]);
-    expect(aircon.questions[0].options.at(-1)).toEqual({ value: "unknown", label: "Hindi ko alam" });
+    expect(aircon.questions[0].options.at(-1)).toEqual({ value: "unknown", label: "I don't know" });
     expect(byType(body.appliances, "refrigerator").routine).toBe("alwaysOn");
     expect(byType(body.appliances, "washing_machine").routine).toBe("usesPerWeek");
   });
@@ -186,9 +186,9 @@ describe("Household appliances", () => {
   it("tags each appliance with where its figure came from", async () => {
     const { saved } = await savedHousehold();
     const list = saved.body.appliances;
-    expect(byType(list, "aircon")).toMatchObject({ source: "answers", sourceLabel: "Tantya mula sa sagot mo" });
-    expect(byType(list, "refrigerator")).toMatchObject({ source: "default", sourceLabel: "Hula (default)" });
-    expect(byType(list, "wifi")).toMatchObject({ source: "default", sourceLabel: "Hula (default)" });
+    expect(byType(list, "aircon")).toMatchObject({ source: "answers", sourceLabel: "Estimated from your answers" });
+    expect(byType(list, "refrigerator")).toMatchObject({ source: "default", sourceLabel: "Typical value" });
+    expect(byType(list, "wifi")).toMatchObject({ source: "default", sourceLabel: "Typical value" });
     expect(byType(list, "washing_machine").source).toBe("answers");
   });
 
@@ -220,7 +220,7 @@ describe("Household appliances", () => {
 
     // owner-b cannot read owner-a's list either.
     await api.put(`/api/households/${SIN}/appliances`, survey, token);
-    const tokenB = await api.login(testLogins[1]!.email, testLogins[1]!.password);
+    const tokenB = await api.login(testLogins[1]!.email);
     expect((await api.get(`/api/households/${SIN}/appliances`, tokenB)).status).toBe(404);
   });
 
@@ -231,19 +231,19 @@ describe("Household appliances", () => {
 
     const unknownType = await put([{ type: "spaceship" }]);
     expect(unknownType.status).toBe(400);
-    expect(unknownType.body.issues).toEqual(["Hindi kilalang appliance: spaceship"]);
+    expect(unknownType.body.issues).toEqual(["Unknown appliance: spaceship"]);
 
     expect((await put([{ type: "aircon", answers: { room: "small" } }])).body.issues).toEqual([
-      "Aircon: kailan ito bukas?",
+      "Aircon: when is it on?",
     ]);
     expect(
       (await put([{ type: "tv", answers: { size: "huge" }, timeRanges: [{ start: "19:00", end: "22:00", days: "everyday" }] }])).body
         .issues,
-    ).toEqual(['TV: hindi tanggap ang sagot na "huge" sa "size"']);
-    expect((await put([{ type: "washing_machine" }])).body.issues).toEqual(["Washing machine: ilang beses kada linggo (0–50)?"]);
+    ).toEqual(['TV: the answer "huge" is not accepted for "size"']);
+    expect((await put([{ type: "washing_machine" }])).body.issues).toEqual(["Washing machine: how many times a week (0–50)?"]);
     expect(
       (await put([{ type: "lights", timeRanges: [{ start: "25:00", end: "06:00", days: "everyday" }] }])).body.issues,
-    ).toEqual(["Mga ilaw: oras dapat HH:MM"]);
+    ).toEqual(["Lights: times must be HH:MM"]);
 
     // Nothing invalid was saved.
     expect((await api.get(`/api/households/${SIN}/appliances`, token)).body.saved).toBe(false);
@@ -274,7 +274,7 @@ describe('GET /api/households/:sin/appliances/breakdown ("Saan napupunta?")', ()
   it("orders appliances by kWh, each with its source tag, and keeps the estimates' proportions", async () => {
     const { api, token } = await savedHousehold();
     const { body } = await api.get(`/api/households/${SIN}/appliances/breakdown`, token);
-    expect(body.rows[0]).toMatchObject({ type: "aircon", label: "Aircon", sourceLabel: "Tantya mula sa sagot mo" });
+    expect(body.rows[0]).toMatchObject({ type: "aircon", label: "Aircon", sourceLabel: "Estimated from your answers" });
     expect(body.rows.map((r: any) => r.kwh)).toEqual([...body.rows.map((r: any) => r.kwh)].sort((a, b) => b - a));
     const aircon = body.rows[0];
     const ref = byType(body.rows, "refrigerator");
@@ -320,11 +320,11 @@ describe("13 · Aircon hours from Bill History (traditional)", () => {
     expect(res.body.hours).toBe(8);
     expect(res.body.coolingKwhPerDay).toBe(8);
     expect(res.body.airconKw).toBe(1.0);
-    expect(res.body.prompt).toBe("Mukhang mga 8 oras/araw bukas ang aircon mo. Tama ba?");
+    expect(res.body.prompt).toBe("Your aircon seems to run about 8 hours a day. Is that right?");
     expect(res.body.options).toEqual([
-      { action: "confirm", label: "Oo", hours: 8 },
-      { action: "longer", label: "Mas matagal", hours: 10 },
-      { action: "shorter", label: "Mas maikli", hours: 6 },
+      { action: "confirm", label: "Yes", hours: 8 },
+      { action: "longer", label: "Longer", hours: 10 },
+      { action: "shorter", label: "Shorter", hours: 6 },
     ]);
   });
 
@@ -344,7 +344,7 @@ describe("13 · Aircon hours from Bill History (traditional)", () => {
     expect(res.status).toBe(200);
     expect(res.body.canPropose).toBe(true);
     expect(res.body.hours).toBe(5);
-    expect(res.body.prompt).toBe("Mukhang mga 5 oras/araw bukas ang aircon mo. Tama ba?");
+    expect(res.body.prompt).toBe("Your aircon seems to run about 5 hours a day. Is that right?");
   });
 
   it("proposal is never used until confirmed or adjusted", async () => {
@@ -367,7 +367,7 @@ describe("13 · Aircon hours from Bill History (traditional)", () => {
       token,
     );
     expect(unconfirmedSave.status).toBe(400);
-    expect(unconfirmedSave.body.issues).toContain("Aircon: kailan ito bukas?");
+    expect(unconfirmedSave.body.issues).toContain("Aircon: when is it on?");
 
     // 3. Only when user confirms (e.g. 8 hours) or adjusts is it accepted.
     const confirmedSave = await api.put(

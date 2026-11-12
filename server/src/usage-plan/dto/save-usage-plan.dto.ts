@@ -2,12 +2,12 @@ import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsIn, IsInt, IsOption
 import { TARGET_CUTS, type TargetCut } from "../../domain/baseline.js";
 
 export class SaveUsagePlanDto {
-  @IsIn(TARGET_CUTS as unknown as number[], { message: "Ang bawas ay 5, 10 o 15 porsyento lang." })
+  @IsIn(TARGET_CUTS as unknown as number[], { message: "The goal is a 5% cut." })
   cut: TargetCut;
 
   @IsArray()
-  @ArrayMinSize(1, { message: "Pumili ng 1 hanggang 3 Mission." })
-  @ArrayMaxSize(3, { message: "Pumili ng 1 hanggang 3 Mission." })
+  @ArrayMinSize(1, { message: "Pick 1 to 3 Missions." })
+  @ArrayMaxSize(3, { message: "Pick 1 to 3 Missions." })
   @ArrayUnique()
   @IsString({ each: true })
   missionIds: string[];

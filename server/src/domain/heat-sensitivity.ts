@@ -120,7 +120,7 @@ export function calculateHeatSensitivity(
     heatSensitivity: rounded,
     baseKwhPerDay: Math.round(base * 100) / 100,
     source: "history",
-    label: "Mula sa Bill History",
+    label: "From your Bill History",
     hotDayKwh: rounded,
     sigma,
   };

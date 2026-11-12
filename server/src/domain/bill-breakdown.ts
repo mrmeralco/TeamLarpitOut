@@ -1,7 +1,7 @@
 import type { ChargeLine } from "./bill.js";
 import { classifyLine, type LineKind, type Payee } from "./charge-catalog.js";
 
-/** "Ano'ng laman ng bill ko?": the household's own Bill lines, redrawn and explained. */
+/** "What's on my bill?": the household's own Bill lines, redrawn and explained. */
 
 export type GroupKey = LineKind | "unclear" | "unknown";
 
@@ -32,11 +32,11 @@ export interface BillBreakdownGroup {
 }
 
 const GROUPS: { key: GroupKey; title: string }[] = [
-  { key: "perKwh", title: "Singil kada kWh" },
-  { key: "fixed", title: "Fixed Charges (kada buwan, kahit gaano kakonti ang gamit)" },
-  { key: "unclear", title: "Hindi naka-print kung kada kWh o kada buwan" },
-  { key: "tax", title: "Buwis" },
-  { key: "unknown", title: "Hindi pa kilala" },
+  { key: "perKwh", title: "Charges per kWh" },
+  { key: "fixed", title: "Fixed charges (per month, however little you use)" },
+  { key: "unclear", title: "Not printed whether per kWh or per month" },
+  { key: "tax", title: "Taxes" },
+  { key: "unknown", title: "Not recognised yet" },
 ];
 
 const toCentavos = (pesos: number) => Math.round(pesos * 100);

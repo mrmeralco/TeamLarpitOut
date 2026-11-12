@@ -61,7 +61,7 @@ describe("04 · Heat Sensitivity and Weather Effect", () => {
       weather,
     });
 
-    const { status, body } = await api.post("/api/bakit-ganito", {
+    const { status, body } = await api.userPost("/api/bakit-ganito", {
       before: bill("2026-09", 200, 30),
       now: bill("2026-10", 250, 30),
     });
@@ -80,7 +80,7 @@ describe("04 · Heat Sensitivity and Weather Effect", () => {
       weather,
     });
 
-    const { status, body } = await api.post("/api/bakit-ganito", {
+    const { status, body } = await api.userPost("/api/bakit-ganito", {
       before: bill("2026-10", 250, 30),
       now: bill("2026-11", 200, 30),
     });
@@ -89,7 +89,7 @@ describe("04 · Heat Sensitivity and Weather Effect", () => {
     const weatherEffect = findEffect(body, "weather");
     expect(weatherEffect).toBeDefined();
     expect(weatherEffect.estimate).toBe(true);
-    expect(weatherEffect.label).toContain("tantya");
+    expect(weatherEffect.label).toContain("estimate");
     expect(weatherEffect.amount).toBeLessThan(0);
     expect(sum(body.effects)).toBe(body.total);
   });
@@ -102,7 +102,7 @@ describe("04 · Heat Sensitivity and Weather Effect", () => {
     });
 
     // Public scan / manual entry without login (no history)
-    const { status, body } = await api.post("/api/bakit-ganito", {
+    const { status, body } = await api.userPost("/api/bakit-ganito", {
       before: bill("2026-09", 180, 30),
       now: bill("2026-10", 210, 30),
     });

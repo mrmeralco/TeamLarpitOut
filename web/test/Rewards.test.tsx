@@ -9,7 +9,7 @@ const mockCatalog: RewardsCatalogResult = {
   sin: household.sin,
   balance: 600,
   tag: "sample rewards",
-  disclaimer: "Partner-funded sample rewards. Hindi ito bawas o diskwento sa Meralco bill.",
+  disclaimer: "Partner-funded sample rewards. Not a deduction or discount on your Meralco bill.",
   catalog: [
     {
       id: "reward-load-50",
@@ -17,7 +17,7 @@ const mockCatalog: RewardsCatalogResult = {
       category: "load",
       partnerName: "Partner Telco",
       pointsCost: 500,
-      description: "₱50 prepaid load para sa anumang network.",
+      description: "₱50 prepaid load for any network.",
       tag: "sample rewards",
       isSampleReward: true,
       affordable: true,
@@ -30,7 +30,7 @@ const mockCatalog: RewardsCatalogResult = {
       category: "e-wallet",
       partnerName: "Partner E-Wallet",
       pointsCost: 1000,
-      description: "₱100 credit sa partner e-wallet account.",
+      description: "₱100 credit in a partner e-wallet.",
       tag: "sample rewards",
       isSampleReward: true,
       affordable: false,
@@ -82,7 +82,7 @@ describe("Rewards component", () => {
     expect(sampleBadges.length).toBeGreaterThanOrEqual(2);
 
     // Disclaimer
-    expect(screen.getByText(/Hindi ito bawas o diskwento sa Meralco bill/)).toBeTruthy();
+    expect(screen.getByText(/Not a deduction or discount on your Meralco bill/)).toBeTruthy();
 
     // Check items
     expect(screen.getByText("₱50 Mobile Load")).toBeTruthy();
@@ -103,9 +103,9 @@ describe("Rewards component", () => {
     const unaffordableCard = screen.getByTestId("reward-card-reward-ewallet-100");
     const progressBox = within(unaffordableCard).getByTestId("progress-reward-ewallet-100");
     expect(progressBox.textContent).toContain("60% naipon");
-    expect(progressBox.textContent).toContain("Kailangan pa ng 400 pts");
+    expect(progressBox.textContent).toContain("400 more pts needed");
 
-    const disabledBtn = within(unaffordableCard).getByRole("button", { name: /Kulang ang Points/ }) as HTMLButtonElement;
+    const disabledBtn = within(unaffordableCard).getByRole("button", { name: /Not enough Points/ }) as HTMLButtonElement;
     expect(disabledBtn.disabled).toBe(true);
   });
 
@@ -118,8 +118,8 @@ describe("Rewards component", () => {
 
     // Click redeem -> shows confirmation
     fireEvent.click(redeemBtn);
-    expect(screen.getByText("Kumpirmahin ang pag-redeem")).toBeTruthy();
-    expect(screen.getByText(/Sigurado ka bang nais mong i-redeem/)).toBeTruthy();
+    expect(screen.getByText("Confirm redemption")).toBeTruthy();
+    expect(screen.getByRole("dialog").textContent).toMatch(/Redeem .* for/);
 
     // Setup mock for POST /api/households/1234567890/rewards/redeem
     const updatedCatalog: RewardsCatalogResult = {
@@ -141,7 +141,7 @@ describe("Rewards component", () => {
           actualKwh: 0,
           source: "redemption",
           hasOutage: false,
-          description: "Na-redeem ang ₱50 Mobile Load (-500 pts) [sample rewards]",
+          description: "Redeemed ₱50 Mobile Load (-500 pts) [sample rewards]",
           createdAt: "2026-11-12T08:00:00.000Z",
         },
       ],
@@ -151,7 +151,7 @@ describe("Rewards component", () => {
       if (url.includes("/rewards/redeem") && init?.method === "POST") {
         return response({
           success: true,
-          message: "Matagumpay na na-redeem ang ₱50 Mobile Load!",
+          message: "₱50 Mobile Load redeemed!",
           reward: { id: "reward-load-50", name: "₱50 Mobile Load", pointsCost: 500, tag: "sample rewards" },
           redeemedPoints: 500,
           balance: 100,
@@ -163,11 +163,11 @@ describe("Rewards component", () => {
     });
 
     // Confirm redeem
-    const confirmBtn = screen.getByRole("button", { name: "Oo, I-redeem" });
+    const confirmBtn = screen.getByRole("button", { name: "Yes, redeem" });
     fireEvent.click(confirmBtn);
 
     // Wait for success notice
-    await screen.findByText(/Matagumpay na na-redeem ang ₱50 Mobile Load/);
+    await screen.findByText(/₱50 Mobile Load redeemed!/);
     expect(pointsChanged).toHaveBeenCalledTimes(1);
   });
 
@@ -178,5 +178,14 @@ describe("Rewards component", () => {
     await waitFor(() => {
       expect(expired).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe("locked Welcome Points", () => {
+  it("shows Welcome Points in the balance marked locked", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...mockCatalog, balance: 100, lockedPoints: 100, spendable: 0 }), { status: 200 })));
+    render(<Rewards token="t" household={household} onExpired={() => {}} />);
+    expect(await screen.findByText(/100 Points/)).toBeTruthy();
+    expect(screen.getByTestId("locked-points").textContent).toMatch(/100 Welcome Points are locked until your first Verified Savings/);
   });
 });

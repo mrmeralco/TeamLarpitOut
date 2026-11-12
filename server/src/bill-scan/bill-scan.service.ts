@@ -3,7 +3,8 @@ import type { Bill, ChargeLine } from "../domain/bill.js";
 import { VISION_PROVIDER } from "../common/injection-tokens.js";
 import type { BillImage, RawBillReading, VisionProvider } from "../vision/vision-provider.interface.js";
 
-import { ScanContextStore } from "../vision/scan-context.store.js";
+import { ScanContextStore, tenDigits } from "../vision/scan-context.store.js";
+import { maskCan } from "../households/households.service.js";
 
 export type DraftBill = Partial<Bill>;
 
@@ -24,6 +25,8 @@ export type ScanResult =
       missing: string[];
       /** Service ID Number, masked; the full number is never sent back. */
       serviceIdMasked: string | null;
+      /** Customer Account Number, masked; null when the photo did not show a full CAN. */
+      canMasked: string | null;
       needsConfirmation: true;
     }
   | { status: "unreadable"; problem: string };
@@ -54,7 +57,7 @@ function chargeLines(raw: RawBillReading["chargeLines"]): ChargeLine[] {
 
 /** Turns what the vision model claims to see into an editable draft. */
 export function toScanResult(raw: RawBillReading): ScanResult {
-  const unreadable = "Hindi mabasa ang litrato. Kunan ulit nang malinaw, o i-type na lang ang Bill.";
+  const unreadable = "We couldn't read the photo. Retake it clearly.";
   if (!raw?.readable) return { status: "unreadable", problem: raw?.problem || unreadable };
 
   const billingDays = num(raw.billingDays, 1);
@@ -91,6 +94,7 @@ export function toScanResult(raw: RawBillReading): ScanResult {
     estimated,
     missing: [...missing],
     serviceIdMasked: maskServiceId(raw.serviceIdNumber),
+    canMasked: (() => { const can = tenDigits(raw.customerAccountNumber); return can ? maskCan(can) : null; })(),
     needsConfirmation: true,
   };
 }
@@ -102,6 +106,10 @@ export class BillScanService {
   async scan(image: BillImage) {
     const raw = await this.vision.readBill(image);
     const result = toScanResult(raw);
-    return result.status === "read" ? { ...result, scanToken: this.contexts.create(raw.serviceIdNumber) } : result;
+    if (result.status !== "read") return { result, can: null };
+    return {
+      result: { ...result, scanToken: this.contexts.create(raw.customerAccountNumber) },
+      can: tenDigits(raw.customerAccountNumber),
+    };
   }
 }

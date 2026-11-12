@@ -14,9 +14,10 @@ export class RewardsService {
   async getCatalog(sin: string) {
     const pointsData = await this.usagePlan.getPoints(sin);
     const balance = pointsData.balance;
+    const spendable = pointsData.spendable;
 
     const catalog = SAMPLE_REWARDS_CATALOG.map((item) => {
-      const affordable = balance >= item.pointsCost;
+      const affordable = spendable >= item.pointsCost;
       const progressPercent = Math.min(100, Math.floor((balance / item.pointsCost) * 100));
       const pointsNeeded = Math.max(0, item.pointsCost - balance);
 
@@ -40,8 +41,10 @@ export class RewardsService {
     return {
       sin,
       balance,
+      lockedPoints: pointsData.lockedPoints,
+      spendable,
       tag: "sample rewards" as const,
-      disclaimer: "Partner-funded sample rewards. Hindi ito bawas o diskwento sa Meralco bill.",
+      disclaimer: "Partner-funded sample rewards. Not a deduction or discount on your Meralco bill.",
       catalog,
       redemptions,
     };
@@ -50,13 +53,22 @@ export class RewardsService {
   async redeem(sin: string, rewardId: string) {
     const reward = findReward(rewardId);
     if (!reward) {
-      throw new BadRequestException({ error: "Hindi kilala ang piniling reward." });
+      throw new BadRequestException({ error: "Unknown reward." });
     }
 
     const pointsData = await this.usagePlan.getPoints(sin);
+    if (pointsData.balance >= reward.pointsCost && pointsData.spendable < reward.pointsCost) {
+      throw new BadRequestException({
+        error: `${pointsData.lockedPoints} Welcome Points are locked until your first Verified Savings on a coming Bill.`,
+        reason: "welcomePointsLocked",
+        balance: pointsData.balance,
+        lockedPoints: pointsData.lockedPoints,
+        pointsCost: reward.pointsCost,
+      });
+    }
     if (pointsData.balance < reward.pointsCost) {
       throw new BadRequestException({
-        error: `Hindi sapat ang iyong Points balance (${pointsData.balance} pts) para sa reward na ${reward.name} (${reward.pointsCost} pts).`,
+        error: `Your Points balance (${pointsData.balance} pts) is not enough for ${reward.name} (${reward.pointsCost} pts).`,
         balance: pointsData.balance,
         pointsCost: reward.pointsCost,
         pointsNeeded: reward.pointsCost - pointsData.balance,
@@ -75,7 +87,7 @@ export class RewardsService {
       source: "redemption",
       hasOutage: false,
       excludedReason: null,
-      description: `Na-redeem ang ${reward.name} (-${reward.pointsCost} pts) [sample rewards]`,
+      description: `Redeemed ${reward.name} (-${reward.pointsCost} pts) [sample rewards]`,
       createdAt: new Date().toISOString(),
       rewardId: reward.id,
       rewardName: reward.name,
@@ -86,7 +98,7 @@ export class RewardsService {
 
     return {
       success: true,
-      message: `Matagumpay na na-redeem ang ${reward.name}!`,
+      message: `${reward.name} redeemed!`,
       reward: {
         id: reward.id,
         name: reward.name,
@@ -97,7 +109,7 @@ export class RewardsService {
       },
       redeemedPoints: reward.pointsCost,
       balance: newBalance,
-      disclaimer: "Partner-funded sample reward. Hindi ito bawas o diskwento sa Meralco bill.",
+      disclaimer: "Partner-funded sample reward. Not a deduction or discount on your Meralco bill.",
       redemption: entry,
     };
   }

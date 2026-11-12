@@ -30,19 +30,19 @@ const row = (body: any, label: string) => rows(body).find((r: any) => r.label ==
 describe("POST /api/bills/laman", () => {
   it("labels generation and transmission as pass-through and distribution as Meralco's", async () => {
     const api = await harness();
-    const { status, body } = await api.post("/api/bills/laman", { now: { chargeLines: october } });
+    const { status, body } = await api.userPost("/api/bills/laman", { now: { chargeLines: october } });
 
     expect(status).toBe(200);
     expect(row(body, "Generation Charge").payee.type).toBe("passThrough");
     expect(row(body, "Transmission Charge").payee.type).toBe("passThrough");
     expect(row(body, "System Loss Charge").payee.type).toBe("passThrough");
     expect(row(body, "Distribution Charge").payee.type).toBe("meralco");
-    expect(row(body, "Generation Charge").what).toMatch(/planta/);
+    expect(row(body, "Generation Charge").what).toMatch(/power plants/);
   });
 
   it("groups Fixed Charges separately from per-kWh charges", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bills/laman", { now: { chargeLines: october } });
+    const { body } = await api.userPost("/api/bills/laman", { now: { chargeLines: october } });
 
     expect(body.groups.map((g: any) => g.key)).toEqual(["perKwh", "fixed", "unclear", "tax", "unknown"]);
     expect(row(body, "Supply Charge (per kWh)").group).toBe("perKwh");
@@ -54,21 +54,21 @@ describe("POST /api/bills/laman", () => {
 
   it("never guesses an unknown line", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bills/laman", { now: { chargeLines: october } });
+    const { body } = await api.userPost("/api/bills/laman", { now: { chargeLines: october } });
     expect(row(body, "Power Act Reduction Adjustment")).toMatchObject({
       group: "unknown",
       known: false,
       code: null,
       kind: null,
       payee: null,
-      what: "Hindi pa namin kilala ang linyang ito.",
+      what: "We don't recognise this line yet.",
       amount: -1250,
     });
   });
 
   it("group totals add up to the Bill's printed lines, and pass-through vs. Meralco is summed", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bills/laman", { now: { chargeLines: october } });
+    const { body } = await api.userPost("/api/bills/laman", { now: { chargeLines: october } });
     const printed = october.reduce((s, l) => s + Math.round(l.amount * 100), 0);
     expect(body.total).toBe(printed);
     expect(body.groups.reduce((s: number, g: any) => s + g.total, 0)).toBe(printed);
@@ -78,7 +78,7 @@ describe("POST /api/bills/laman", () => {
 
   it("shows how each line changed vs. last month", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bills/laman", {
+    const { body } = await api.userPost("/api/bills/laman", {
       now: { chargeLines: october },
       before: { chargeLines: september },
     });
@@ -93,13 +93,13 @@ describe("POST /api/bills/laman", () => {
 
   it("says so when last month's Bill has no printed lines", async () => {
     const api = await harness();
-    const { body } = await api.post("/api/bills/laman", { now: { chargeLines: october }, before: { chargeLines: [] } });
+    const { body } = await api.userPost("/api/bills/laman", { now: { chargeLines: october }, before: { chargeLines: [] } });
     expect(row(body, "Generation Charge").change).toEqual({ status: "noPrevious", amount: null, previous: null });
   });
 
   it("accepts whole Bills as sent to /api/bakit-ganito", async () => {
     const api = await harness();
-    const { status } = await api.post("/api/bills/laman", {
+    const { status } = await api.userPost("/api/bills/laman", {
       now: { period: "2026-10", kwh: 240, billingDays: 32, chargeLines: october },
       before: { period: "2026-09", kwh: 200, billingDays: 30 },
     });
@@ -108,8 +108,8 @@ describe("POST /api/bills/laman", () => {
 
   it("returns 400 when the Bill has no charge lines", async () => {
     const api = await harness();
-    const { status, body } = await api.post("/api/bills/laman", { now: { chargeLines: [] } });
+    const { status, body } = await api.userPost("/api/bills/laman", { now: { chargeLines: [] } });
     expect(status).toBe(400);
-    expect(JSON.stringify(body)).toMatch(/Walang charge line/);
+    expect(JSON.stringify(body)).toMatch(/No charge lines/);
   });
 });

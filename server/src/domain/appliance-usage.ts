@@ -38,9 +38,9 @@ export interface ApplianceInput {
 export type ApplianceSource = "label" | "answers" | "default";
 
 export const SOURCE_LABEL: Record<ApplianceSource, string> = {
-  label: "Mula sa energy label",
-  answers: "Tantya mula sa sagot mo",
-  default: "Hula (default)",
+  label: "From the energy label",
+  answers: "Estimated from your answers",
+  default: "Typical value",
 };
 
 export interface ApplianceEstimate {
@@ -95,10 +95,10 @@ export function rangeFromHours(hours: number, days: DaysOfWeek = "everyday"): Ti
 /** Validate the appliance rating without requiring a confirmed routine yet. */
 export function validateApplianceRating(a: ApplianceInput): string[] {
   const def = findAppliance(a.type);
-  if (!def) return [`Hindi kilalang appliance: ${a.type}`];
+  if (!def) return [`Unknown appliance: ${a.type}`];
   const errors: string[] = [];
   const quantity = a.quantity ?? 1;
-  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) errors.push(`${def.label}: 1 hanggang 20 lang ang bilang`);
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) errors.push(`${def.label}: the count must be 1 to 20`);
 
   if (a.energyLabel !== undefined) {
     const label = a.energyLabel;
@@ -111,14 +111,14 @@ export function validateApplianceRating(a: ApplianceInput): string[] {
         : label.referenceHoursPerDay === undefined || label.referenceHoursPerDay === 24);
     const normalized = valid ? labelKwhPerHour(a.type, label) : NaN;
     if (!positive(normalized) || !Number.isFinite(normalized * 24 * quantity)) {
-      errors.push(`${def.label}: kumpirmahin ang positibong kWh at tamang batayan ng energy label`);
+      errors.push(`${def.label}: confirm a positive kWh and the correct basis of the energy label`);
     }
   }
 
   for (const [key, value] of Object.entries(a.answers ?? {})) {
     const q = def.questions.find((x) => x.key === key);
-    if (!q) errors.push(`${def.label}: walang tanong na "${key}"`);
-    else if (value !== UNKNOWN && !q.options.some((o) => o.value === value)) errors.push(`${def.label}: hindi tanggap ang sagot na "${value}" sa "${key}"`);
+    if (!q) errors.push(`${def.label}: there is no question "${key}"`);
+    else if (value !== UNKNOWN && !q.options.some((o) => o.value === value)) errors.push(`${def.label}: the answer "${value}" is not accepted for "${key}"`);
   }
 
   return errors;
@@ -131,16 +131,16 @@ export function validateAppliance(a: ApplianceInput): string[] {
   if (!def) return errors;
   if (def.routine === "timeRanges") {
     const ranges = a.timeRanges ?? [];
-    if (ranges.length === 0) errors.push(`${def.label}: kailan ito bukas?`);
+    if (ranges.length === 0) errors.push(`${def.label}: when is it on?`);
     for (const r of ranges) {
-      if (!TIME.test(r.start) || !TIME.test(r.end)) errors.push(`${def.label}: oras dapat HH:MM`);
-      else if (r.start === r.end) errors.push(`${def.label}: magkaiba dapat ang simula at tapos`);
-      if (!(r.days in DAY_SHARE)) errors.push(`${def.label}: araw dapat everyday, weekdays o weekends`);
+      if (!TIME.test(r.start) || !TIME.test(r.end)) errors.push(`${def.label}: times must be HH:MM`);
+      else if (r.start === r.end) errors.push(`${def.label}: start and end must differ`);
+      if (!(r.days in DAY_SHARE)) errors.push(`${def.label}: days must be everyday, weekdays or weekends`);
     }
   }
   if (def.routine === "usesPerWeek") {
     const uses = a.usesPerWeek;
-    if (uses === undefined || !Number.isFinite(uses) || uses < 0 || uses > 50) errors.push(`${def.label}: ilang beses kada linggo (0–50)?`);
+    if (uses === undefined || !Number.isFinite(uses) || uses < 0 || uses > 50) errors.push(`${def.label}: how many times a week (0–50)?`);
   }
   return errors;
 }

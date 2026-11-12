@@ -15,7 +15,7 @@ export class BillHistoryController {
     try {
       return (await this.source.bills(sin)).slice().sort((a, b) => a.period.localeCompare(b.period)).slice(-12);
     } catch {
-      throw new BadGatewayException({ error: "Hindi makuha ang Bill History. Subukan ulit." });
+      throw new BadGatewayException({ error: "We couldn't get the Bill History. Please try again." });
     }
   }
 }

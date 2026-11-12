@@ -8,7 +8,7 @@ import type { BillSource } from "../bills/bill-source.js";
 import { BILL_SOURCE, RATE_SCHEDULES, WEATHER_PROVIDER } from "../common/injection-tokens.js";
 import type { WeatherProvider } from "../weather/weather-provider.interface.js";
 
-/** "Bakit ganito?": the Bill Change split into four effects (ADR-0001). All amounts in centavos. */
+/** "Why this bill?": the Bill Change split into four effects (ADR-0001). All amounts in centavos. */
 @Injectable()
 export class BillChangeService {
   constructor(
@@ -19,7 +19,7 @@ export class BillChangeService {
 
   async explainForHousehold(sin: string) {
     const bills = await this.bills.bills(sin);
-    if (bills.length < 2) throw new NotFoundException({ error: "Kailangan ng dalawang Bill" });
+    if (bills.length < 2) throw new NotFoundException({ error: "Two Bills are needed" });
     const [before, now] = bills.slice(-2) as [Bill, Bill];
 
     const billsWithWeather = await Promise.all(
@@ -117,7 +117,7 @@ export class BillChangeService {
     if (split.catchUpApplies) {
       lines.push({
         key: "catchUp",
-        label: "Catch-up mula sa tantyang Bill",
+        label: "Catch-up from an estimated Bill",
         amount: split.catchUpEffect,
         kwh: Math.round(split.catchUpKwh * 100) / 100,
       });
@@ -137,7 +137,7 @@ export class BillChangeService {
         { key: "billingDays", label: "Billing Days Effect", amount: split.billingDaysEffect },
         {
           key: "weather",
-          label: "Weather Effect (tantya)",
+          label: "Weather Effect (estimate)",
           amount: split.weatherEffect,
           estimate: true,
           sensitivity: sensitivity?.heatSensitivity,
@@ -176,7 +176,7 @@ export class BillChangeService {
 
   private schedule(period: string): RateSchedule {
     const s = this.rates.get(period);
-    if (!s) throw new UnprocessableEntityException({ error: `Walang Rate Schedule para sa ${period}`, period });
+    if (!s) throw new UnprocessableEntityException({ error: `There is no Rate Schedule for ${period}`, period });
     return s;
   }
 }

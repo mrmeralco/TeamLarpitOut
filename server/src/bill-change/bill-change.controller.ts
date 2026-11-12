@@ -5,7 +5,7 @@ import { BillChangeRequestDto } from "./dto/bill-change-request.dto.js";
 import { SessionGuard } from "../auth/session.guard.js";
 import { HouseholdAccessGuard } from "../households/household-access.guard.js";
 
-/** "Bakit ganito?": why the Bill changed. */
+/** "Why this bill?": why the Bill changed. */
 @Controller()
 export class BillChangeController {
   constructor(private readonly billChange: BillChangeService) {}
@@ -13,6 +13,7 @@ export class BillChangeController {
   /** From two typed or scanned-and-confirmed Bills. */
   @Post("bakit-ganito")
   @HttpCode(200)
+  @UseGuards(SessionGuard)
   fromBills(@Body() body: BillChangeRequestDto) {
     return this.billChange.explainWithFallback(body.before, body.now);
   }

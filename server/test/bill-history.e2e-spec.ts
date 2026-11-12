@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MeralcoApiSource } from "../src/bills/meralcoApiSource.js";
-import { mockMyMeralcoSource } from "../src/bills/myMeralcoSource.js";
+import { DEMO_ACCOUNTS } from "../src/bills/meralco-accounts.js";
 import rates from "../src/data/rate-schedules.json" with { type: "json" };
 import seed from "../src/data/meralco-demo-seed.json" with { type: "json" };
 import { bill, harness } from "./utils/test-harness.js";
@@ -53,10 +53,10 @@ describe("GET /api/households/:sin/bills", () => {
 
   it("gives inaccessible and unknown Households the same 404 even when their Bills exist", async () => {
     const api = await harness({ billSource: new MeralcoApiSource() });
-    const token = await api.login("owner-b@example.test", "test-password-b");
+    const token = await api.login("owner-b@example.test");
     const foreign = await api.get(path(), token);
     expect(foreign).toEqual(await api.get(path("unknown"), token));
-    expect(foreign).toEqual({ status: 404, body: { error: "Hindi makita ang Household." } });
+    expect(foreign).toEqual({ status: 404, body: { error: "Household not found." } });
   });
 
   it("sorts source Bills and returns only the latest twelve", async () => {
@@ -75,14 +75,16 @@ describe("GET /api/households/:sin/bills", () => {
     const token = await api.login();
     expect((await api.get(path(), token)).body).toHaveLength(1);
     const failed = await api.get(path("9876543210"), token);
-    expect(failed).toEqual({ status: 502, body: { error: "Hindi makuha ang Bill History. Subukan ulit." } });
+    expect(failed).toEqual({ status: 502, body: { error: "We couldn't get the Bill History. Please try again." } });
     const empty = await harness();
     expect(await empty.get(path(), await empty.login())).toEqual({ status: 200, body: [] });
   });
 
-  it("supports the default mock login with the demo histories and denies history after logout", async () => {
-    const api = await harness({ myMeralco: mockMyMeralcoSource(), billSource: new MeralcoApiSource() });
-    const token = await api.login("demo@example.com", "kuryenteko-demo");
+  it("serves the demo histories to a linked demo login and denies history after logout", async () => {
+    const api = await harness({
+      accounts: DEMO_ACCOUNTS, links: { "demo@example.com": DEMO_ACCOUNTS.map((a) => a.sin) }, billSource: new MeralcoApiSource(),
+    });
+    const token = await api.login("demo@example.com");
     expect((await api.get(path(), token)).body).toHaveLength(12);
     await api.post("/api/auth/logout", {}, token);
     expect((await api.get(path(), token)).status).toBe(401);

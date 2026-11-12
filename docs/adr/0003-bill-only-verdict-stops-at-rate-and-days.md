@@ -1,5 +1,7 @@
 # Without login, the Bill-only Verdict stops at the Rate and Billing Days Effects
 
+> **Superseded** by [ADR-0005](0005-email-otp-sign-in-and-can-linking.md) on 2026-11-12: sign-in now comes first, so every scan gets the full Bakit ganito?.
+
 Anyone can scan a Bill without logging in, but what they get is the **Bill-only Verdict**: the Bill Change, its Rate Effect and Billing Days Effect, Bill Checks 1 and 3, and the redrawn Bill. The rest of the change (Weather Effect + Habit Effect) is shown as one ❓ amount: "Init ba o gamit ninyo? Mag-login gamit ang My Meralco para malaman." The team worried that a full no-login explanation makes KilosWatt pointless, since people could stop at "explain my bill". The line is not artificial: separating Weather from Habit needs Heat Sensitivity from the 12-bill Bill History, which only login provides, so the Bill-only Verdict stops where one Bill stops being able to answer. The Habit Effect, revealed after login, is then the bridge into Missions ("₱577 dahil sa gamit. Gusto mo bang mabawasan?").
 
 ## Considered Options

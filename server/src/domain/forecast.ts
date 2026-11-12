@@ -61,8 +61,8 @@ export function detectHeatWave(opts: {
 
   const banner = isHeatWave
     ? heatIndex
-      ? `Babala sa Heat Wave: Inaasahang aabot sa ${heatIndex}°C ang heat index sa susunod na 14 araw. Maaaring tumaas ang konsumo ng kuryente.`
-      : "Babala sa Heat Wave: Inaasahang mataas na heat index sa susunod na 14 araw. Maaaring tumaas ang konsumo ng kuryente."
+      ? `Heat wave warning: the heat index is expected to reach ${heatIndex}°C in the next 14 days. Electricity use may go up.`
+      : "Heat wave warning: a high heat index is expected in the next 14 days. Electricity use may go up."
     : null;
 
   return { active: isHeatWave, heatIndex, banner, kwhAdjustmentPerDay };
@@ -124,7 +124,7 @@ export function compareTarget(opts: {
   const diffPesosNumber = Math.abs(diffPesos / 100);
   const formatted = diffPesosNumber.toFixed(2);
   const label = diffPesos <= 0
-    ? (diffPesos === 0 ? "Eksaktong pasok sa target" : `Pasok sa target (mas mababa nang ₱${formatted})`)
-    : `Lalampas sa target nang ₱${formatted}`;
+    ? (diffPesos === 0 ? "Exactly on target" : `Within target (₱${formatted} below)`)
+    : `Over target by ₱${formatted}`;
   return { targetKwh, targetPesos, diffPesos, diffKwh, status, label };
 }

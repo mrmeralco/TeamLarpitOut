@@ -77,7 +77,7 @@ function sum(ctx: MissionContext, type: ApplianceType) {
 export const MISSION_CATALOG: MissionDefinition[] = [
   {
     id: "aircon-25c",
-    title: "Aircon sa 25°C",
+    title: "Set the aircon to 25°C",
     appliance: "aircon",
     basis: "assumption",
     kwhSaved: (ctx) => {
@@ -87,15 +87,15 @@ export const MISSION_CATALOG: MissionDefinition[] = [
       const setting = ctx.airconSetting ?? ASSUMED.airconSetting;
       if (setting >= 25) return null;
       const assumptions: Assumption[] = [
-        { key: "airconPerDegree", label: "Tipid kada 1°C na mas mainit (palagay)", value: ASSUMED.airconPerDegree },
+        { key: "airconPerDegree", label: "Savings per 1°C warmer (assumption)", value: ASSUMED.airconPerDegree },
       ];
-      if (!told) assumptions.push({ key: "airconSetting", label: "Kasalukuyang setting (palagay)", value: setting });
+      if (!told) assumptions.push({ key: "airconSetting", label: "Current setting (assumption)", value: setting });
       return { kwh: ac.kwh * ASSUMED.airconPerDegree * (25 - setting), assumptions };
     },
   },
   {
     id: "aircon-timer-2h",
-    title: "Aircon timer, 2 oras na mas maaga",
+    title: "Aircon timer 2 hours earlier",
     appliance: "aircon",
     basis: "physics",
     kwhSaved: (ctx) => {
@@ -105,8 +105,30 @@ export const MISSION_CATALOG: MissionDefinition[] = [
     },
   },
   {
+    id: "aircon-off-1h",
+    title: "Turn off the aircon 1 hour earlier",
+    appliance: "aircon",
+    basis: "physics",
+    kwhSaved: (ctx) => {
+      const ac = sum(ctx, "aircon");
+      if (ac.kwh <= 0 || ac.hours <= 1) return null;
+      return { kwh: ac.kwh / ac.hours, assumptions: [] };
+    },
+  },
+  {
+    id: "tv-hour-less",
+    title: "Watch TV 1 hour less a day",
+    appliance: "tv",
+    basis: "physics",
+    kwhSaved: (ctx) => {
+      const tv = sum(ctx, "tv");
+      if (tv.kwh <= 0 || tv.hours <= 1) return null;
+      return { kwh: tv.kwh / tv.hours, assumptions: [] };
+    },
+  },
+  {
     id: "fan-first-hour",
-    title: "Electric fan muna sa unang oras, bago ang aircon",
+    title: "Use the electric fan for the first hour before the aircon",
     appliance: "aircon",
     basis: "physics",
     kwhSaved: (ctx) => {
@@ -118,7 +140,7 @@ export const MISSION_CATALOG: MissionDefinition[] = [
       let fanKw = fans[0]?.rating;
       if (fanKw === undefined) {
         fanKw = ASSUMED.fanKw;
-        assumptions.push({ key: "fanKw", label: "Kuryente ng electric fan, kW (karaniwan)", value: fanKw });
+        assumptions.push({ key: "fanKw", label: "Electric fan power, kW (typical)", value: fanKw });
       }
       const kwh = Math.max(0, airconKw - fanKw) * ctx.billingDays;
       return kwh > 0 ? { kwh, assumptions } : null;
@@ -126,7 +148,7 @@ export const MISSION_CATALOG: MissionDefinition[] = [
   },
   {
     id: "unplug-standby",
-    title: "Hugutin ang TV at gadgets sa gabi",
+    title: "Unplug the TV and chargers at night",
     appliance: "tv",
     basis: "assumption",
     kwhSaved: (ctx) => {
@@ -134,13 +156,13 @@ export const MISSION_CATALOG: MissionDefinition[] = [
       if (tv.quantity <= 0) return null;
       return {
         kwh: (ASSUMED.standbyWatts * tv.quantity * 8 * ctx.billingDays) / 1000,
-        assumptions: [{ key: "standbyWatts", label: "Standby ng TV, watts (palagay)", value: ASSUMED.standbyWatts }],
+        assumptions: [{ key: "standbyWatts", label: "TV standby, watts (assumption)", value: ASSUMED.standbyWatts }],
       };
     },
   },
   {
     id: "lights-off",
-    title: "Patayin ang ilaw sa kwartong walang tao",
+    title: "Lights off in empty rooms",
     appliance: "lights",
     basis: "assumption",
     kwhSaved: (ctx) => {
@@ -149,13 +171,13 @@ export const MISSION_CATALOG: MissionDefinition[] = [
       const kw = lights.kwh / (lights.hours * ctx.billingDays);
       return {
         kwh: kw * ASSUMED.lightHoursCut * ctx.billingDays,
-        assumptions: [{ key: "lightHoursCut", label: "Oras na mababawas kada araw (palagay)", value: ASSUMED.lightHoursCut }],
+        assumptions: [{ key: "lightHoursCut", label: "Hours cut per day (assumption)", value: ASSUMED.lightHoursCut }],
       };
     },
   },
   {
     id: "iron-batch",
-    title: "Magplantsa minsan sa isang linggo, sabay-sabay",
+    title: "Iron clothes once a week, all at once",
     appliance: "flat_iron",
     basis: "assumption",
     kwhSaved: (ctx) => {
@@ -163,13 +185,13 @@ export const MISSION_CATALOG: MissionDefinition[] = [
       if (iron.kwh <= 0 || iron.uses < 2) return null;
       return {
         kwh: iron.kwh * ASSUMED.ironBatch,
-        assumptions: [{ key: "ironBatch", label: "Tipid sa isang beses na pag-init (palagay)", value: ASSUMED.ironBatch }],
+        assumptions: [{ key: "ironBatch", label: "Savings from heating up once (assumption)", value: ASSUMED.ironBatch }],
       };
     },
   },
   {
     id: "washing-full-loads",
-    title: "Maglaba lang kapag puno ang washing machine",
+    title: "Wash only full loads",
     appliance: "washing_machine",
     basis: "assumption",
     kwhSaved: (ctx) => {
@@ -179,13 +201,13 @@ export const MISSION_CATALOG: MissionDefinition[] = [
       const perLoad = wash.kwh / (wash.uses * weeks);
       return {
         kwh: ASSUMED.washLoadsCutPerWeek * weeks * perLoad,
-        assumptions: [{ key: "washLoadsCutPerWeek", label: "Labang mababawas kada linggo (palagay)", value: ASSUMED.washLoadsCutPerWeek }],
+        assumptions: [{ key: "washLoadsCutPerWeek", label: "Loads cut per week (assumption)", value: ASSUMED.washLoadsCutPerWeek }],
       };
     },
   },
   {
     id: "ref-medium",
-    title: "Ref sa medium, hindi sa max",
+    title: "Set the ref to medium, not max",
     appliance: "refrigerator",
     basis: "assumption",
     kwhSaved: (ctx) => {
@@ -193,7 +215,7 @@ export const MISSION_CATALOG: MissionDefinition[] = [
       if (ref.kwh <= 0) return null;
       return {
         kwh: ref.kwh * ASSUMED.refMedium,
-        assumptions: [{ key: "refMedium", label: "Tipid sa medium setting (palagay)", value: ASSUMED.refMedium }],
+        assumptions: [{ key: "refMedium", label: "Savings at the medium setting (assumption)", value: ASSUMED.refMedium }],
       };
     },
   },

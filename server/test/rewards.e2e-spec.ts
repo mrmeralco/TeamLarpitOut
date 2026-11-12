@@ -40,7 +40,7 @@ describe("19 · Rewards catalog and redemption", () => {
     expect(body.balance).toBe(330);
     expect(body.tag).toBe("sample rewards");
     expect(body.disclaimer).toContain("Partner-funded");
-    expect(body.disclaimer).toContain("Hindi ito bawas o diskwento sa Meralco bill");
+    expect(body.disclaimer).toContain("Not a deduction or discount on your Meralco bill");
     expect(body.catalog).toBeInstanceOf(Array);
     expect(body.catalog.length).toBeGreaterThanOrEqual(3);
 
@@ -81,7 +81,7 @@ describe("19 · Rewards catalog and redemption", () => {
     );
 
     expect(status).toBe(400);
-    expect(body.error).toContain("Hindi sapat ang iyong Points balance");
+    expect(body.error).toContain("is not enough for");
     expect(body.balance).toBe(330);
     expect(body.pointsCost).toBe(500);
     expect(body.pointsNeeded).toBe(170);
@@ -102,7 +102,7 @@ describe("19 · Rewards catalog and redemption", () => {
     );
 
     expect(status).toBe(400);
-    expect(body.error).toContain("Hindi kilala");
+    expect(body.error).toContain("Unknown reward");
   });
 
   it("redemption deducts Points and is recorded per Household", async () => {
@@ -159,7 +159,7 @@ describe("19 · Rewards catalog and redemption", () => {
       token,
     );
     expect(secondRedeem.status).toBe(400);
-    expect(secondRedeem.body.error).toContain("Hindi sapat");
+    expect(secondRedeem.body.error).toContain("is not enough");
   });
 
   it("requires authentication and household access", async () => {

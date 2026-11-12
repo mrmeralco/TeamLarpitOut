@@ -4,17 +4,17 @@ import { peso } from "../lib/format";
 
 const PAYEE_TAG: Record<string, string> = {
   passThrough: "Pass-through",
-  meralco: "Kay Meralco",
-  government: "Buwis",
+  meralco: "Meralco",
+  government: "Tax",
   subsidy: "Subsidy",
 };
 
 function change(row: BillBreakdownRow) {
   const c = row.change;
-  if (c.status === "noPrevious") return "Walang naka-print na linya ang nakaraang Bill, kaya hindi maikumpara.";
-  if (c.status === "new") return "Wala ito sa nakaraang Bill.";
-  if (c.amount === 0) return `Walang pagbabago mula sa nakaraang buwan (${peso(c.previous!)}).`;
-  return `${peso(c.amount!, true)} kumpara sa nakaraang buwan (${peso(c.previous!)} noon).`;
+  if (c.status === "noPrevious") return "Last month's Bill has no printed lines, so it can't be compared.";
+  if (c.status === "new") return "This wasn't on last month's Bill.";
+  if (c.amount === 0) return `No change from last month (${peso(c.previous!)}).`;
+  return `${peso(c.amount!, true)} compared with last month (${peso(c.previous!)} then).`;
 }
 
 function Row({ row }: { row: BillBreakdownRow }) {
@@ -34,12 +34,12 @@ function Row({ row }: { row: BillBreakdownRow }) {
           <p>{row.what}</p>
           {row.payee && (
             <p>
-              <span className="muted">Kanino napupunta: </span>
+              <span className="muted">Who gets it: </span>
               {row.payee.name}
             </p>
           )}
           <p>
-            <span className="muted">Pagbabago: </span>
+            <span className="muted">Change: </span>
             {change(row)}
           </p>
         </div>
@@ -48,13 +48,13 @@ function Row({ row }: { row: BillBreakdownRow }) {
   );
 }
 
-/** "Ano'ng laman ng bill ko?" */
+/** "What's on my bill?" */
 export function BillBreakdown({ data, missingLines }: { data: BillBreakdownData | null; missingLines: boolean }) {
   if (missingLines) {
     return (
       <section className="card">
-        <h2>Ano'ng laman ng bill ko?</h2>
-        <p className="muted">I-scan o i-type ang mga charge line ng Bill ngayon para makita kung saan napupunta ang bawat piso.</p>
+        <h2>What's on my bill?</h2>
+        <p className="muted">Scan or type this Bill's charge lines to see where every peso goes.</p>
       </section>
     );
   }
@@ -62,7 +62,7 @@ export function BillBreakdown({ data, missingLines }: { data: BillBreakdownData 
   const share = data.split.passThrough + data.split.meralco;
   return (
     <section className="card" aria-live="polite">
-      <h2>Ano'ng laman ng bill ko?</h2>
+      <h2>What's on my bill?</h2>
       {share > 0 && (
         <div className="split">
           <div className="bar two">
@@ -70,12 +70,12 @@ export function BillBreakdown({ data, missingLines }: { data: BillBreakdownData 
             <span className="meralco" style={{ width: `${(data.split.meralco / share) * 100}%` }} />
           </div>
           <small>
-            <span className="tag passThrough">Pass-through</span> {peso(data.split.passThrough)} ang kinokolekta ng Meralco para sa iba ·{" "}
-            <span className="tag meralco">Kay Meralco</span> {peso(data.split.meralco)}
+            <span className="tag passThrough">Pass-through</span> {peso(data.split.passThrough)} collected by Meralco for others ·{" "}
+            <span className="tag meralco">Meralco</span> {peso(data.split.meralco)}
           </small>
         </div>
       )}
-      <p className="muted">I-tap ang isang linya para makita kung ano ito.</p>
+      <p className="muted">Tap a line to see what it is.</p>
       {data.groups.map((g) => (
         <div key={g.key} className="laman-group">
           <div className="effect-head">
@@ -90,7 +90,7 @@ export function BillBreakdown({ data, missingLines }: { data: BillBreakdownData 
         </div>
       ))}
       <div className="effect-head laman-total">
-        <span>Kabuuan ng mga linya</span>
+        <span>Total of the lines</span>
         <strong>{peso(data.total)}</strong>
       </div>
     </section>

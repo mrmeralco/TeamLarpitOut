@@ -16,7 +16,7 @@ export class ApplianceLabelScanService {
     if (raw?.readable !== true || raw.type !== type) {
       throw new UnprocessableEntityException({
         status: "unreadable",
-        error: "Hindi mabasa ang energy label o hindi tugma ang appliance. Kunan ulit o gamitin ang mga sagot mo.",
+        error: "We couldn't read the energy label, or it is for a different appliance. Retake it or use your answers.",
       });
     }
 
@@ -26,11 +26,11 @@ export class ApplianceLabelScanService {
     let referenceHoursPerDay = type === "refrigerator" ? 24 : positive(raw.referenceHoursPerDay);
     if (period === "monthly" && raw.referenceDays == null) {
       referenceDays = 30;
-      assumptions.push({ field: "referenceDays", value: 30, reason: "Hindi nakalimbag ang bilang ng araw; ipinagpalagay na 30 araw/buwan. Pakisuri." });
+      assumptions.push({ field: "referenceDays", value: 30, reason: "The number of days isn't printed; assumed 30 days a month. Please check." });
     }
     if (type === "aircon" && raw.referenceHoursPerDay == null) {
       referenceHoursPerDay = 9;
-      assumptions.push({ field: "referenceHoursPerDay", value: 9, reason: "Hindi nakalimbag ang oras; paunang palagay na 9 oras/araw. Itama kung iba ang batayan ng label." });
+      assumptions.push({ field: "referenceHoursPerDay", value: 9, reason: "The hours aren't printed; assumed 9 hours a day. Correct it if the label uses a different basis." });
     }
     if (referenceHoursPerDay !== null && referenceHoursPerDay > 24) referenceHoursPerDay = null;
     const label = { consumptionKwh: positive(raw.consumptionKwh), period, referenceDays, referenceHoursPerDay };
