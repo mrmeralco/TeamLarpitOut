@@ -15,6 +15,8 @@ export interface HeatSensitivityResult {
   source: SensitivitySource;
   label: string;
   hotDayKwh: number;
+  /** Standard deviation of residuals from least-squares fit (GLOSSARY / KuryenteKo §4). */
+  sigma?: number;
 }
 
 /** Baseline cooling sensitivity when no bill history is available (1.0 kWh/CDD). */
@@ -50,12 +52,14 @@ export function calculateHeatSensitivity(
     const meanDaily =
       valid.length > 0 ? valid.reduce((acc, b) => acc + b.kwh / b.billingDays, 0) / valid.length : 0;
     const base = Math.max(0, meanDaily - fallbackSensitivity * 0);
+    const fallbackSigma = Math.max(1.0, Math.round(meanDaily * 0.1 * 100) / 100);
     return {
       heatSensitivity: fallbackSensitivity,
       baseKwhPerDay: Math.round(base * 100) / 100,
       source: "cooling_appliance_estimate",
       label: "Cooling Appliance estimate",
       hotDayKwh: fallbackSensitivity,
+      sigma: fallbackSigma,
     };
   }
 
@@ -84,12 +88,14 @@ export function calculateHeatSensitivity(
   // If there's no variation in CDD, slope is undefined; fall back to estimate.
   if (varX <= 1e-6) {
     const base = Math.max(0, meanY - fallbackSensitivity * meanX);
+    const fallbackSigma = Math.max(1.0, Math.round(meanY * 0.1 * 100) / 100);
     return {
       heatSensitivity: fallbackSensitivity,
       baseKwhPerDay: Math.round(base * 100) / 100,
       source: "cooling_appliance_estimate",
       label: "Cooling Appliance estimate",
       hotDayKwh: fallbackSensitivity,
+      sigma: fallbackSigma,
     };
   }
 
@@ -99,12 +105,24 @@ export function calculateHeatSensitivity(
   const rounded = Math.round(clamped * 10) / 10;
   const base = Math.max(0, meanY - rounded * meanX);
 
+  let sumSqRes = 0;
+  for (const b of valid) {
+    const dailyKwh = b.kwh / b.billingDays;
+    const predicted = base + rounded * b.cddPerDay;
+    const res = dailyKwh - predicted;
+    sumSqRes += res * res;
+  }
+  const fitSigma = Math.sqrt(sumSqRes / n);
+  const roundedSigma = Math.round(fitSigma * 100) / 100;
+  const sigma = roundedSigma > 0 ? roundedSigma : 1.0;
+
   return {
     heatSensitivity: rounded,
     baseKwhPerDay: Math.round(base * 100) / 100,
     source: "history",
     label: "Mula sa Bill History",
     hotDayKwh: rounded,
+    sigma,
   };
 }
 
