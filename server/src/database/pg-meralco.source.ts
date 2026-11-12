@@ -53,6 +53,7 @@ export class PgMeralcoSource implements BillSource, MeralcoAccountSource {
       insert into meralco.accounts (can, sin, holder_name, area, meter_type, demo)
       values (${account.can}, ${account.sin}, 'Demo Household (scanned Bill)', ${account.area}, ${account.meter_type}, true)
       on conflict do nothing`;
+    // A lookup just before linking may have cached "no account" for this CAN or SIN.
     this.accounts.delete(`can:${account.can}`);
     this.accounts.delete(`sin:${account.sin}`);
   }

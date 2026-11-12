@@ -73,4 +73,21 @@ describe("PgMeralcoSource demo Households", () => {
     await source.bills("8485721936");
     expect(calls).toHaveLength(before + 1 + 4);
   });
+
+  it("forgets a cached lookup once the demo account is added", async () => {
+    let stored = false;
+    const sql = ((strings: TemplateStringsArray) => {
+      const text = strings.join("?");
+      if (text.includes("insert into meralco.accounts")) { stored = true; return Promise.resolve([]); }
+      if (text.includes("select can, sin")) {
+        return Promise.resolve(stored ? [{ can: "0485721936", sin: "8485721936", area: "Caloocan City", meter_type: "traditional", demo: true }] : []);
+      }
+      return Promise.resolve([]);
+    }) as unknown as Sql;
+    const source = new PgMeralcoSource(sql, 60_000, () => 0);
+    expect(await source.findByCan("0485721936")).toBeNull();
+    await source.addDemo({ can: "0485721936", sin: "8485721936", area: "Caloocan City", meter_type: "traditional" });
+    expect(await source.findByCan("0485721936")).toMatchObject({ sin: "8485721936", demo: true });
+    expect(await source.household("8485721936")).toMatchObject({ can: "0485721936", demo: true });
+  });
 });
