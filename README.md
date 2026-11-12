@@ -15,6 +15,7 @@ Plan, glossary and decisions (ADR-0001, ADR-0002) live in `99lash/meralco-idol-2
 | `server/src/sources/` | Bill sources behind a `BillSource` interface |
 | `server/src/tokens.ts` | Injection tokens for every external source (`RATE_SCHEDULES`, `BILL_SOURCE`) |
 | `server/src/bakit-ganito/` | Controller + service for "Bakit ganito?" |
+| `server/src/vision/` | Bill scan: `VisionProvider` seam, Gemini provider, draft builder |
 | `server/test/harness.ts` | API test harness (Vitest + Supertest): boots the real `AppModule`, overrides providers with fakes |
 | `web/` | Vite + React PWA |
 
@@ -26,6 +27,7 @@ TypeScript everywhere, pnpm workspace. Backend: NestJS 12, class-validator, Vite
 
 ```sh
 pnpm install
+cp server/.env.example server/.env   # add GEMINI_API_KEY for bill scan
 pnpm dev          # API on :8787, PWA on :5173 (proxies /api)
 pnpm test         # API-level tests
 pnpm typecheck
@@ -35,6 +37,7 @@ pnpm typecheck
 
 - `GET  /api/rate-schedules` → `{ periods }`
 - `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` → effects, total (centavos)
+- `POST /api/bills/scan` (multipart, field `photo`) → editable draft: `now`, `before` (from printed history), `missing`, `estimated`, masked Service ID Number. `422` unreadable, `503` no vision key. Nothing is used until the PWA confirms and posts to `/api/bakit-ganito`.
 - `GET  /api/households/:sin/bakit-ganito` → same, from the Household's two latest Bills in the Bill source
 
 `Bill = { period: "YYYY-MM", kwh, billingDays, chargeLines?: [{ label, amount }] }`

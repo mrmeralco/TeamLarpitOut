@@ -12,7 +12,7 @@
     "skipLibCheck": true,
     "outDir": "dist",
     "sourceMap": true,
-    "types": ["node"]
+    "types": ["node", "multer"]
   },
   "include": ["src", "test", "vitest.config.ts"]
 }

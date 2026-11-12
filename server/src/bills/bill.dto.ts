@@ -39,6 +39,20 @@ export class BillDto implements Bill {
   @ValidateNested({ each: true })
   @Type(() => ChargeLineDto)
   chargeLines?: ChargeLineDto[];
+
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "dueDate must be YYYY-MM-DD" })
+  dueDate?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  previousReading?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  presentReading?: number;
 }
 
 export class BakitGanitoDto {

@@ -4,3 +4,4 @@
  */
 export const RATE_SCHEDULES = Symbol("RATE_SCHEDULES");
 export const BILL_SOURCE = Symbol("BILL_SOURCE");
+export const VISION_PROVIDER = Symbol("VISION_PROVIDER");

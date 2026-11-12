@@ -1,6 +1,10 @@
 import "reflect-metadata";
+import { existsSync } from "node:fs";
 import { NestFactory } from "@nestjs/core";
 import { AppModule, configureApp } from "./app.module.js";
+
+// GEMINI_API_KEY etc. from server/.env (see .env.example). Providers read env at startup.
+if (existsSync(".env")) process.loadEnvFile(".env");
 
 const app = configureApp(await NestFactory.create(AppModule));
 const port = Number(process.env.PORT ?? 8787);

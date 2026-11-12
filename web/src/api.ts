@@ -48,3 +48,41 @@ export const api = {
       body: JSON.stringify({ before, now }),
     }).then((r) => json<BakitGanito>(r)),
 };
+
+export interface DraftBill {
+  period?: string;
+  kwh?: number;
+  billingDays?: number;
+  dueDate?: string;
+  previousReading?: number;
+  presentReading?: number;
+  chargeLines?: ChargeLine[];
+}
+
+export type ScanOutcome =
+  | {
+      kind: "read";
+      now: DraftBill;
+      before: DraftBill | null;
+      estimated: string[];
+      missing: string[];
+      serviceIdMasked: string | null;
+    }
+  | { kind: "unreadable"; problem: string }
+  | { kind: "unavailable"; error: string };
+
+/** Send a Bill photo to be read. The result is a draft the user must confirm. */
+export async function scanBill(photo: File): Promise<ScanOutcome> {
+  const form = new FormData();
+  form.append("photo", photo);
+  let res: Response;
+  try {
+    res = await fetch("/api/bills/scan", { method: "POST", body: form });
+  } catch {
+    return { kind: "unavailable", error: "Hindi maabot ang server. I-type na lang ang Bill." };
+  }
+  const body = await res.json().catch(() => ({}));
+  if (res.ok) return { kind: "read", ...body };
+  if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
+  return { kind: "unavailable", error: body.error ?? `Hindi nabasa ang litrato (HTTP ${res.status}).` };
+}

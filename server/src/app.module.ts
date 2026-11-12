@@ -1,6 +1,7 @@
 import { Controller, Get, Module, ValidationPipe, type INestApplication } from "@nestjs/common";
 import { BakitGanitoModule } from "./bakit-ganito/bakit-ganito.module.js";
 import { RateSchedulesModule } from "./rate-schedules/rate-schedules.module.js";
+import { VisionModule } from "./vision/vision.module.js";
 
 @Controller("health")
 export class HealthController {
@@ -11,7 +12,7 @@ export class HealthController {
 }
 
 @Module({
-  imports: [RateSchedulesModule, BakitGanitoModule],
+  imports: [RateSchedulesModule, BakitGanitoModule, VisionModule],
   controllers: [HealthController],
 })
 export class AppModule {}
