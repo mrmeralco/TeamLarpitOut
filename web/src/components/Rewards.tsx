@@ -107,11 +107,14 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
             </div>
             {(data.lockedPoints ?? 0) > 0 && (
               <p className="small" data-testid="locked-points">
-                🔒 {data.lockedPoints} Welcome Points are locked until your first Verified Savings on a coming Bill.
+                🔒 {data.lockedPoints} Welcome Points are locked until your first Verified Savings
+                {household.meter_type === "smart" ? " on a coming day." : " on a coming Bill."}
               </p>
             )}
             <p className="muted">
-              1 Point for every ₱1 of Verified Savings. Use them on sample rewards from our partners.
+              1 Point for every ₱1 of Verified Savings
+              {household.meter_type === "smart" ? ", verified every day by your smart meter" : ", verified on your next bill"}.
+              Use them on sample rewards from our partners.
             </p>
           </div>
 
@@ -199,6 +202,23 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
               </div>
             ))}
           </div>
+
+          {data.earned && data.earned.length > 0 && (
+            <div className="redemptions-history" data-testid="earned-history">
+              <h3>Points earned</h3>
+              <ul className="redemptions-list">
+                {data.earned.map((e) => (
+                  <li key={e.id} className="redemption-entry">
+                    <div className="row" style={{ justifyContent: "space-between" }}>
+                      <span>{e.description}</span>
+                      <strong>{e.points > 0 ? `+${e.points}` : e.points} pts</strong>
+                    </div>
+                    {e.excludedReason && <small className="muted">{e.excludedReason}</small>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {data.redemptions && data.redemptions.length > 0 && (
             <div className="redemptions-history" data-testid="redemptions-history">

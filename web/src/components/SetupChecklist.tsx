@@ -32,8 +32,10 @@ const Svg = ({ d }: { d: string }) => (
  * The setup state of the Missions tab, fully gamified with Eelio in Low Battery state:
  * Hero card with sleepy Eelio, charge meter, 3 skills, checklist card, and locked preview sidebar.
  */
-export function SetupChecklist({ status, onStep, onIntro }: {
+export function SetupChecklist({ status, onStep, onIntro, smart = false }: {
   status: SetupStatus;
+  /** Smart meter homes earn daily, not at the next bill (ADR-0008). */
+  smart?: boolean;
   onStep: (key: SetupStatus["steps"][number]["key"]) => void;
   onIntro: () => void;
 }) {
@@ -104,8 +106,8 @@ export function SetupChecklist({ status, onStep, onIntro }: {
       <aside className="dash-side" aria-label="Setup rewards info">
         <div className="save-card" style={{ cursor: "default" }}>
           <span>
-            <strong>Earn points on your next bill</strong>
-            <span>Every ₱1 you save, verified on your next bill, earns 1 point you can redeem for load, e-wallet credit and vouchers.</span>
+            <strong>{smart ? "Earn points every day" : "Earn points on your next bill"}</strong>
+            <span>Every ₱1 you save, verified {smart ? "every day by your smart meter" : "on your next bill"}, earns 1 point you can redeem for load, e-wallet credit and vouchers.</span>
           </span>
           <span aria-hidden="true">→</span>
         </div>

@@ -14,8 +14,18 @@ export interface RewardItem {
   partnerName: string;
   pointsCost: number;
   description: string;
-  tag: "sample rewards";
-  isSampleReward: true;
+  tag: "sample rewards" | "rewards";
+  isSampleReward: boolean;
+}
+
+/** Where the Rewards catalog comes from: `public.rewards`, or the sample list below without a database. */
+export interface RewardsCatalog {
+  /** Active Rewards in display order. */
+  list(): Promise<RewardItem[]>;
+}
+
+export function inMemoryRewardsCatalog(items: readonly RewardItem[] = SAMPLE_REWARDS_CATALOG): RewardsCatalog {
+  return { list: async () => structuredClone([...items]) };
 }
 
 export const SAMPLE_REWARDS_CATALOG: readonly RewardItem[] = [
@@ -61,6 +71,6 @@ export const SAMPLE_REWARDS_CATALOG: readonly RewardItem[] = [
   },
 ];
 
-export function findReward(rewardId: string): RewardItem | undefined {
-  return SAMPLE_REWARDS_CATALOG.find((r) => r.id === rewardId);
+export async function findReward(catalog: RewardsCatalog, rewardId: string): Promise<RewardItem | undefined> {
+  return (await catalog.list()).find((r) => r.id === rewardId);
 }

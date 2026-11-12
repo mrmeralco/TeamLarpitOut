@@ -1,12 +1,16 @@
 import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { AppliancesService } from "../appliances/appliances.service.js";
 import type { BillSource } from "../bills/bill-source.js";
+import type { MeralcoAccountSource } from "../bills/meralco-accounts.js";
 import type { OutageSource } from "../bills/outage-source.js";
+import type { Clock } from "../common/clock.js";
 import type { CoachProvider } from "../coach/coach-provider.interface.js";
 import { TemplateCoachProvider } from "../coach/template-coach.provider.js";
 import {
   BILL_SOURCE,
+  CLOCK,
   COACH_PROVIDER,
+  MERALCO_ACCOUNTS,
   MID_MONTH_READING_REPOSITORY,
   OUTAGE_SOURCE,
   POINTS_REPOSITORY,
@@ -25,6 +29,7 @@ import { cost, type RateScheduleTable } from "../domain/rate-schedule.js";
 import { lockedPoints } from "../domain/welcome-points.js";
 import { SetupService } from "../setup/setup.service.js";
 import type { WeatherProvider } from "../weather/weather-provider.interface.js";
+import { DailyPointsService } from "./daily-points.service.js";
 import type { MidMonthReading, MidMonthReadingRepository } from "./mid-month-reading-repository.interface.js";
 import type { PointsEntry, PointsRepository } from "./points-repository.interface.js";
 import type { UsagePlan, UsagePlanRepository } from "./usage-plan-repository.interface.js";
@@ -33,7 +38,7 @@ const round2 = (x: number) => Math.round(x * 100) / 100;
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const monthName = (period: string) => MONTHS[Number(period.slice(5, 7)) - 1] ?? period;
 
-/** KilosWatt for traditional meters: Baseline, Target, and Missions for one billing period. */
+/** KilosWatt: Baseline, Target, Missions and Points for one billing period. */
 @Injectable()
 export class UsagePlanService {
   private readonly templateCoach = new TemplateCoachProvider();
@@ -47,9 +52,24 @@ export class UsagePlanService {
     @Inject(COACH_PROVIDER) private readonly coach: CoachProvider,
     @Inject(POINTS_REPOSITORY) private readonly pointsRepo: PointsRepository,
     @Inject(OUTAGE_SOURCE) private readonly outageSource: OutageSource,
+    @Inject(MERALCO_ACCOUNTS) private readonly meralco: MeralcoAccountSource,
+    @Inject(CLOCK) private readonly clock: Clock,
     private readonly appliances: AppliancesService,
     private readonly setup: SetupService,
+    private readonly dailyPoints: DailyPointsService,
   ) {}
+
+  /** Meter Type comes from Meralco's record, never from the household. */
+  async isSmartMeter(sin: string): Promise<boolean> {
+    return (await this.meralco.household(sin))?.meter_type === "smart";
+  }
+
+  /** When the Household first started Missions: kept from an earlier plan, else now (ADR-0008). */
+  async planStartedAt(sin: string): Promise<{ createdAt: string; startedAt: string }> {
+    const createdAt = new Date(this.clock.now()).toISOString();
+    const existing = await this.plans.find(sin);
+    return { createdAt, startedAt: existing?.startedAt ?? existing?.createdAt ?? createdAt };
+  }
 
   /** The weather- and days-adjusted Baseline for next period, and the Target for each cut. */
   async target(sin: string) {
@@ -155,7 +175,7 @@ export class UsagePlanService {
       targetPesos: option.pesos,
       airconSetting: input.airconSetting ?? null,
       missions: chosen.map((m) => ({ id: m!.id, title: m!.title, kwhSaved: m!.kwhSaved, pesoValue: m!.pesoValue })),
-      createdAt: new Date().toISOString(),
+      ...(await this.planStartedAt(sin)),
     };
     return { active: true, plan: await this.plans.save(sin, plan) };
   }
@@ -323,7 +343,8 @@ export class UsagePlanService {
 
   /**
    * Points balance and ledger for the Household.
-   * Auto-settles any newly arrived bills against their weather-adjusted baseline.
+   * Traditional: auto-settles any newly arrived Bills against their weather-adjusted Baseline.
+   * Smart meter: auto-settles every complete day since Missions started; the Bill gives no Points (ADR-0008).
    */
   async getPoints(sin: string) {
     const history = await this.bills.bills(sin);
@@ -340,7 +361,8 @@ export class UsagePlanService {
       /** Welcome Points that cannot be spent until the first Verified Savings (ADR-0004). */
       lockedPoints: locked,
       spendable: balance - locked,
-      history: entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      history: entries.sort((a, b) =>
+        b.createdAt.localeCompare(a.createdAt) || (b.day ?? b.period).localeCompare(a.day ?? a.period)),
     };
   }
 
@@ -361,6 +383,11 @@ export class UsagePlanService {
 
   private async autoSettle(sin: string) {
     const history = await this.bills.bills(sin);
+    if (await this.isSmartMeter(sin)) {
+      const schedule = this.rates.get(history.at(-1)!.period);
+      if (schedule) await this.dailyPoints.settle(sin, schedule.perKwh.reduce((s, c) => s + c.rate, 0));
+      return;
+    }
     if (history.length < 2) return;
     const existing = await this.pointsRepo.getEntries(sin);
     const settled = new Set(existing.filter((e) => e.source === "bill_verified").map((e) => e.period));

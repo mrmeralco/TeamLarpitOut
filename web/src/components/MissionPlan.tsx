@@ -174,7 +174,10 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
           </ul>
           <p className="muted small" style={{ margin: "14px 0 0" }}>
             {plan.source === "ai" ? "AI picks and words the missions for your appliances and routine." : "Missions picked for your appliances and routine."}{" "}
-            Every peso value is computed from your bill. Points come only from savings verified on your next bill.
+            Every peso value is computed from your bill.{" "}
+            {household.meter_type === "smart"
+              ? "Points come only from savings your smart meter verifies each day."
+              : "Points come only from savings verified on your next bill."}
           </p>
         </div>
       </div>

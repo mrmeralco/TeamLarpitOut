@@ -79,7 +79,7 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
   }, [isSetupModal]);
 
   if (sub[0] === "save") {
-    return <SaveIntro onLater={() => go("home")} onStart={() => {
+    return <SaveIntro smart={household.meter_type === "smart"} onLater={() => go("home")} onStart={() => {
       const next = nextStep(setup);
       if (setup.complete || !next) go("missions"); else go("missions", "setup", next);
     }} />;
@@ -159,7 +159,7 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
   if (!setup.complete) {
     return (
       <>
-        <SetupChecklist status={setup} onIntro={() => go("missions", "save")} onStep={(key) => go("missions", "setup", key)} />
+        <SetupChecklist status={setup} smart={household.meter_type === "smart"} onIntro={() => go("missions", "save")} onStep={(key) => go("missions", "setup", key)} />
         {modal}
       </>
     );

@@ -1,6 +1,7 @@
+import { Global, Module } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { describe, expect, it } from "vitest";
-import { DAILY_WEATHER_SOURCE, READING_SOURCE, WEATHER_PROVIDER } from "../src/common/injection-tokens.js";
+import { DAILY_WEATHER_SOURCE, DATABASE, READING_SOURCE, WEATHER_PROVIDER } from "../src/common/injection-tokens.js";
 import { DAY_MS, HOUR_MS } from "../src/domain/meter-reading.js";
 import { MockReadingSource } from "../src/smart-meter/mock-reading-source.provider.js";
 import type { ReadingSource } from "../src/smart-meter/reading-source.interface.js";
@@ -10,13 +11,18 @@ import type { WeatherProvider } from "../src/weather/weather-provider.interface.
 import { WeatherModule } from "../src/weather/weather.module.js";
 import { harness } from "./utils/test-harness.js";
 
+/** No DATABASE_URL: modules fall back to their in-code sources. */
+@Global()
+@Module({ providers: [{ provide: DATABASE, useValue: null }], exports: [DATABASE] })
+class NoDatabase {}
+
 const SMART = "9876543210";
 const RANGE = { from: "2026-11-01", to: "2026-11-03" };
 
 describe("daily demo weather", () => {
   it("exports the daily source through WeatherModule independently of monthly weather", async () => {
     const module = await Test.createTestingModule({
-      imports: [WeatherModule],
+      imports: [NoDatabase, WeatherModule],
       providers: [{
         provide: "daily-consumer",
         inject: [DAILY_WEATHER_SOURCE],

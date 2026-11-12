@@ -3,6 +3,7 @@ import type { WeatherForecastInfo, WeatherProvider } from "./weather-provider.in
 
 export class OpenMeteoWeatherProvider implements WeatherProvider {
   private readonly cache = new Map<string, number>();
+  private readonly sources = new Map<string, "observed" | "sample">();
   private readonly fallbackTable = new Map<string, number>();
 
   constructor(
@@ -17,6 +18,10 @@ export class OpenMeteoWeatherProvider implements WeatherProvider {
         }
       }
     }
+  }
+
+  cddSource(period: string): "observed" | "sample" | null {
+    return this.sources.get(period) ?? null;
   }
 
   async getCddPerDay(period: string): Promise<number | null> {
@@ -44,6 +49,7 @@ export class OpenMeteoWeatherProvider implements WeatherProvider {
           }
           const cddPerDay = Math.round((sumCdd / temps.length) * 10) / 10;
           this.cache.set(period, cddPerDay);
+          this.sources.set(period, "observed");
           return cddPerDay;
         }
       }
@@ -54,6 +60,7 @@ export class OpenMeteoWeatherProvider implements WeatherProvider {
     if (this.fallbackTable.has(period)) {
       const val = this.fallbackTable.get(period)!;
       this.cache.set(period, val);
+      this.sources.set(period, "sample");
       return val;
     }
 
