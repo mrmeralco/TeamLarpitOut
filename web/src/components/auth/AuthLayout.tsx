@@ -26,22 +26,10 @@ export function AuthLayout({ children }: { children: ReactNode }) {
               <div className="auth-mascot-y">
                 <div className="auth-mascot-float">
                   <div className="auth-mascot-glow" />
-                  <div className="auth-mascot-trail" />
 
-                  {/* Phase 1: 4-frame Peek sequence over top edge of form card */}
-                  <div className="auth-mascot-stage stage-peek">
-                    {[1, 2, 3, 4].map((n) => (
-                      <img
-                        key={`peek-${n}`}
-                        src={`/mascot/eelio-peek-${n}.png`}
-                        alt=""
-                        className={`auth-mascot-frame peek-frame-${n}`}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Phase 2: 6-frame Undulating Swim Dash along the 3-arrow spline */}
+                  {/* Phase 1: 6-frame swim, diving in from the upper right and gliding into place */}
                   <div className="auth-mascot-stage stage-swim">
+                    <div className="auth-mascot-trail" />
                     {[1, 2, 3, 4, 5, 6].map((n) => (
                       <img
                         key={`swim-${n}`}
@@ -52,7 +40,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
                     ))}
                   </div>
 
-                  {/* Phase 3: Turnaround & 6-frame Seamless Waving + Breathing at destination */}
+                  {/* Phase 2: Turnaround & 6-frame Seamless Waving + Breathing at destination */}
                   <div className="auth-mascot-stage stage-wave">
                     {[1, 2, 3, 4, 5, 6].map((n) => (
                       <img
