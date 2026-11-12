@@ -218,6 +218,7 @@ export async function harness(opts: HarnessOptions = {}) {
   const server = app.getHttpServer();
   let cachedToken: string | undefined;
 
+  let nextPhone = 0;
   return {
     app,
     links,
@@ -227,7 +228,7 @@ export async function harness(opts: HarnessOptions = {}) {
       const signIn = () => request(server).post("/api/auth/signin").send({ email: address, password: TEST_PASSWORD });
       let res = await signIn();
       if (res.status === 200) return res.body.token;
-      const started = await request(server).post("/api/auth/signup").send({ email: address, phone: TEST_PHONE });
+      const started = await request(server).post("/api/auth/signup").send({ email: address, phone: `+63918${String(nextPhone++).padStart(7, "0")}` });
       if (started.status !== 202) throw new Error(`Test sign-up failed: HTTP ${started.status}`);
       const verified = await request(server).post("/api/auth/signup/verify").send({ email: address, code: notifier.codes.at(-1)!.code });
       if (verified.status !== 200) throw new Error(`Test code check failed: HTTP ${verified.status}`);

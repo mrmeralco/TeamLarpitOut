@@ -89,6 +89,33 @@ describe("sign up (like My Meralco): email + mobile → SMS code → email link 
     expect(again.body.reason).toBe("accountExists");
   });
 
+  it("refuses a mobile number another account has already verified", async () => {
+    const api = await harness();
+    await toLink(api, "first@example.test");
+    const again = await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE });
+    expect(again.status).toBe(409);
+    expect(again.body).toMatchObject({ reason: "phoneInUse", error: "This mobile number is already used by another account. Use a different number." });
+    expect(api.notifier.codes).toHaveLength(1);
+  });
+
+  it("lets only the first of two sign-ups with the same number verify it", async () => {
+    const api = await harness();
+    await api.post("/api/auth/signup", { email: "first@example.test", phone: TEST_PHONE });
+    const firstCode = api.notifier.codes.at(-1)!.code;
+    await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE });
+    const secondCode = api.notifier.codes.at(-1)!.code;
+    expect((await api.post("/api/auth/signup/verify", { email: "first@example.test", code: firstCode })).status).toBe(200);
+    const late = await api.post("/api/auth/signup/verify", { email: NEW, code: secondCode });
+    expect(late.status).toBe(409);
+    expect(late.body.reason).toBe("phoneInUse");
+  });
+
+  it("lets an unfinished sign-up's number be used again before it is verified", async () => {
+    const api = await harness();
+    await api.post("/api/auth/signup", { email: "half@example.test", phone: TEST_PHONE });
+    await toLink(api);
+  });
+
   it.each([
     ["/api/auth/signup", { email: NEW }], ["/api/auth/signup", { email: NEW, phone: "09171234567" }], ["/api/auth/signup", { email: "invalid", phone: TEST_PHONE }],
     ["/api/auth/signup/verify", { email: NEW, code: "12345" }], ["/api/auth/signup/resend", { email: NEW, channel: "fax" }],

@@ -13,6 +13,12 @@ export class PgAccountRepository implements AccountRepository {
     return { email: row.email, phone: row.phone, phoneVerified: row.phone_verified, passwordHash: row.password_hash, createdAt: new Date(row.created_at).toISOString() };
   }
 
+  async findVerifiedPhone(phone: string, exceptEmail: string): Promise<Account | null> {
+    const [row] = await this.sql<{ email: string }[]>`
+      select email from public.accounts where phone = ${phone} and phone_verified and email <> ${exceptEmail} limit 1`;
+    return row ? this.find(row.email) : null;
+  }
+
   async save(account: Account): Promise<void> {
     await this.sql`
       insert into public.accounts (owner_id, email, phone, phone_verified, password_hash, created_at)
