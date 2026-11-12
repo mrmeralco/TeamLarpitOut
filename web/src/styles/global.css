@@ -1404,7 +1404,7 @@ button.wide { width: 100%; margin-top: 10px; }
   .shell > main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
   .tabbar {
     position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 10; height: auto;
-    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0;
     min-height: 64px; padding: 0 0 env(safe-area-inset-bottom);
     background: var(--card); border-right: 0; border-top: 1px solid var(--border);
   }
@@ -2684,3 +2684,187 @@ button.wide { width: 100%; margin-top: 10px; }
 .daily-streak { padding: 4px 10px; border-radius: 999px; font-weight: 800; background: var(--muted); color: var(--muted-foreground); }
 .daily-streak.on { background: #FFF1E6; color: #8A3A08; box-shadow: inset 0 -2px 0 rgba(138, 58, 8, 0.12); }
 .daily-yesterday { color: var(--muted-foreground); font-weight: 600; }
+
+/* Account tab: gamified holder profile + households + badges */
+.account-dash { align-items: stretch; row-gap: 22px; }
+.account-dash .dash-side { position: static; }
+.account-dash .dash-wide { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+@media (min-width: 901px) {
+  .shell .dash.account-dash,
+  .shell.nav-collapsed .dash.account-dash { grid-template-columns: minmax(400px, 470px) minmax(0, 1fr); }
+  .account-dash .hero { margin-top: 0; min-height: 0; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding: 20px 22px; overflow: hidden; }
+  .account-dash .hero-copy { flex: 1; max-width: 64%; gap: 8px; }
+  .account-dash .hero-play { margin-top: auto; }
+  .account-dash .hero h2 { font-size: 1.05rem; }
+  .account-dash .hero-amount.account-hero-name { font-size: 1.75rem; line-height: 1.15; letter-spacing: -0.02em; }
+  .account-dash .hero-mascot { top: auto; bottom: 6px; right: 6px; height: calc(100% - 30px); max-height: 200px; }
+}
+@media (max-width: 900px) {
+  .account-dash .hero { margin-top: 0; padding: 18px; min-height: 0; overflow: hidden; }
+  .account-dash .hero-copy { max-width: 68%; gap: 8px; }
+  .account-dash .hero-amount.account-hero-name { font-size: 1.5rem; line-height: 1.15; }
+  .account-dash .hero-mascot { top: auto; bottom: 8px; right: 6px; height: 140px; }
+}
+.account-households-card { margin: 0; padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; height: 100%; box-sizing: border-box; justify-content: space-between; }
+.account-meter-strip {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+  padding: 12px 14px; border-radius: 16px; background: var(--muted); border: 1.5px solid var(--border);
+}
+.account-meter-strip > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.account-meter-strip strong { font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.account-info-card, .account-badges-card { margin: 0; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.account-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.account-card-head h2, .account-card-head h3 { margin: 0; font-size: 1.1rem; }
+.account-saved-pill {
+  margin: 0; align-self: flex-start; padding: 6px 12px; border-radius: 999px;
+  background: var(--ok-soft); color: var(--ok); font-size: 0.84rem; font-weight: 800;
+}
+.account-info-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+}
+.account-info-tile {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 14px 16px; border-radius: 18px; border: 1.5px solid var(--border);
+  background: var(--card); box-shadow: 0 4px 0 var(--border);
+}
+.account-tile-label {
+  font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted-foreground);
+}
+.account-info-tile strong { font-size: 1.02rem; line-height: 1.25; word-break: break-word; }
+.account-badge-inline {
+  display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px;
+  background: #FFF4CC; color: #8A5A00; font-size: 0.76rem; font-weight: 800;
+}
+.account-edit-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px;
+}
+.account-badges-grid {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+}
+.account-badge-tile {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  border-radius: 18px; border: 1.5px solid var(--border); background: var(--card);
+  box-shadow: 0 4px 0 var(--border);
+}
+.account-badge-tile.unlocked {
+  border-color: #F3C46A; background: linear-gradient(180deg, #FFF9E8, var(--card) 70%);
+}
+.account-badge-tile.locked { opacity: 0.65; }
+.account-badge-icon {
+  flex: none; width: 44px; height: 44px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; font-size: 1.35rem;
+  background: #FFF4CC; box-shadow: inset 0 -3px 0 rgba(138, 90, 0, 0.16);
+}
+.account-badge-tile p { margin: 2px 0 0; }
+
+/* Leaderboards tab: Bayanihan Barangay League + Kapitbahay Savers */
+.leaderboard-dash { align-items: stretch; row-gap: 22px; }
+.leaderboard-dash .dash-side { position: static; }
+.leaderboard-dash .dash-wide { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+@media (min-width: 901px) {
+  .shell .dash.leaderboard-dash,
+  .shell.nav-collapsed .dash.leaderboard-dash { grid-template-columns: minmax(400px, 470px) minmax(0, 1fr); }
+  .leaderboard-dash .hero { margin-top: 0; min-height: 0; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding: 20px 22px; overflow: hidden; }
+  .leaderboard-dash .hero-copy { flex: 1; max-width: 64%; gap: 8px; }
+  .leaderboard-dash .hero-play { margin-top: auto; }
+  .leaderboard-dash .hero h2 { font-size: 1.15rem; }
+  .leaderboard-dash .hero-amount { font-size: 1.85rem; }
+  .leaderboard-dash .hero-mascot { top: auto; bottom: 6px; right: 6px; height: calc(100% - 30px); max-height: 200px; }
+}
+@media (max-width: 900px) {
+  .leaderboard-dash .hero { margin-top: 0; padding: 18px; min-height: 0; overflow: hidden; }
+  .leaderboard-dash .hero-copy { max-width: 68%; gap: 8px; }
+  .leaderboard-dash .hero-amount { font-size: 1.6rem; }
+  .leaderboard-dash .hero-mascot { top: auto; bottom: 8px; right: 6px; height: 140px; }
+}
+
+.bayanihan-meter p.muted { margin: 4px 0 0; }
+.bayanihan-impact-strip {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+  padding: 10px 14px; border-radius: 16px; background: var(--muted); border: 1.5px solid var(--border);
+}
+.bayanihan-impact-strip > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bayanihan-impact-strip strong { font-size: 0.9rem; }
+.bayanihan-note {
+  margin: 0; padding: 10px 12px; border-radius: 14px;
+  background: var(--info-soft); color: var(--foreground); border: 1px solid #B6DDD8; line-height: 1.4;
+}
+
+.leaderboard-card { margin: 0; padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }
+.leaderboard-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.leaderboard-head h3 { margin: 0; font-size: 1.15rem; }
+.leaderboard-tabs {
+  display: inline-flex; gap: 6px; padding: 4px; border-radius: 14px;
+  background: var(--muted); border: 1.5px solid var(--border);
+}
+.lb-tab {
+  padding: 7px 14px; border-radius: 10px; border: 0; background: transparent;
+  color: var(--muted-foreground); font: inherit; font-size: 0.85rem; font-weight: 800; cursor: pointer;
+  transition: all 0.15s ease;
+}
+.lb-tab.active {
+  background: var(--card); color: var(--brand-ink);
+  box-shadow: 0 2px 6px rgba(31, 27, 22, 0.12);
+}
+
+.lb-podium {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+}
+@media (max-width: 700px) {
+  .lb-podium { grid-template-columns: minmax(0, 1fr); }
+}
+.lb-podium-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  padding: 16px; border-radius: 20px; border: 1.5px solid var(--border);
+  background: var(--card); box-shadow: 0 4px 0 var(--border);
+}
+.lb-podium-card.rank-1 {
+  border-color: #F3C46A; box-shadow: 0 4px 0 #F3C46A;
+  background: linear-gradient(180deg, #FFF9E8, var(--card) 65%);
+}
+.lb-podium-card.is-yours {
+  border-color: var(--info); box-shadow: 0 4px 0 var(--info);
+  background: linear-gradient(180deg, var(--info-soft), var(--card) 65%);
+}
+.lb-podium-top { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px; }
+.lb-medal { font-size: 1.5rem; line-height: 1; }
+.lb-podium-name { font-size: 1rem; line-height: 1.25; }
+.lb-podium-stat { font-size: 1.2rem; font-weight: 800; color: var(--ok); font-variant-numeric: tabular-nums; }
+.lb-you-pill {
+  padding: 2px 8px; border-radius: 999px; background: var(--info); color: #fff;
+  font-size: 0.72rem; font-weight: 800; white-space: nowrap;
+}
+
+.lb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.lb-row {
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  border-radius: 18px; border: 1.5px solid var(--border); background: var(--card);
+  box-shadow: 0 4px 0 var(--border);
+}
+.lb-row.is-yours {
+  border-color: var(--info); box-shadow: 0 4px 0 var(--info);
+  background: linear-gradient(90deg, var(--info-soft), var(--card) 45%);
+}
+.lb-rank {
+  flex: none; width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--muted); font-weight: 800; font-size: 1rem;
+}
+.lb-rank.rank-1, .lb-rank.rank-2, .lb-rank.rank-3 { font-size: 1.3rem; background: #FFF4CC; }
+.lb-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.lb-row-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.lb-status-chip {
+  padding: 2px 8px; border-radius: 999px; background: var(--muted);
+  color: var(--muted-foreground); font-size: 0.72rem; font-weight: 700;
+}
+.lb-bar-track { height: 8px; border-radius: 4px; background: var(--muted); overflow: hidden; max-width: 360px; }
+.lb-bar-track span {
+  display: block; height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--info), #2FA39A);
+}
+.lb-row-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.lb-cut { font-size: 1rem; font-weight: 800; color: var(--ok); font-variant-numeric: tabular-nums; }
