@@ -78,13 +78,13 @@ describe("Account Linking from the scanned Bill (no CAN screen)", () => {
     expect((await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken }, token)).status).toBe(404);
   });
 
-  it("a CAN already linked to another login is refused at scan and at confirm", async () => {
+  it("a CAN already linked to another login can be linked by this login too", async () => {
     const { api, token, scan } = await scanned(switchableVision(), { "owner@example.test": [A.sin] });
-    expect(scan.body.account).toMatchObject({ status: "ownedByAnother", canMasked: "10•• ••• 001" });
-    expect(scan.body.account.message).toMatch(/contact the account owner/);
+    expect(scan.body.account).toMatchObject({ status: "found", canMasked: "10•• ••• 001" });
     const res = await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken }, token);
-    expect(res.status).toBe(409);
-    expect((await api.get(`/api/households/${A.sin}/bills`, token)).status).toBe(404);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: "active", householdSin: A.sin });
+    expect((await api.get(`/api/households/${A.sin}/bills`, token)).status).toBe(200);
   });
 
   it("a Bill already linked to this login is reported as such", async () => {

@@ -4,8 +4,6 @@ import { HOUSEHOLD_LINKS, MERALCO_ACCOUNTS } from "../common/injection-tokens.js
 import type { Household, HouseholdChange } from "../domain/household.js";
 import type { HouseholdLinkRepository } from "./household-link.repository.js";
 
-export const OWNED_BY_ANOTHER = "This account is already linked to another login. Please contact the account owner.";
-
 /** Shows a CAN like "39•• ••• 482": enough to recognise, not enough to reuse. */
 export function maskCan(can: string): string {
   const d = can.replace(/\D/g, "");

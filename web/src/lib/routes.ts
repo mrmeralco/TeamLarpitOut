@@ -36,15 +36,18 @@ export function useRawHash(): string {
   return hash;
 }
 
-/** Per-tab session storage: survives a reload, gone when the tab closes. Never required to work. */
+/**
+ * Device storage: survives a reload and closing the app, until logout or the server expires the
+ * session. Never required to work.
+ */
 export const stored = {
   get(key: string): string | null {
-    try { return window.sessionStorage.getItem(`kuryenteko.${key}`); } catch { return null; }
+    try { return window.localStorage.getItem(`kuryenteko.${key}`); } catch { return null; }
   },
   set(key: string, value: string | null) {
     try {
-      if (value === null) window.sessionStorage.removeItem(`kuryenteko.${key}`);
-      else window.sessionStorage.setItem(`kuryenteko.${key}`, value);
+      if (value === null) window.localStorage.removeItem(`kuryenteko.${key}`);
+      else window.localStorage.setItem(`kuryenteko.${key}`, value);
     } catch { /* storage unavailable: the session just won't survive a reload */ }
   },
 };

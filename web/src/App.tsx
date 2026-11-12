@@ -17,6 +17,7 @@ import { TabBar } from "./components/TabBar";
 import { stored, useHashRoute, useRawHash } from "./lib/routes";
 
 const EXPIRED = "Your session expired. Please sign in again.";
+const UNREACHABLE = "We couldn't reach Eelio. Check your connection and reopen the app; you're still signed in.";
 
 /**
  * Signed out: sign-in → code → link CAN → scan → "Is this right?", one screen at a time.
@@ -60,28 +61,27 @@ export function App() {
     window.location.hash = "/signin";
     void api.logout(token).catch((err) => {
       if (!(err instanceof ApiError && err.status === 401)) {
-        setSessionNotice("We couldn't confirm the logout with the server. The session is cleared on this device; the token expires within an hour.");
+        setSessionNotice("We couldn't confirm the logout with the server. You're signed out on this device; the old session expires on its own after 30 days unused.");
       }
     });
   }, [session, end]);
 
-  // A reload keeps the session (and the tab, via the hash) until the token expires.
+  // Reopening the app keeps the session (and the tab, via the hash) until the server expires it.
+  // Only a 401 clears it: if the server can't be reached, the token stays for the next try.
   useEffect(() => {
     const token = stored.get("token");
     if (!token) return;
     const controller = new AbortController();
     api.households(token, controller.signal)
       .then((households) => begin({ token, households }, stored.get("household") ?? undefined))
-      .catch((err) => { if (!controller.signal.aborted) end(err instanceof ApiError && err.status === 401 ? EXPIRED : null); })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        if (err instanceof ApiError && err.status === 401) end(EXPIRED);
+        else setSessionNotice(UNREACHABLE);
+      })
       .finally(() => { if (!controller.signal.aborted) setRestoring(false); });
     return () => controller.abort();
   }, [begin, end]);
-
-  useEffect(() => {
-    if (!session) return;
-    const timer = window.setTimeout(onExpired, 60 * 60 * 1000);
-    return () => window.clearTimeout(timer);
-  }, [session, onExpired]);
 
   // Household Setup decides the Missions tab and the Home save card; reloaded per Household.
   const setupKey = session && selectedSin ? `${session.token}:${selectedSin}` : null;

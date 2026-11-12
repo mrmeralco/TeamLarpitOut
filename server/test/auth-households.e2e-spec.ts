@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ownerIdForEmail } from "../src/auth/auth.service.js";
+import { ownerIdForEmail, SESSION_IDLE_MS, SESSION_MAX_MS, SESSION_TOUCH_MS } from "../src/auth/auth.service.js";
 import { LogNotifier } from "../src/auth/notifier.interface.js";
 import { bill, harness, TEST_CODE, TEST_PASSWORD, TEST_PHONE, testLogins } from "./utils/test-harness.js";
 
@@ -187,16 +187,42 @@ describe("sessions and Household access", () => {
     expect((await api.get("/api/households", token)).body).toEqual([]);
   });
 
-  it("expires sessions at the boundary and allows signing in again", async () => {
+  it("expires an idle session at the boundary and allows signing in again", async () => {
     let now = 0;
     const api = await harness({ clock: { now: () => now }, bills: { "1234567890": pair } });
     const token = await api.login();
-    now = 60 * 60 * 1000 - 1;
+    now = SESSION_IDLE_MS - 1;
     expect((await api.get("/api/households", token)).status).toBe(200);
-    now++;
+    now += SESSION_IDLE_MS;
     expect((await api.get("/api/households", token)).status).toBe(401);
     expect((await api.get(householdPath("1234567890"), token)).status).toBe(401);
     expect((await api.get("/api/households", await api.login())).status).toBe(200);
+  });
+
+  it("keeps a session alive while it is used, up to the absolute limit after sign-in", async () => {
+    let now = 0;
+    const api = await harness({ clock: { now: () => now } });
+    const token = await api.login();
+    const day = 24 * 60 * 60 * 1000;
+    // Used every 20 days: never idle long enough to expire, until the absolute cap.
+    while (now + 20 * day < SESSION_MAX_MS) {
+      now += 20 * day;
+      expect((await api.get("/api/households", token)).status).toBe(200);
+    }
+    now = SESSION_MAX_MS - 1;
+    expect((await api.get("/api/households", token)).status).toBe(200);
+    now = SESSION_MAX_MS;
+    expect((await api.get("/api/households", token)).status).toBe(401);
+  });
+
+  it("only renews a session after SESSION_TOUCH_MS, so a burst of requests doesn't extend it", async () => {
+    let now = 0;
+    const api = await harness({ clock: { now: () => now } });
+    const token = await api.login();
+    now = SESSION_TOUCH_MS - 1;
+    expect((await api.get("/api/households", token)).status).toBe(200);
+    now = SESSION_IDLE_MS;
+    expect((await api.get("/api/households", token)).status).toBe(401);
   });
 
   it("logout revokes only that session; sessions are not shared across app instances", async () => {

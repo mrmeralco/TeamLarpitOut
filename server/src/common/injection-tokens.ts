@@ -13,6 +13,8 @@ export const HOUSEHOLD_LINKS = Symbol("HOUSEHOLD_LINKS");
 export const NOTIFIER = Symbol("NOTIFIER");
 /** Logins: email, verified mobile number, password hash (in-memory now; database later). */
 export const ACCOUNT_REPOSITORY = Symbol("ACCOUNT_REPOSITORY");
+/** Signed-in sessions (hashed tokens): Postgres when DATABASE_URL is set, else in memory. */
+export const SESSION_REPOSITORY = Symbol("SESSION_REPOSITORY");
 /** Makes 6-digit one-time codes (fixed in test mode). */
 export const SIGN_IN_CODE_GENERATOR = Symbol("SIGN_IN_CODE_GENERATOR");
 export const WEATHER_PROVIDER = Symbol("WEATHER_PROVIDER");

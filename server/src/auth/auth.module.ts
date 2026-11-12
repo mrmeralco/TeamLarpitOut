@@ -1,7 +1,9 @@
 import { Body, Controller, Header, HttpCode, Module, Post, Req, UseGuards } from "@nestjs/common";
-import { ACCOUNT_REPOSITORY, AUTH_CLOCK, DATABASE, NOTIFIER, SIGN_IN_CODE_GENERATOR } from "../common/injection-tokens.js";
+import { ACCOUNT_REPOSITORY, AUTH_CLOCK, DATABASE, NOTIFIER, SESSION_REPOSITORY, SIGN_IN_CODE_GENERATOR } from "../common/injection-tokens.js";
 import type { Sql } from "../database/database.module.js";
 import { PgAccountRepository } from "../database/pg-account.repository.js";
+import { PgSessionRepository } from "../database/pg-session.repository.js";
+import { InMemorySessionRepository } from "./session.repository.js";
 import { demoAccounts, demoLoginsEnabled } from "./demo-logins.js";
 import { InMemoryAccountRepository } from "./account.repository.js";
 import { AuthService } from "./auth.service.js";
@@ -63,8 +65,8 @@ export class AuthController {
   @HttpCode(204)
   @Header("Cache-Control", "no-store")
   @UseGuards(SessionGuard)
-  logout(@Req() request: AuthenticatedRequest) {
-    this.auth.logout(request.auth.token);
+  async logout(@Req() request: AuthenticatedRequest) {
+    await this.auth.logout(request.auth.token);
   }
 }
 
@@ -91,6 +93,11 @@ const fixedCode = () => {
         if (demoLoginsEnabled()) for (const account of await demoAccounts()) await accounts.save(account);
         return accounts;
       },
+    },
+    {
+      provide: SESSION_REPOSITORY,
+      inject: [DATABASE],
+      useFactory: (db: Sql | null) => (db ? new PgSessionRepository(db) : new InMemorySessionRepository()),
     },
   ],
   exports: [AuthService, SessionGuard, AUTH_CLOCK],

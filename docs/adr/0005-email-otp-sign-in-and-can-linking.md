@@ -17,5 +17,5 @@ We chose this because the team wants one familiar sign-in that works for anyone,
 - Before the scan matches, CAN lookup returns only a masked summary (area, Meter Type, number of Bills on record), never amounts or kWh.
 - Smart meter Households follow the same rule: one Bill scan to prove the CAN, then readings load.
 - Sending codes needs an email service; the demo uses a mock sender that logs the code and accepts a fixed code in test mode.
-- A Household is still owned by one login. A second login that scans the same CAN is refused with a message to contact the owner (no sharing in the demo).
+- **Updated 2026-11-13:** any number of logins may link the same Household. A second login that scans the same Bill links it too and shares its setup, missions and points (the one-owner rule and its "contact the account owner" refusal were removed).
 - Renters without access to the Bill cannot link; the "Wala akong My Meralco account" path and the no-login scan are removed.
