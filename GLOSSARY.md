@@ -70,6 +70,10 @@ _Avoid_: Behavior share, usage effect, intensity effect
 A comparison between Meralco's own documents only (the Bill's lines vs. its total, its previous reading vs. the last Bill's present reading, its rates vs. the published Rate Schedule, its balance vs. payments made). Never a comparison against an app estimate.
 _Avoid_: Audit, verification, dispute check
 
+**Bill-only Verdict**:
+What a Bill scan shows without logging in: the Bill Change, its Rate and Billing Days Effects, Bill Checks 1 and 3, and the redrawn Bill. Weather vs. Habit stays unanswered until login, because it needs Bill History.
+_Avoid_: Quick verdict, free version, teaser
+
 **Unexplained Difference**:
 A failed Bill Check: a gap of more than a few pesos between two of Meralco's own figures. Shown as something worth asking Meralco about; the app never files or judges it.
 _Avoid_: Error, discrepancy, dispute, complaint
@@ -108,8 +112,16 @@ kWh below the weather- and billing-days-adjusted Baseline, measured from a Bill 
 _Avoid_: Self-reported savings, completed mission
 
 **Points**:
-The household's reward balance, earned only from Verified Savings.
+The household's reward balance, earned from Verified Savings, plus one grant of Welcome Points that stays locked until the first Verified Savings.
 _Avoid_: Credits, coins, score
+
+**Household Setup**:
+The one-time onboarding a household completes before Missions: who lives there and when the house is occupied, the aircon (label scan or visual questions), and a confirmation of the aircon hours. Shown as a checklist on Home.
+_Avoid_: Profile, onboarding mission
+
+**Welcome Points**:
+Points granted once per Household for finishing Household Setup, visible at once but locked until the Household's first Verified Savings. See ADR-0004.
+_Avoid_: Signup bonus, free points
 
 **Reward**:
 A partner-funded item (load, e-wallet credit, voucher) a household gets by spending Points. Never a discount on the Meralco Bill.
