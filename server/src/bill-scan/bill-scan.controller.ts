@@ -16,7 +16,7 @@ import {
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { VisionUnavailableError } from "../vision/vision-provider.interface.js";
-import { BillScanService } from "./bill-scan.service.js";
+import { BillScanService, type DraftBill } from "./bill-scan.service.js";
 
 import { SessionGuard, type AuthenticatedRequest } from "../auth/session.guard.js";
 import { AccountLinkingService } from "../account-linking/account-linking.module.js";
@@ -110,5 +110,70 @@ export class BillScanController {
     if (result.status === "unreadable") throw new UnprocessableEntityException(result);
     // Account Linking: what the printed CAN points to. Nothing is linked until the person confirms.
     return { ...result, account: await this.linking.preview(request.auth.ownerId, can) };
+  }
+
+  /** Guest mode: simulate reading a single Bill without signing in or linking an account. */
+  @Post("guest/simulate")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  guestSimulate() {
+    return this.billScan.simulateGuest();
+  }
+
+  /** Guest mode: read a Bill photo into a single-bill draft without signing in or linking an account. */
+  @Post("guest/scan")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  @UseInterceptors(FileInterceptor("photo", { limits: { fileSize: MAX_PHOTO_BYTES } }))
+  async guestScan(
+    @UploadedFile() photo?: Express.Multer.File,
+    @Query("simulate") simulate?: string,
+  ) {
+    if (simulate === "true" || (!photo && simulate !== undefined)) {
+      return this.billScan.simulateGuest();
+    }
+    if (!photo) throw new BadRequestException({ error: "No photo (field: photo)" });
+    if (!IMAGE_TYPES.includes(photo.mimetype)) {
+      throw new BadRequestException({ error: `The file is not an image (${photo.mimetype})` });
+    }
+
+    let result;
+    try {
+      result = await this.billScan.scanGuest({ mimeType: photo.mimetype, data: photo.buffer });
+    } catch (err) {
+      if (err instanceof VisionUnavailableError) {
+        throw new ServiceUnavailableException({
+          status: "unavailable",
+          error: "Bill scan is not set up yet. You can use simulated bill data to proceed.",
+        });
+      }
+      const isQuota =
+        (err as any)?.status === 429 ||
+        /quota|rate limit|resourceexhausted/i.test((err as Error)?.message ?? "");
+      if (isQuota) {
+        throw new BadGatewayException({
+          status: "unavailable",
+          error: "Vision AI quota limit reached. Please use simulated bill data to proceed.",
+        });
+      }
+      console.error(err);
+      throw new BadGatewayException({
+        status: "unavailable",
+        error: "We couldn't read the photo right now. Please try again or use simulated bill data.",
+      });
+    }
+    if (result.status === "unreadable") throw new UnprocessableEntityException(result);
+    return result;
+  }
+
+  /** Guest mode: explain the confirmed single Bill (charges only, no comparison or appliance breakdown). */
+  @Post("guest/explain")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  guestExplain(@Body() body?: { now?: DraftBill }) {
+    if (!body?.now || typeof body.now !== "object") {
+      throw new BadRequestException({ error: "Provide the scanned bill in 'now'." });
+    }
+    return this.billScan.explainGuest(body.now);
   }
 }

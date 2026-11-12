@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, type CodeSent } from "../../api/client";
+import { EelioMascot } from "./EelioMascot";
 
 /** Icons drawn as in the mockup (stroke, currentColor). */
 const ICON = {
@@ -39,8 +40,36 @@ function useCountdown(seconds: number) {
   return [left, () => setLeft(seconds)] as const;
 }
 
+/** 0 · Landing page: choose Sign up, Sign in, or Guest mode. */
+export function Landing({ onSignUp, onSignIn, onGuest }: { onSignUp: () => void; onSignIn: () => void; onGuest: () => void }) {
+  return <section className="screen top landing-screen" aria-labelledby="landing-title">
+    <div className="auth-hero">
+      <Brand />
+      <EelioMascot className="auth-mascot-mobile" />
+    </div>
+    <div className="screen-intro spaced">
+      <h1 id="landing-title" className="big">Understand your Meralco bill in seconds</h1>
+      <p className="lead">Sign in for full bill comparisons and appliance breakdown, or scan a single bill right away as a guest.</p>
+    </div>
+    <ul className="landing-features">
+      <li><span className="feature-icon"><Icon d={ICON.receipt} size={16} width={2.2} /></span>Every charge explained in plain words</li>
+      <li><span className="feature-icon"><Icon d={ICON.chart} size={16} width={2.2} /></span>Previous bill comparison and appliance breakdown with an account</li>
+    </ul>
+    <div className="screen-bottom">
+      <button type="button" className="btn-primary" onClick={onSignUp}>Sign up</button>
+      <button type="button" className="btn-outline" onClick={onSignIn}>Sign in</button>
+      <button type="button" className="btn-guest" onClick={onGuest}>Continue as guest</button>
+      <p className="fine">Guest mode explains only your scanned bill, without previous bill comparison or appliance breakdown.</p>
+    </div>
+  </section>;
+}
+
 /** 1 · Sign up: email + contact number (like My Meralco). */
-export function SignUp({ onCodeSent, onSignIn }: { onCodeSent: (email: string, sent: CodeSent) => void; onSignIn: () => void }) {
+export function SignUp({ onCodeSent, onSignIn, onLanding }: {
+  onCodeSent: (email: string, sent: CodeSent) => void;
+  onSignIn: () => void;
+  onLanding?: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
@@ -55,7 +84,11 @@ export function SignUp({ onCodeSent, onSignIn }: { onCodeSent: (email: string, s
   }
 
   return <form className="screen top" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-    <Brand />
+    {onLanding && <div className="screen-head left"><BackButton onClick={onLanding} label="Back to welcome" /></div>}
+    <div className="auth-hero">
+      <Brand />
+      <EelioMascot className="auth-mascot-mobile" />
+    </div>
     <div className="screen-intro">
       <h1 className="big">Create your account</h1>
       <p className="lead">See why your bill changed, check it against Meralco's own figures, and earn rewards when you use less.</p>
@@ -253,11 +286,15 @@ export function CreatePassword({ token, onDone, onBack }: { token: string; onDon
 }
 
 /** Sign in (returning user): Gmail address + password → Home. */
-export function SignIn({ notice, onSignedIn, onSignUp }: { notice?: string | null; onSignedIn: (token: string) => void; onSignUp: () => void }) {
+export function SignIn({ notice, onSignedIn, onSignUp, onLanding }: {
+  notice?: string | null;
+  onSignedIn: (token: string) => void;
+  onSignUp: () => void;
+  onLanding?: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
-  const [forgot, setForgot] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -269,7 +306,11 @@ export function SignIn({ notice, onSignedIn, onSignUp }: { notice?: string | nul
   }
 
   return <form className="screen top" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-    <Brand />
+    {onLanding && <div className="screen-head left"><BackButton onClick={onLanding} label="Back to welcome" /></div>}
+    <div className="auth-hero">
+      <Brand />
+      <EelioMascot className="auth-mascot-mobile" />
+    </div>
     <div className="screen-intro spaced">
       <h1 className="big">Welcome back</h1>
       <p className="lead">Sign in to see your latest bill, your missions and your points.</p>
@@ -278,15 +319,11 @@ export function SignIn({ notice, onSignedIn, onSignUp }: { notice?: string | nul
     <div className="screen-bottom">
       <label className="field-label" htmlFor="signin-email">Gmail address</label>
       <input id="signin-email" className="input-lg" type="email" autoComplete="username" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
-      <div className="label-row">
-        <label className="field-label" htmlFor="signin-password">Password</label>
-        <button type="button" className="link small" onClick={() => setForgot((v) => !v)}>Forgot password?</button>
-      </div>
+      <label className="field-label" htmlFor="signin-password">Password</label>
       <div className="pw-wrap">
         <input id="signin-password" className="input-lg" type={show ? "text" : "password"} autoComplete="current-password" required maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button type="button" className="pw-toggle" aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} onClick={() => setShow((v) => !v)}><Icon d={ICON.eye} /></button>
+        <button type="button" className="pw-toggle" tabIndex={-1} aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} onClick={() => setShow((v) => !v)}><Icon d={ICON.eye} /></button>
       </div>
-      {forgot && <p className="small muted" role="status">Password reset isn't available in the demo yet.</p>}
       {error && <p className="error" role="alert">{error}</p>}
       <button className="btn-primary" disabled={busy || !email.trim() || !password}>{busy ? "Signing in…" : "Sign in"}</button>
       <p className="screen-switch">Don't have an account? <button type="button" className="link" onClick={onSignUp}>Sign up</button></p>
@@ -295,27 +332,37 @@ export function SignIn({ notice, onSignedIn, onSignUp }: { notice?: string | nul
 }
 
 type Step =
+  | { name: "landing" }
   | { name: "signup" }
   | { name: "otp"; email: string; sent: CodeSent }
   | { name: "verify"; email: string; demoLink?: string }
   | { name: "signin" };
 
-/** Signed out: Sign up → code → verify email (→ Create password from the link), or Sign in. */
-export function AuthFlow({ initial, notice, onSignedIn }: { initial: "signup" | "signin"; notice?: string | null; onSignedIn: (token: string) => void }) {
+/** Signed out: Landing → Sign up → code → verify email (→ Create password from the link), or Sign in. */
+export function AuthFlow({ initial, notice, onSignedIn, onGuest }: {
+  initial: "landing" | "signup" | "signin";
+  notice?: string | null;
+  onSignedIn: (token: string) => void;
+  onGuest?: () => void;
+}) {
   const [step, setStep] = useState<Step>({ name: initial } as Step);
   useEffect(() => { setStep({ name: initial } as Step); }, [initial]);
+  const toLanding = () => { window.location.hash = "/"; setStep({ name: "landing" }); };
   const toSignIn = () => { window.location.hash = "/signin"; setStep({ name: "signin" }); };
   const toSignUp = () => { window.location.hash = "/signup"; setStep({ name: "signup" }); };
+  const toGuest = () => { window.location.hash = "/guest"; onGuest?.(); };
 
   switch (step.name) {
+    case "landing":
+      return <Landing onSignUp={toSignUp} onSignIn={toSignIn} onGuest={toGuest} />;
     case "signin":
-      return <SignIn notice={notice} onSignedIn={onSignedIn} onSignUp={toSignUp} />;
+      return <SignIn notice={notice} onSignedIn={onSignedIn} onSignUp={toSignUp} onLanding={onGuest ? toLanding : undefined} />;
     case "otp":
       return <OtpCode email={step.email} sent={step.sent} onBack={toSignUp}
         onVerified={(r) => setStep({ name: "verify", email: r.sentTo, demoLink: r.demoLink })} />;
     case "verify":
       return <VerifyEmail email={step.email} demoLink={step.demoLink} onBack={toSignUp} onDifferentEmail={toSignUp} />;
     default:
-      return <SignUp onSignIn={toSignIn} onCodeSent={(email, sent) => setStep({ name: "otp", email, sent })} />;
+      return <SignUp onSignIn={toSignIn} onLanding={onGuest ? toLanding : undefined} onCodeSent={(email, sent) => setStep({ name: "otp", email, sent })} />;
   }
 }

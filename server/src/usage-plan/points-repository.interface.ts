@@ -10,7 +10,8 @@ export interface PointsEntry {
   savedKwh: number;
   baselineKwh: number;
   actualKwh: number;
-  source: "bill_verified" | "meter_verified" | "self_report" | "redemption" | "welcome";
+  /** "demo_bonus": spendable Points the seed gives each demo Household, so Rewards can be redeemed in a demo. */
+  source: "bill_verified" | "meter_verified" | "self_report" | "redemption" | "welcome" | "demo_bonus";
   hasOutage: boolean;
   excludedReason?: string | null;
   description: string;

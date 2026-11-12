@@ -218,6 +218,241 @@ export const fetchBillBreakdown = (token: string, now: BillInput, before?: BillI
     body: JSON.stringify({ now, before }),
   }).then((r) => json<BillBreakdown>(r));
 
+export type GuestScanOutcome =
+  | {
+      kind: "read";
+      now: DraftBill;
+      before: null;
+      estimated: string[];
+      missing: string[];
+      serviceIdMasked: string | null;
+      canMasked?: string | null;
+    }
+  | { kind: "unreadable"; problem: string }
+  | { kind: "unavailable"; error: string };
+
+export interface GuestChargeLine extends HomeChargeLine {
+  what: string;
+}
+
+export interface GuestBillExplanation {
+  currency: "PHP-centavos";
+  bill: {
+    period: string | null;
+    kwh: number | null;
+    billingDays: number | null;
+    dueDate: string | null;
+    amountDue: number | null;
+  };
+  chargeLines: {
+    featured: GuestChargeLine[];
+    all: GuestChargeLine[];
+  };
+  breakdown: BillBreakdown;
+}
+
+const GUEST_FALLBACK_SCAN: Extract<GuestScanOutcome, { kind: "read" }> = {
+  kind: "read",
+  now: {
+    period: "2026-10",
+    billingDays: 31,
+    kwh: 240,
+    dueDate: "2026-11-20",
+    previousReading: 10450,
+    presentReading: 10690,
+    chargeLines: [
+      { label: "Generation Charge", amount: 1618.32 },
+      { label: "Transmission Charge", amount: 248.06 },
+      { label: "System Loss Charge", amount: 148.9 },
+      { label: "Distribution Charge", amount: 328.99 },
+      { label: "Subsidies", amount: 0.38 },
+      { label: "Government Taxes", amount: 236.85 },
+      { label: "Universal Charges", amount: 54.34 },
+      { label: "FIT-All (Renewable)", amount: 20.11 },
+    ],
+  },
+  before: null,
+  estimated: [],
+  missing: [],
+  serviceIdMasked: "••••••7890",
+  canMasked: "39•• ••• 482",
+};
+
+const GUEST_LINE_CATALOG: {
+  id: string;
+  label: string;
+  match: RegExp;
+  kind: "perKwh" | "fixed" | "tax";
+  goesTo: string;
+  payee: { type: "passThrough" | "meralco" | "government" | "subsidy"; name: string };
+  what: string;
+}[] = [
+  {
+    id: "generation",
+    label: "Generation",
+    match: /generation/i,
+    kind: "perKwh",
+    goesTo: "Pass-through",
+    payee: { type: "passThrough", name: "Power plants (generation companies)" },
+    what: "The price of the electricity itself, bought by Meralco from power plants. The biggest part of the bill.",
+  },
+  {
+    id: "transmission",
+    label: "Transmission",
+    match: /transmission/i,
+    kind: "perKwh",
+    goesTo: "Pass-through",
+    payee: { type: "passThrough", name: "NGCP (which runs the transmission lines)" },
+    what: "The cost of carrying power from the plants to Meralco.",
+  },
+  {
+    id: "system_loss",
+    label: "System Loss",
+    match: /system\s*loss/i,
+    kind: "perKwh",
+    goesTo: "Pass-through",
+    payee: { type: "passThrough", name: "Power plants (for power lost on the lines)" },
+    what: "The cost of power lost on the lines before it reaches homes, within a set cap.",
+  },
+  {
+    id: "distribution",
+    label: "Distribution",
+    match: /distribution|supply|meter/i,
+    kind: "perKwh",
+    goesTo: "Meralco",
+    payee: { type: "meralco", name: "Meralco (this is the part Meralco keeps)" },
+    what: "Paid to Meralco for running and maintaining the lines and poles to your home.",
+  },
+  {
+    id: "subsidies",
+    label: "Subsidies",
+    match: /subsid|lifeline|senior/i,
+    kind: "perKwh",
+    goesTo: "Subsidy",
+    payee: { type: "subsidy", name: "Other customers with a subsidy" },
+    what: "Subsidies set by law, shared among customers.",
+  },
+  {
+    id: "government_taxes",
+    label: "Taxes",
+    match: /tax|vat|franchise/i,
+    kind: "tax",
+    goesTo: "Government",
+    payee: { type: "government", name: "Local or national government" },
+    what: "A tax Meralco collects for the government.",
+  },
+  {
+    id: "universal",
+    label: "Universal Charge",
+    match: /universal|missionary|environmental|stranded|npc|psalm/i,
+    kind: "perKwh",
+    goesTo: "Pass-through",
+    payee: { type: "passThrough", name: "Government (PSALM / NPC) for electricity programs" },
+    what: "Universal Charges: funds for power in remote areas, the environment, and old NPC debts.",
+  },
+  {
+    id: "fit_all",
+    label: "FIT-All (Renewable)",
+    match: /fit[\s-]?all|feed[\s-]?in/i,
+    kind: "perKwh",
+    goesTo: "Pass-through",
+    payee: { type: "passThrough", name: "Renewable energy developers (through TransCo)" },
+    what: "Feed-in Tariff Allowance: support for solar, wind and other renewable plants.",
+  },
+];
+
+function fallbackExplainGuestBill(now: DraftBill): GuestBillExplanation {
+  const rawLines = now.chargeLines ?? [];
+  const all: GuestChargeLine[] = rawLines.map((l, idx) => {
+    const entry = GUEST_LINE_CATALOG.find((c) => c.match.test(l.label));
+    const centavos = Math.round(l.amount * 100);
+    return {
+      id: entry?.id ?? `line_${idx}`,
+      label: entry?.label ?? l.label,
+      amount: centavos,
+      previous: null,
+      change: null,
+      kind: entry?.kind ?? null,
+      payee: entry?.payee ?? null,
+      goesTo: entry?.goesTo ?? null,
+      printed: [l.label],
+      what: entry?.what ?? "Charge printed on this Meralco bill.",
+    };
+  });
+  const totalFromLines = all.length ? all.reduce((s, l) => s + l.amount, 0) : null;
+  const amountDue =
+    typeof now.totalAmount === "number" && Number.isFinite(now.totalAmount) && now.totalAmount >= 0
+      ? Math.round(now.totalAmount * 100)
+      : totalFromLines;
+  return {
+    currency: "PHP-centavos",
+    bill: {
+      period: now.period ?? null,
+      kwh: now.kwh ?? null,
+      billingDays: now.billingDays ?? null,
+      dueDate: now.dueDate ?? null,
+      amountDue,
+    },
+    chargeLines: {
+      featured: all.slice(0, 4),
+      all,
+    },
+    breakdown: {
+      groups: [],
+      total: amountDue ?? 0,
+      split: { passThrough: 0, meralco: 0 },
+    },
+  };
+}
+
+/** Guest mode: send a Bill photo to be read without signing in or linking an account. */
+export async function scanGuestBill(photo: File): Promise<GuestScanOutcome> {
+  const form = new FormData();
+  form.append("photo", photo);
+  let res: Response;
+  try {
+    res = await fetch("/api/bills/guest/scan", { method: "POST", body: form });
+  } catch {
+    return { kind: "unavailable", error: "We couldn't reach the server. You can use simulated bill data to proceed." };
+  }
+  const body = await res.json().catch(() => ({}));
+  if (res.ok) return { kind: "read", ...body };
+  if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
+  if (res.status === 404) {
+    return { kind: "unavailable", error: "Bill scan is not set up yet. You can use simulated bill data to proceed." };
+  }
+  return { kind: "unavailable", error: body.error ?? `We couldn't read the photo (HTTP ${res.status}).` };
+}
+
+/** Guest mode: simulate reading a bill without uploading a photo or signing in. */
+export async function simulateGuestBill(): Promise<GuestScanOutcome> {
+  let res: Response;
+  try {
+    res = await fetch("/api/bills/guest/simulate", { method: "POST" });
+  } catch {
+    return GUEST_FALLBACK_SCAN;
+  }
+  const body = await res.json().catch(() => ({}));
+  if (res.ok) return { kind: "read", ...body };
+  if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
+  return GUEST_FALLBACK_SCAN;
+}
+
+/** Guest mode: explain the confirmed single Bill (charges only, no comparison or appliance breakdown). */
+export async function explainGuestBill(now: DraftBill): Promise<GuestBillExplanation> {
+  try {
+    const res = await fetch("/api/bills/guest/explain", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ now }),
+    });
+    if (res.ok) return (await res.json()) as GuestBillExplanation;
+  } catch {
+    // Fall back to local single-bill explanation if the server is unreachable.
+  }
+  return fallbackExplainGuestBill(now);
+}
+
 export type RoutineKind = "alwaysOn" | "timeRanges" | "usesPerWeek";
 export interface TimeRange { start: string; end: string; days: "everyday" | "weekdays" | "weekends" }
 export interface CatalogAppliance {
@@ -407,7 +642,7 @@ export interface PointsHistoryEntry {
   savedKwh: number;
   baselineKwh: number;
   actualKwh: number;
-  /** "bill_verified" (traditional, per Bill), "meter_verified" (smart meter, per day), "welcome", "redemption". */
+  /** "bill_verified" (traditional, per Bill), "meter_verified" (smart meter, per day), "welcome", "demo_bonus" (seeded demo Points), "redemption". */
   source: string;
   hasOutage: boolean;
   excludedReason?: string | null;
