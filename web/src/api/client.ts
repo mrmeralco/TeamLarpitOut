@@ -529,6 +529,8 @@ export interface PointsHistoryEntry {
 export interface PointsResult {
   currency: string;
   balance: number;
+  lockedPoints?: number;
+  spendable?: number;
   history: PointsHistoryEntry[];
 }
 
@@ -549,6 +551,9 @@ export interface CatalogRewardItem {
 export interface RewardsCatalogResult {
   sin: string;
   balance: number;
+  /** Welcome Points that unlock at the first Verified Savings. */
+  lockedPoints?: number;
+  spendable?: number;
   tag: string;
   disclaimer: string;
   catalog: CatalogRewardItem[];
@@ -678,4 +683,31 @@ export const chargeApi = {
       headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ question }),
     }).then((r) => json<ChargeAnswer>(r)),
+};
+
+export type HomePattern = "allDay" | "eveningsWeekends" | "daytime";
+export type AirconPattern = "sleeping" | "afternoonNight" | "mostOfDay";
+export interface SetupStatus {
+  steps: { key: "household" | "appliances" | "routine"; label: string; done: boolean }[];
+  doneCount: number;
+  total: number;
+  complete: boolean;
+  household: { size: number } | null;
+  routine: { home: HomePattern; aircon: AirconPattern | null } | null;
+  hasAircon: boolean;
+  welcomePoints: { points: number; granted: boolean; locked: boolean };
+}
+
+const setupPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/setup`;
+export const setupApi = {
+  status: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(setupPath(sin), authed(token, signal)).then((r) => json<SetupStatus>(r)),
+  household: (token: string, sin: string, size: number) =>
+    fetch(`${setupPath(sin)}/household`, {
+      method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ size }),
+    }).then((r) => json<SetupStatus>(r)),
+  routine: (token: string, sin: string, home: HomePattern, aircon: AirconPattern | null) =>
+    fetch(`${setupPath(sin)}/routine`, {
+      method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ home, aircon }),
+    }).then((r) => json<SetupStatus>(r)),
 };

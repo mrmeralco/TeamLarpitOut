@@ -224,6 +224,13 @@ export async function harness(opts: HarnessOptions = {}) {
       cachedToken ??= await this.login();
       return cachedToken;
     },
+    /** Household Setup's household and routine steps (appliances are saved by the test itself). */
+    async completeSetup(sin: string, token: string) {
+      const household = await this.put(`/api/households/${sin}/setup/household`, { size: 4 }, token);
+      const routine = await this.put(`/api/households/${sin}/setup/routine`, { home: "eveningsWeekends", aircon: "sleeping" }, token);
+      if (household.status !== 200 || routine.status !== 200) throw new Error(`Test setup failed: HTTP ${household.status}/${routine.status}`);
+      return routine.body;
+    },
     async put(path: string, body: unknown, token?: string) {
       const req = request(server).put(path);
       if (token !== undefined) req.set("Authorization", `Bearer ${token}`);

@@ -30,6 +30,7 @@ async function setup(opts: Parameters<typeof harness>[0] = {}) {
   const api = await harness({ bills: { [SIN]: history() }, weather, ...opts });
   const token = await api.login();
   await api.put(`/api/households/${SIN}/appliances`, survey, token);
+  await api.completeSetup(SIN, token);
   return { api, token };
 }
 
@@ -197,6 +198,7 @@ describe("Household usage plan (Target + Missions for one billing period)", () =
     const api = await harness({ billSource: { bills: async () => bills }, weather });
     const token = await api.login();
     await api.put(`/api/households/${SIN}/appliances`, survey, token);
+    await api.completeSetup(SIN, token);
     await api.put(`/api/households/${SIN}/usage-plan`, { cut: 5, missionIds: ["ref-medium"] }, token);
 
     bills.push(bill("2026-11", 250, 30));

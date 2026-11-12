@@ -144,6 +144,7 @@ describe("16 · Forecast: range, typed Mid-month Reading, heat wave banner", () 
       token,
     );
 
+    await api.completeSetup(SIN, token);
     // Set a 10% Target plan with an available mission
     const missionsRes = await api.get(`/api/households/${SIN}/missions`, token);
     const missionIds = [missionsRes.body.missions[0].id];

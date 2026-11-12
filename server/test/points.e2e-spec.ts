@@ -86,6 +86,7 @@ describe("Verified Savings and Points (traditional)", () => {
     const api = await harness({ bills, weather, schedules });
     const token = await api.login();
     await api.put(`/api/households/${SIN}/appliances`, survey, token);
+    await api.completeSetup(SIN, token);
 
     // Save a plan first
     const putRes = await api.put(
@@ -104,12 +105,13 @@ describe("Verified Savings and Points (traditional)", () => {
 
     expect(res.status).toBe(201);
     expect(res.body.awardedPoints).toBe(0);
-    expect(res.body.balance).toBe(0);
+    // Only the (locked) Welcome Points from finishing setup; the self-report added nothing.
+    expect(res.body.balance).toBe(100);
     expect(res.body.message).toContain("hindi sa self-report");
 
-    // Balance remains 0
+    // Balance is still only the locked Welcome Points: nothing spendable
     const pointsRes = await api.get(`/api/households/${SIN}/points`, token);
-    expect(pointsRes.body.balance).toBe(0);
+    expect(pointsRes.body).toMatchObject({ balance: 100, lockedPoints: 100, spendable: 0 });
   });
 
   it("awards 1 Point per ₱1 of Verified Savings when habits change and shows where each Point came from", async () => {

@@ -29,3 +29,5 @@ export const COACH_PROVIDER = Symbol("COACH_PROVIDER");
 export const POINTS_REPOSITORY = Symbol("POINTS_REPOSITORY");
 /** Outage records from Meralco (used to exclude brownouts from Points). */
 export const OUTAGE_SOURCE = Symbol("OUTAGE_SOURCE");
+/** Per-Household Household Setup progress (in-memory now; database later). */
+export const SETUP_REPOSITORY = Symbol("SETUP_REPOSITORY");
