@@ -607,3 +607,21 @@ button.wide { width: 100%; margin-top: 10px; }
 .review div:first-child { border-top: 0; }
 .review dt { color: var(--muted-foreground); }
 .review dd { margin: 0; font-weight: 600; }
+
+/* App shell: content above a fixed bottom tab bar */
+.flow-screen { max-width: 480px; margin: 0 auto; padding: max(16px, env(safe-area-inset-top)) 16px 32px; }
+.shell main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+.shell, main { overflow-x: clip; }
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-height: 64px; padding-bottom: env(safe-area-inset-bottom);
+  background: var(--card); border-top: 1px solid var(--border);
+}
+.tabbar a {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  min-height: 48px; font-size: 0.72rem; font-weight: 500; text-decoration: none; color: var(--muted-foreground);
+}
+.tabbar a[aria-current="page"] { color: var(--primary); font-weight: 600; }
+.tabbar a:focus-visible { outline: 2px solid var(--ring); outline-offset: -4px; }
+@media (min-width: 520px) { .tabbar { left: 50%; width: 480px; transform: translateX(-50%); border-left: 1px solid var(--border); border-right: 1px solid var(--border); } }
