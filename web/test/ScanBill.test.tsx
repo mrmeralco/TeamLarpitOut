@@ -64,11 +64,10 @@ describe("Scan and confirm (mockup screens 5–6)", () => {
     expect(JSON.parse(String(call[1]!.body))).toEqual({ scanToken: "a".repeat(43), can: "3901 234 482" });
   });
 
-  it("can't link a bill whose account belongs to another login", async () => {
-    account = { status: "ownedByAnother", canMasked: "39•• ••• 482", message: "This account is already linked to another login. Please contact the account owner." };
+  it("can't link a bill whose CAN is unknown", async () => {
+    account = { status: "unknownAccount", canMasked: "39•• ••• 482" };
     await scan();
-    expect(screen.getByText("Linked to another login")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toMatch(/contact the account owner/);
+    expect(screen.getByText("Account not found")).toBeTruthy();
     expect((screen.getByRole("button", { name: "Yes, explain my bill" }) as HTMLButtonElement).disabled).toBe(true);
   });
 

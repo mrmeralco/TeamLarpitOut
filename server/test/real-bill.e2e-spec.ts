@@ -52,7 +52,7 @@ describe("the real-Bill Household, end to end", () => {
     expect(taxes).toMatchObject({ amount: 37464, previous: 39508, change: -2044 });
   });
 
-  it("a new login links it by scanning the Bill; another login is then told it is taken", async () => {
+  it("a new login links it by scanning the Bill; another login can link the same Bill too", async () => {
     const api = await realHarness({});
     const newUser = await api.login("new-user@example.test");
     const scan = await api.upload("/api/bills/scan", undefined, undefined, newUser);
@@ -62,7 +62,10 @@ describe("the real-Bill Household, end to end", () => {
 
     const other = await api.login("other-user@example.test");
     const second = await api.upload("/api/bills/scan", undefined, undefined, other);
-    expect(second.body.account.status).toBe("ownedByAnother");
-    expect((await api.get(path("/bills"), other)).status).toBe(404);
+    expect(second.body.account.status).toBe("found");
+    const linkedToo = await api.post("/api/households/link/confirm", { scanToken: second.body.scanToken }, other);
+    expect(linkedToo.body).toMatchObject({ status: "active", householdSin: REAL.sin });
+    expect((await api.get(path("/bills"), other)).status).toBe(200);
+    expect((await api.get(path("/bills"), newUser)).status).toBe(200);
   });
 });
