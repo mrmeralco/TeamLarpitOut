@@ -86,3 +86,28 @@ export async function scanBill(photo: File): Promise<ScanOutcome> {
   if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
   return { kind: "unavailable", error: body.error ?? `Hindi nabasa ang litrato (HTTP ${res.status}).` };
 }
+
+export interface LamanRow {
+  label: string;
+  amount: number;
+  known: boolean;
+  code: string | null;
+  kind: "perKwh" | "fixed" | "tax" | null;
+  payee: { type: "passThrough" | "meralco" | "government" | "subsidy"; name: string } | null;
+  what: string;
+  change: { status: "changed" | "new" | "noPrevious"; amount: number | null; previous: number | null };
+}
+
+/** All amounts are integer centavos. */
+export interface Laman {
+  groups: { key: string; title: string; total: number; rows: LamanRow[] }[];
+  total: number;
+  split: { passThrough: number; meralco: number };
+}
+
+export const lamanApi = (now: BillInput, before: BillInput) =>
+  fetch("/api/bills/laman", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ now, before }),
+  }).then((r) => json<Laman>(r));

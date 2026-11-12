@@ -120,3 +120,44 @@ label.missing em, label.missing span { color: var(--up); }
 label.missing input, label.missing select { border-color: var(--up); }
 label.estimated em { color: var(--brand); }
 label.estimated input { border-color: var(--brand); border-style: dashed; }
+
+/* Ano'ng laman */
+.split { margin-bottom: 12px; }
+.split small { color: var(--muted); line-height: 1.8; }
+.bar.two { display: flex; height: 10px; }
+.bar.two span { border-radius: 0; }
+.bar .pass { background: #6366f1; }
+.bar .meralco { background: var(--brand); }
+.tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+  vertical-align: middle;
+  border: 1px solid currentColor;
+}
+.split .tag { margin-left: 0; }
+.tag.passThrough { color: #6366f1; }
+.tag.meralco { color: var(--brand); }
+.tag.government, .tag.subsidy { color: var(--muted); }
+.laman-group h3 { font-size: 0.9rem; margin: 14px 0 4px; }
+.laman-group ul { list-style: none; margin: 0; padding: 0; }
+.laman-row { border-bottom: 1px solid var(--line); }
+.laman-row button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 0;
+  cursor: pointer;
+}
+.laman-row button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.laman-row strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.laman-row.unknown .laman-label { color: var(--muted); font-style: italic; }
+.laman-detail { padding: 0 0 10px; font-size: 0.9rem; }
+.laman-detail p { margin: 4px 0; }
+.laman-total { border-top: 2px solid var(--ink); padding-top: 10px; margin-top: 8px; }

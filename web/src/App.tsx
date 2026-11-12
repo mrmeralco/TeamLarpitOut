@@ -1,14 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { api, scanBill, type BakitGanito, type BillInput, type ChargeLine, type DraftBill, type ScanOutcome } from "./api";
-
-const peso = (centavos: number, signed = false) => {
-  const s = (Math.abs(centavos) / 100).toLocaleString("en-PH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  const sign = centavos < 0 ? "−" : signed && centavos > 0 ? "+" : "";
-  return `${sign}₱${s}`;
-};
+import { api, lamanApi, scanBill, type BakitGanito, type BillInput, type ChargeLine, type DraftBill, type Laman as LamanData, type ScanOutcome } from "./api";
+import { peso } from "./format";
+import { Laman } from "./Laman";
 
 const monthLabel = (period: string) =>
   /^\d{4}-\d{2}$/.test(period)
@@ -260,6 +253,7 @@ export function App() {
   const [scan, setScan] = useState<ScanState>(noScan);
   const [scanning, setScanning] = useState<Slot | null>(null);
   const [result, setResult] = useState<BakitGanito | null>(null);
+  const [laman, setLaman] = useState<LamanData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -318,9 +312,15 @@ export function App() {
     setBusy(true);
     setError(null);
     try {
-      setResult(await api.bakitGanito(b, n));
+      const [r, l] = await Promise.all([
+        api.bakitGanito(b, n),
+        n.chargeLines.length ? lamanApi(n, b) : Promise.resolve(null),
+      ]);
+      setResult(r);
+      setLaman(l);
     } catch (err) {
       setResult(null);
+      setLaman(null);
       setError((err as Error).message);
     } finally {
       setBusy(false);
@@ -402,6 +402,7 @@ export function App() {
       </form>
       {error && <p className="error">{error}</p>}
       {result && <Result r={result} />}
+      {result && <Laman data={laman} missingLines={!n?.chargeLines.length} />}
     </main>
   );
 }
