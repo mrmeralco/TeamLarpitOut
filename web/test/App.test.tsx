@@ -6,19 +6,22 @@ const households = [
   { sin: "1234567890", masked_address: "••• Caloocan City", meter_type: "traditional" },
   { sin: "9876543210", masked_address: "••• Quezon City", meter_type: "smart" },
 ];
-const history = (kwh: number) => [{ period: "2026-10", kwh, billingDays: 30, chargeLines: [{ label: "Sample", amount: kwh * 10 }], provenance: { kind: "sample", note: "Synthetic" } }];
-const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-const verdictResponse = (total = 50000) => ({
-  before: { period: "2026-09", kwh: 150, billingDays: 30, rebuiltTotal: 150000, printedTotal: null, estimated: false, extras: [], extrasTotal: 0 },
-  now: { period: "2026-10", kwh: 200, billingDays: 31, rebuiltTotal: 200000, printedTotal: null, estimated: false, extras: [], extrasTotal: 0 },
-  effects: [], lines: [], habitMeasurable: true, total, printedChange: null, extrasChange: 0, unexplained: null,
+const homeBody = (sin: string) => ({
+  meterType: sin === households[0]!.sin ? "traditional" : "smart", canMasked: "39•• ••• 482",
+  area: sin === households[0]!.sin ? "Caloocan City" : "Quezon City",
+  chargeLines: { featured: [], all: [] },
+  bill: { period: "2026-10", amountDue: 10000, dueDate: null, billDate: null },
+  badge: { status: "green", label: "Bill verified" }, bakitGanito: null, bakitGanitoUnavailable: "Two Bills are needed to compare.",
+  tamaBa: { status: "green", label: "Bill verified", failedChecks: 0, summary: "OK", screen: "tama-ba" },
+  action: { kind: "missions", label: "See Missions", screen: "missions" }, smartMeter: null,
 });
+const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+
 const expired = () => response({ error: "Please sign in first." }, 401);
 let fetchMock: Mock<(input: string, init?: RequestInit) => Promise<Response>>;
-let historyRequest: (sin: string) => Promise<Response>;
+let homeRequest: (sin: string) => Promise<Response>;
 let loginHouseholds = households;
 let loginFails = false;
-let failHistory = false;
 const setupStatus = (done: boolean[]) => ({
   steps: [
     { key: "household", label: "Household info", done: done[0] },
@@ -41,10 +44,10 @@ const usage = (sin: string) => ({
 beforeEach(() => {
   window.sessionStorage.clear();
   window.location.hash = "";
-  historyRequest = async (sin) => response(history(sin === households[0]!.sin ? 230 : 370));
+  homeRequest = async (sin) => response(homeBody(sin));
   readingsRequest = async (sin) => response(usage(sin));
   loginHouseholds = households;
-  loginFails = false; failHistory = false;
+  loginFails = false;
   setup = setupStatus([true, true, true]);
   fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10", "2026-11"] });
@@ -62,20 +65,13 @@ beforeEach(() => {
     }
     if (/^\/api\/households\/[^/]+\/rewards$/.test(input)) return response({ sin: "x", balance: 0, tag: "sample rewards", disclaimer: "Sample.", catalog: [], history: [] });
     if (input === "/api/auth/logout") return new Response(null, { status: 204 });
-    const match = /^\/api\/households\/([^/]+)\/bills$/.exec(input);
-    if (match) return failHistory ? response({ error: "We couldn't get the Bill History. Please try again." }, 502) : historyRequest(match[1]!);
     const readingsMatch = /^\/api\/households\/([^/]+)\/readings\?interval=(hour|day|week)$/.exec(input);
     if (readingsMatch) return readingsRequest(readingsMatch[1]!);
     if (input === "/api/appliances/catalog") return response({ appliances: [] });
     if (/^\/api\/households\/[^/]+\/appliances$/.test(input)) return response({ saved: false, updatedAt: null, appliances: [] });
-    if (/^\/api\/households\/[^/]+\/home$/.test(input)) return response({
-      meterType: input.includes(households[0]!.sin) ? "traditional" : "smart", canMasked: "39•• ••• 482", area: "Caloocan City",
-      chargeLines: { featured: [], all: [] },
-      bill: { period: "2026-10", amountDue: 10000, dueDate: null, billDate: null },
-      badge: { status: "green", label: "Bill verified" }, bakitGanito: null, bakitGanitoUnavailable: "Two Bills are needed to compare.",
-      tamaBa: { status: "green", label: "Bill verified", failedChecks: 0, summary: "OK", screen: "tama-ba" },
-      action: { kind: "missions", label: "See Missions", screen: "missions" }, smartMeter: null,
-    });
+    if (/^\/api\/households\/[^/]+\/bills$/.test(input)) return response([]);
+    const homeMatch = /^\/api\/households\/([^/]+)\/home$/.exec(input);
+    if (homeMatch) return homeRequest(homeMatch[1]!);
     if (/^\/api\/households\/[^/]+\/target$/.test(input)) return response({
       period: "2026-11", billingDays: 30, rateSchedulePeriod: "2026-11",
       baseline: { kwh: 230, kwhPerDay: 230 / 30, pesos: 230000, weatherAdjusted: false, weatherKwhPerDay: 0, heatSensitivity: { value: 1, source: "cooling_appliance_estimate", label: "Estimate" } },
@@ -115,9 +111,8 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-/** The Home tab asked for this Household's Bill History (it drives the explanation and checks). */
-const historyFetched = (sin: string, times = 1) => waitFor(() =>
-  expect(fetchMock.mock.calls.filter(([url]) => url === `/api/households/${sin}/bills`).length).toBeGreaterThanOrEqual(times));
+/** Home's Wrapped story is showing this Household's bill (the area is on the first slide). */
+const homeShows = (area: "Caloocan City" | "Quezon City") => screen.findByText(new RegExp(`· ${area} home`));
 
 /** Returning user: Sign up screen → "Sign in" → Gmail address + password. */
 async function signIn(password = "rosa2026x") {
@@ -166,7 +161,7 @@ describe("My Meralco PWA", () => {
   it("loads smart readings and Bills without uploading and clears usage on traditional selection", async () => {
     render(<App />); await login(); await select(households[1]!.sin);
     await screen.findByText("12.345 kWh");
-    await historyFetched(households[1]!.sin);
+    await homeShows("Quezon City");
     expect(await screen.findByRole("button", { name: /Your plan: use 5% less electricity/ })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan")).toBe(false);
     await goTab("Missions");
@@ -175,7 +170,7 @@ describe("My Meralco PWA", () => {
     expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/forecast"))).toBe(false);
     await select(households[0]!.sin);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
-    await historyFetched(households[0]!.sin);
+    await homeShows("Caloocan City");
     await goTab("Missions");
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
     await goTab("Account");
@@ -187,12 +182,12 @@ describe("My Meralco PWA", () => {
     readingsRequest = async () => response({ error: "Readings unavailable" }, 502);
     render(<App />); await login(); await select(households[1]!.sin);
     await screen.findByText("Readings unavailable");
-    expect(screen.getAllByText("Bill verified").length).toBeGreaterThan(0);
+    await homeShows("Quezon City");
     readingsRequest = async () => expired();
     fireEvent.click(screen.getByRole("button", { name: "Retry readings" }));
     await screen.findByText(/Your session expired/);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
-    expect(screen.queryByText("Bill verified")).toBeNull();
+    expect(screen.queryByRole("heading", { name: /wrapped/ })).toBeNull();
   });
 
   it.each(["traditional", "logout"])('ignores late readings after %s', async (action) => {
@@ -214,34 +209,34 @@ describe("My Meralco PWA", () => {
     expect(screen.getByRole("option", { name: /Caloocan.*Traditional meter/ }).textContent).toContain("••••••7890");
     expect(document.body.textContent).not.toContain("1234567890");
     await select(households[0]!.sin);
-    await historyFetched(households[0]!.sin);
-    // The month-by-month Bill History table is no longer shown on Home.
+    await homeShows("Caloocan City");
+    // No month-by-month Bill History table, explanation or Bill Checks on Home.
     expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Why this bill?" })).toBeNull();
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
     expect(fetchMock.mock.calls.some(([url]) => url.includes("/readings"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url, init]) => url.includes("/households/") && new Headers(init?.headers).get("authorization") === "Bearer test-session")).toBe(true);
   });
 
-  it("ignores a delayed response after switching Households and immediately hides the old history", async () => {
+  it("ignores a delayed Home response after switching Households", async () => {
     let resolveFirst!: (r: Response) => void;
-    historyRequest = (sin) => sin === households[0]!.sin ? new Promise((resolve) => { resolveFirst = resolve; }) : Promise.resolve(response(history(370)));
+    homeRequest = (sin) => sin === households[0]!.sin ? new Promise((resolve) => { resolveFirst = resolve; }) : Promise.resolve(response(homeBody(sin)));
     render(<App />); await login(); await select(households[0]!.sin);
     await waitFor(() => expect(resolveFirst).toBeTypeOf("function"));
     await select(households[1]!.sin);
-    await historyFetched(households[1]!.sin);
-    // A late two-Bill History for the old Household must not start its explanation or checks.
-    await act(async () => resolveFirst(response([{ ...history(200)[0], period: "2026-09" }, ...history(230)])));
-    expect(fetchMock.mock.calls.some(([url]) => url.startsWith(`/api/households/${households[0]!.sin}/`) && /bakit-ganito|check$/.test(url))).toBe(false);
+    await homeShows("Quezon City");
+    await act(async () => resolveFirst(response(homeBody(households[0]!.sin))));
+    expect(screen.queryByText(/Caloocan City home/)).toBeNull();
   });
 
-  it("clears protected data on logout and ignores a history response arriving afterward", async () => {
+  it("clears protected data on logout and ignores a Home response arriving afterward", async () => {
     let resolveHistory!: (r: Response) => void;
-    historyRequest = () => new Promise((resolve) => { resolveHistory = resolve; });
+    homeRequest = () => new Promise((resolve) => { resolveHistory = resolve; });
     render(<App />); await login(); await select(households[0]!.sin);
     await waitFor(() => expect(resolveHistory).toBeTypeOf("function"));
     await goTab("Account");
     fireEvent.click(screen.getAllByRole("button", { name: "Log out" })[0]!);
-    await act(async () => resolveHistory(response(history(230))));
+    await act(async () => resolveHistory(response(homeBody(households[0]!.sin))));
     await screen.findByRole("heading", { name: "Welcome back" });
     expect(screen.queryByRole("table")).toBeNull();
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/auth/logout")).toBe(true));
@@ -249,30 +244,13 @@ describe("My Meralco PWA", () => {
 
   it("logs out directly from the sidebar TabBar without visiting Account tab", async () => {
     render(<App />); await login(); await select(households[0]!.sin);
-    await screen.findByRole("heading", { name: /Good/ });
+    await screen.findByRole("heading", { name: /bill/i });
     fireEvent.click(screen.getByRole("button", { name: "Log out" }));
     await screen.findByRole("heading", { name: "Welcome back" });
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/auth/logout")).toBe(true));
   });
-
-  it("ignores a delayed Bill explanation after changing Household", async () => {
-    let resolveExplanation!: (r: Response) => void;
-    historyRequest = async (sin) => response(sin === households[0]!.sin
-      ? [{ ...history(200)[0], period: "2026-09" }, ...history(230)] : history(370));
-    const originalFetch = fetchMock.getMockImplementation()!;
-    fetchMock.mockImplementation((input: string, init?: RequestInit) => input.endsWith("/bakit-ganito") && input.includes("/households/")
-      ? new Promise<Response>((resolve) => { resolveExplanation = resolve; }) : originalFetch(input, init));
-    render(<App />); await login(); await select(households[0]!.sin);
-    await waitFor(() => expect(resolveExplanation).toBeTypeOf("function"));
-    await select(households[1]!.sin);
-    await historyFetched(households[1]!.sin);
-    await act(async () => resolveExplanation(response(verdictResponse(11111))));
-    expect(screen.queryByText("₱111.11")).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Why this bill?" })).toBeNull();
-  });
-
   it("clears the session when a protected request returns 401", async () => {
-    historyRequest = async () => expired();
+    homeRequest = async () => expired();
     render(<App />); await signIn();
     await screen.findByText(/Your session expired/);
     expect(screen.queryByRole("heading", { name: "Your Households" })).toBeNull();
@@ -301,22 +279,17 @@ describe("My Meralco PWA", () => {
     expect(screen.getByRole("heading", { name: "Create your account" })).toBeTruthy();
   });
 
-  it("supports retry after a history error without keeping stale data", async () => {
-    failHistory = true;
-    render(<App />); await login(); await select(households[0]!.sin);
-    await screen.findByText("We couldn't get the Bill History. Please try again.");
-    expect(screen.queryByRole("table")).toBeNull();
-    failHistory = false;
-    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-    await historyFetched(households[0]!.sin, 2);
-    await waitFor(() => expect(screen.queryByText("We couldn't get the Bill History. Please try again.")).toBeNull());
+  it("shows Home's error when the bill can't be loaded", async () => {
+    homeRequest = async () => response({ error: "We couldn't load your bill. Please try again." }, 502);
+    render(<App />); await login();
+    expect((await screen.findByRole("alert")).textContent).toBe("We couldn't load your bill. Please try again.");
+    expect(screen.queryByRole("heading", { name: /wrapped/ })).toBeNull();
   });
-
 
   it("switches tabs by hash route and highlights the current tab", async () => {
     render(<App />); await login();
     expect(window.location.hash).toBe("#/home");
-    await historyFetched(households[0]!.sin);
+    await homeShows("Caloocan City");
     await goTab("Missions");
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();

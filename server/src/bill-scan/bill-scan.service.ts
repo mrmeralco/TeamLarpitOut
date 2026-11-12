@@ -99,6 +99,32 @@ export function toScanResult(raw: RawBillReading): ScanResult {
   };
 }
 
+export const DEFAULT_SIMULATED_BILL: RawBillReading = {
+  readable: true,
+  customerAccountNumber: "3901234482",
+  serviceIdNumber: "1234567890",
+  period: "2026-10",
+  billingDays: 31,
+  kwh: 240,
+  dueDate: "2026-11-20",
+  previousReading: 10450,
+  presentReading: 10690,
+  chargeLines: [
+    { label: "Generation Charge", amount: 1618.32 },
+    { label: "Transmission Charge", amount: 248.06 },
+    { label: "System Loss Charge", amount: 148.9 },
+    { label: "Distribution Charge", amount: 328.99 },
+    { label: "Subsidies", amount: 0.38 },
+    { label: "Government Taxes", amount: 236.85 },
+    { label: "Universal Charges", amount: 54.34 },
+    { label: "FIT-All (Renewable)", amount: 20.11 },
+  ],
+  history: [
+    { period: "2026-08", kwh: 230 },
+    { period: "2026-09", kwh: 220 },
+  ],
+};
+
 @Injectable()
 export class BillScanService {
   constructor(@Inject(VISION_PROVIDER) private readonly vision: VisionProvider, private readonly contexts: ScanContextStore) {}
@@ -112,6 +138,22 @@ export class BillScanService {
       result: { ...result, scanToken: this.contexts.create(raw.customerAccountNumber, result.now, accountName) },
       can: tenDigits(raw.customerAccountNumber),
       accountName,
+    };
+  }
+
+  async simulate(can?: string) {
+    const targetCan = (can ? tenDigits(can) : null) ?? "3901234482";
+    const targetSin = targetCan === "3901567213" ? "9876543210" : targetCan === "3901234482" ? "1234567890" : `8${targetCan.slice(1)}`;
+    const raw: RawBillReading = {
+      ...DEFAULT_SIMULATED_BILL,
+      customerAccountNumber: targetCan,
+      serviceIdNumber: targetSin,
+    };
+    const result = toScanResult(raw);
+    if (result.status !== "read") return { result, can: null };
+    return {
+      result: { ...result, scanToken: this.contexts.create(raw.customerAccountNumber, result.now) },
+      can: tenDigits(raw.customerAccountNumber),
     };
   }
 }

@@ -122,6 +122,28 @@ Scanning and `POST /api/bakit-ganito` remain public. A scan grants no access to 
 - Regenerate deterministically with `pnpm --filter @kuryenteko/server build` followed by `node server/scripts/generate-bill-history.mjs`. The script reuses the actual `costLines()` implementation, preserves supplied recent Bill fields and rejects missing schedules or nonconsecutive periods.
 - `HouseholdStore` holds isolated snapshots under each Service ID Number. Restarting recreates the demo fixture; there is no database migration. Future appliance, Mission, typed-reading and Points records must use the same Household boundary, with ownership checked before access. Their feature behavior is outside this ticket.
 
+### Database (Supabase) and the real-Bill Household
+
+**Without `DATABASE_URL`** everything runs in memory as before. **With it**, logins (`public.accounts`), Household links (`public.household_links`) and the mock Meralco data (`meralco.*`: accounts by CAN, Bills with every printed group and rate component, payments) live in Supabase. Setup, appliances, Missions, readings and Points are still in memory; their tables are already in the migration. Tests never use the database.
+
+1. Apply `supabase/migrations/*.sql` (Supabase SQL editor, or `supabase db push`).
+2. Set `DATABASE_URL` in `server/.env` (Transaction pooler, port 6543, `?sslmode=require`).
+3. `pnpm --filter @kuryenteko/server db:seed`: loads the three Households and the test logins (safe to re-run).
+
+**Real-Bill Household** (`server/src/data/meralco-real-bill-seed.json`): one real September 2026 Meralco Bill, used with the account holder's consent. Every amount, rate, reading and date is transcribed; the name, street address, CAN, Service ID Number, meter number and invoice numbers are **not** in git (placeholders: CAN `0900000273`, SIN `090000027300`). The 11 earlier Bills are rebuilt from what the real Bill prints: kWh from its chart, readings counted back, and May–August totals equal to "What you've paid". `pnpm --filter @kuryenteko/server data:real-bill` regenerates `meralco-real-bill.json` and rebuilds `rate-schedules.json` on the real September rates (each month's `_note` says real, reconstructed or sample), then regenerates the older demo histories.
+
+To scan the paper Bill live, copy `server/seed.local.example.json` to `server/seed.local.json` (git-ignored), fill in the real CAN (and SIN), and set `LOCAL_SEED_FILE=seed.local.json`. Both the in-memory mock and `db:seed` use it.
+
+**Test logins** (password `eelio-demo-2026`; created at startup in memory, or by `db:seed`):
+
+| Login | State | Shows |
+|---|---|---|
+| `bill-owner@example.com` | linked to the real-Bill Household | Home, Bill History, "Bakit ganito?" (Aug → Sep 2026: −₱236.86), Bill Checks all green |
+| `new-user@example.com` | not linked | scanning the Bill while someone holds it → "already linked to another login" |
+| `other-user@example.com` | not linked | the same, from a second login |
+
+To show linking live, start with `DEMO_OWNER_LINKED=false` (and re-run `db:seed` when using Supabase): nobody holds the real-Bill Household, so the first login that scans the Bill gets "found" → "Yes, explain my bill", and every later login gets "already linked". Scanning the paper Bill needs its real CAN in the local seed. Re-running `db:seed` resets who holds it.
+
 ### Mock smart meter readings and usage chart (issue #10)
 
 `GET /api/households/:sin/readings?from=<ISO timestamp>&to=<ISO timestamp>&interval=hour|day|week`

@@ -6,6 +6,7 @@ import { BillChangeModule } from "./bill-change/bill-change.module.js";
 import { BillChecksModule } from "./bill-checks/bill-checks.module.js";
 import { BillScanModule } from "./bill-scan/bill-scan.module.js";
 import { ChargeChatModule } from "./charge-chat/charge-chat.module.js";
+import { DatabaseModule } from "./database/database.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { HomeModule } from "./home/home.module.js";
 import { HouseholdsModule } from "./households/households.module.js";
@@ -16,6 +17,7 @@ import { UsagePlanModule } from "./usage-plan/usage-plan.module.js";
 
 @Module({
   imports: [
+    DatabaseModule,
     RateSchedulesModule,
     BillChangeModule,
     BillScanModule,

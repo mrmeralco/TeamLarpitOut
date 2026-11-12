@@ -14,7 +14,7 @@ import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
 import { inMemoryOutageSource, type OutageRecord, type OutageSource } from "../../src/bills/outage-source.js";
-import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, DAILY_WEATHER_SOURCE, HOUSEHOLD_LINKS, KNOWLEDGE_SOURCE, NOTIFIER, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
+import { ACCOUNT_REPOSITORY, AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, DAILY_WEATHER_SOURCE, DATABASE, HOUSEHOLD_LINKS, KNOWLEDGE_SOURCE, NOTIFIER, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
 import { inMemoryReadingSource, type ReadingSource } from "../../src/smart-meter/reading-source.interface.js";
 import type { HourlyReading } from "../../src/domain/meter-reading.js";
 import type { CoachProvider } from "../../src/coach/coach-provider.interface.js";
@@ -24,6 +24,7 @@ import { ownerIdForEmail, type AuthClock } from "../../src/auth/auth.service.js"
 import type { Notifier, OtpChannel } from "../../src/auth/notifier.interface.js";
 import { mockMeralcoAccounts, type MeralcoAccount, type MeralcoAccountSource } from "../../src/bills/meralco-accounts.js";
 import type { Household } from "../../src/domain/household.js";
+import { InMemoryAccountRepository } from "../../src/auth/account.repository.js";
 import { InMemoryHouseholdLinkRepository, type HouseholdLink } from "../../src/households/household-link.repository.js";
 import type { RawBillReading, RawEnergyLabelReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
 import { FakeWeatherProvider } from "../../src/weather/fake-weather.provider.js";
@@ -166,6 +167,11 @@ export async function harness(opts: HarnessOptions = {}) {
   const links = new InMemoryHouseholdLinkRepository(activeLinks(opts.links ?? defaultLinks(), accounts));
   const notifier = fakeNotifier();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+    // Never a real database, and no seeded demo logins: each test starts from an empty login store.
+    .overrideProvider(DATABASE)
+    .useValue(null)
+    .overrideProvider(ACCOUNT_REPOSITORY)
+    .useValue(new InMemoryAccountRepository())
     .overrideProvider(RATE_SCHEDULES)
     .useValue(rateScheduleTable(opts.schedules ?? [schedule("2026-09", 10), schedule("2026-10", 11)]))
     .overrideProvider(BILL_SOURCE)

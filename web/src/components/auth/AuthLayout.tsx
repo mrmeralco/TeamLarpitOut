@@ -8,7 +8,7 @@ import { Icon, ICON } from "./AuthScreens";
 export function AuthLayout({ children }: { children: ReactNode }) {
   return <div className="auth-layout">
     <aside className="auth-aside" aria-hidden="true">
-      <div className="brand"><span className="brand-mark"><Icon d={ICON.bolt} width={2.2} /></span>Eelio</div>
+      <div className="brand"><span className="brand-mark"><img src="/icon-192.png" alt="" /></span>Eelio</div>
       <div className="auth-aside-copy">
         <h2>Understand your Meralco bill, peso by peso</h2>
         <p>See why your bill changed, check it against Meralco's own figures, and earn rewards when you use less.</p>

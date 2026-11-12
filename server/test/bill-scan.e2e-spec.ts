@@ -143,4 +143,44 @@ describe("POST /api/bills/scan", () => {
     expect((await api.userPost("/api/bills/scan", {})).status).toBe(400);
     expect((await api.userUpload("/api/bills/scan", Buffer.from("%PDF"), "application/pdf")).status).toBe(400);
   });
+
+  it("POST /api/bills/simulate returns simulated bill data with valid scanToken", async () => {
+    const api = await harness();
+    const { status, body } = await api.userPost("/api/bills/simulate", {});
+    expect(status).toBe(200);
+    expect(body.status).toBe("read");
+    expect(body.needsConfirmation).toBe(true);
+    expect(body.scanToken).toBeDefined();
+    expect(body.now).toMatchObject({
+      period: "2026-10",
+      kwh: 240,
+      billingDays: 31,
+    });
+    expect(body.canMasked).toBe("39•• ••• 482");
+    expect(body.account).toBeDefined();
+  });
+
+  it("POST /api/bills/scan?simulate=true allows simulation without photo upload", async () => {
+    const api = await harness();
+    const { status, body } = await api.userPost("/api/bills/scan?simulate=true", {});
+    expect(status).toBe(200);
+    expect(body.status).toBe("read");
+    expect(body.scanToken).toBeDefined();
+  });
+
+  it("returns 502 with quota message when vision AI quota limit is reached", async () => {
+    const api = await harness({
+      vision: {
+        readEnergyLabel: async () => ({ readable: false }),
+        readBill: async () => {
+          const quotaErr = new Error("ResourceExhausted: Quota exceeded for model gemini-3.8-flash");
+          (quotaErr as any).status = 429;
+          throw quotaErr;
+        },
+      },
+    });
+    const { status, body } = await api.userUpload("/api/bills/scan");
+    expect(status).toBe(502);
+    expect(body.error).toMatch(/quota limit reached/i);
+  });
 });

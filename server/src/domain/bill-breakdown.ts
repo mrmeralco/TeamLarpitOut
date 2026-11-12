@@ -50,15 +50,22 @@ function identity(label: string): string {
 
 export function buildBillBreakdown(now: ChargeLine[], before: ChargeLine[] = []) {
   const previous = new Map<string, number>();
+  const previousByLabel = new Map<string, number>();
   for (const l of before) {
     const id = identity(l.label);
     previous.set(id, (previous.get(id) ?? 0) + toCentavos(l.amount));
+    previousByLabel.set(norm(l.label), (previousByLabel.get(norm(l.label)) ?? 0) + toCentavos(l.amount));
   }
+  // Several lines can share one identity (VAT per kWh and VAT per customer): those match last
+  // month's line with the same label only, never the identity's combined amount.
+  const sharedIdentities = new Map<string, number>();
+  for (const l of now) sharedIdentities.set(identity(l.label), (sharedIdentities.get(identity(l.label)) ?? 0) + 1);
 
   const rows: BillBreakdownRow[] = now.map((line) => {
     const c = classifyLine(line.label);
     const amount = toCentavos(line.amount);
-    const prev = previous.get(identity(line.label));
+    const id = identity(line.label);
+    const prev = previousByLabel.get(norm(line.label)) ?? (sharedIdentities.get(id) === 1 ? previous.get(id) : undefined);
     const change: LineChange =
       before.length === 0
         ? { status: "noPrevious", amount: null, previous: null }
