@@ -108,3 +108,34 @@ describe("Account Linking from the scanned Bill (no CAN screen)", () => {
     expect((await api.post("/api/households/link", { can: A.can }, token)).status).toBe(404);
   });
 });
+
+describe("demo fallback (AUTH_FIXED_CODE set)", () => {
+  it("an unknown CAN opens the sample Household, labelled as demo, and several logins can share it", async () => {
+    const { vi } = await import("vitest");
+    vi.stubEnv("AUTH_FIXED_CODE", "123456");
+    try {
+      const vision = switchableVision("5512345678");
+      const api = await harness({ links: {}, bills: { [A.sin]: twelve }, vision });
+      const first = await api.login("first@example.test");
+      const scan = await api.upload("/api/bills/scan", undefined, undefined, first);
+      expect(scan.body.account).toMatchObject({ status: "found", demo: true, canMasked: "55•• ••• 678", area: "City A", billsOnRecord: 12 });
+      const linked = await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken }, first);
+      expect(linked.body).toMatchObject({ status: "active", householdSin: A.sin, demo: true });
+      expect((await api.get(`/api/households/${A.sin}/bills`, first)).body).toHaveLength(12);
+
+      const second = await api.login("second@example.test");
+      const again = await api.upload("/api/bills/scan", undefined, undefined, second);
+      expect(again.body.account.status).toBe("found");
+      expect((await api.post("/api/households/link/confirm", { scanToken: again.body.scanToken }, second)).status).toBe(200);
+      expect((await api.get(`/api/households/${A.sin}/bills`, second)).status).toBe(200);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("without demo mode an unknown CAN still says 'Account not found'", async () => {
+    const { api, token, scan } = await scanned(switchableVision("5512345678"));
+    expect(scan.body.account.status).toBe("unknownAccount");
+    expect((await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken }, token)).status).toBe(404);
+  });
+});

@@ -234,6 +234,8 @@ interface AccountSummary {
   billsOnRecord: number;
   firstPeriod: string | null;
   lastPeriod: string | null;
+  /** Demo fallback: the CAN isn't in the mock data, so the sample Household opens instead. */
+  demo?: true;
 }
 /** What the scanned Bill's CAN points to. Nothing is linked until "Yes, explain my bill". */
 export type ScannedAccount =

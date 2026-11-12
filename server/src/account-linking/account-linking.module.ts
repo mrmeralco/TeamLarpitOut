@@ -13,8 +13,8 @@ import { ConfirmLinkDto } from "./dto/link-household.dto.js";
 
 /** What the scanned Bill's CAN points to, before anything is linked. */
 export type ScannedAccount =
-  | { status: "found"; canMasked: string; area: string; meterType: MeralcoAccount["meter_type"]; billsOnRecord: number; firstPeriod: string | null; lastPeriod: string | null }
-  | { status: "alreadyLinked"; canMasked: string; householdSin: string; area: string; meterType: MeralcoAccount["meter_type"]; billsOnRecord: number; firstPeriod: string | null; lastPeriod: string | null }
+  | { status: "found"; canMasked: string; area: string; meterType: MeralcoAccount["meter_type"]; billsOnRecord: number; firstPeriod: string | null; lastPeriod: string | null; demo?: true }
+  | { status: "alreadyLinked"; canMasked: string; householdSin: string; area: string; meterType: MeralcoAccount["meter_type"]; billsOnRecord: number; firstPeriod: string | null; lastPeriod: string | null; demo?: true }
   | { status: "canUnread" }
   | { status: "unknownAccount"; canMasked: string }
   | { status: "ownedByAnother"; canMasked: string; message: string };
@@ -49,10 +49,26 @@ export class AccountLinkingService {
     };
   }
 
+  /**
+   * Demo fallback: in demo/test mode (AUTH_FIXED_CODE set), a CAN that isn't in the mock
+   * Meralco data opens the sample Household (DEMO_FALLBACK_SIN, default the Caloocan one),
+   * so a real Bill can be scanned during testing. Several logins may share it.
+   */
+  private async demoFallback(): Promise<MeralcoAccount | null> {
+    if (!process.env.AUTH_FIXED_CODE) return null;
+    return this.meralco.household(process.env.DEMO_FALLBACK_SIN ?? "1234567890");
+  }
+
   async preview(ownerId: string, can: string | null): Promise<ScannedAccount> {
     if (can === null) return { status: "canUnread" };
     const account = await this.meralco.findByCan(can);
-    if (!account) return { status: "unknownAccount", canMasked: maskCan(can) };
+    if (!account) {
+      const sample = await this.demoFallback();
+      if (!sample) return { status: "unknownAccount", canMasked: maskCan(can) };
+      const linked = (await this.links.forOwner(ownerId)).some((l) => l.sin === sample.sin && l.status === "active");
+      const summary = { ...(await this.summary(sample)), canMasked: maskCan(can), demo: true as const };
+      return linked ? { status: "alreadyLinked", householdSin: sample.sin, ...summary } : { status: "found", ...summary };
+    }
     const owner = await this.links.activeOwner(account.sin);
     if (owner !== null && owner !== ownerId) return { status: "ownedByAnother", canMasked: maskCan(can), message: OWNED_BY_ANOTHER };
     const summary = await this.summary(account);
@@ -61,6 +77,13 @@ export class AccountLinkingService {
 
   async link(ownerId: string, can: string) {
     const account = await this.meralco.findByCan(can);
+    if (!account) {
+      const sample = await this.demoFallback();
+      if (sample) {
+        await this.links.save({ ownerId, sin: sample.sin, can, status: "active" });
+        return { status: "active" as const, householdSin: sample.sin, canMasked: maskCan(can), demo: true as const };
+      }
+    }
     if (!account) throw new NotFoundException({ error: "No Meralco account has this CAN. Please check your Bill again.", reason: "unknownAccount" });
     const owner = await this.links.activeOwner(account.sin);
     if (owner !== null && owner !== ownerId) throw new ConflictException({ error: OWNED_BY_ANOTHER, reason: "ownedByAnother" });

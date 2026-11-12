@@ -78,3 +78,15 @@ describe("Scan and confirm (mockup screens 5–6)", () => {
     expect(screen.getByRole("heading", { name: "Scan your latest Meralco bill" })).toBeTruthy();
   });
 });
+
+describe("demo fallback", () => {
+  it("labels an unknown CAN as a demo account and still links", async () => {
+    account = { status: "found", demo: true, canMasked: "55•• ••• 678", area: "Caloocan City", meterType: "traditional", billsOnRecord: 12, firstPeriod: "2025-11", lastPeriod: "2026-10" };
+    canMasked = "55•• ••• 678";
+    await scan();
+    expect(screen.getByText("Demo account")).toBeTruthy();
+    expect(screen.getByRole("status").textContent).toMatch(/sample Caloocan City household/);
+    fireEvent.click(screen.getByRole("button", { name: "Yes, explain my bill" }));
+    await waitFor(() => expect(onLinked).toHaveBeenCalledWith("1234567890"));
+  });
+});
