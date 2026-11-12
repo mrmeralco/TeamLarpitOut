@@ -21,6 +21,6 @@ import { UsagePlanService } from "./usage-plan.service.js";
     { provide: MID_MONTH_READING_REPOSITORY, useFactory: () => new InMemoryMidMonthReadingRepository() },
     { provide: POINTS_REPOSITORY, useFactory: () => new InMemoryPointsRepository() },
   ],
-  exports: [UsagePlanService],
+  exports: [UsagePlanService, POINTS_REPOSITORY],
 })
 export class UsagePlanModule {}

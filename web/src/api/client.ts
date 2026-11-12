@@ -476,6 +476,7 @@ export interface ForecastResult {
 
 export interface PointsHistoryEntry {
   id: string;
+  sin?: string;
   period: string;
   points: number;
   savedPesos: number;
@@ -487,12 +488,54 @@ export interface PointsHistoryEntry {
   excludedReason?: string | null;
   description: string;
   createdAt: string;
+  rewardId?: string;
+  rewardName?: string;
 }
 
 export interface PointsResult {
   currency: string;
   balance: number;
   history: PointsHistoryEntry[];
+}
+
+export interface CatalogRewardItem {
+  id: string;
+  name: string;
+  category: "load" | "e-wallet" | "voucher";
+  partnerName: string;
+  pointsCost: number;
+  description: string;
+  tag: string;
+  isSampleReward: boolean;
+  affordable: boolean;
+  progressPercent: number;
+  pointsNeeded: number;
+}
+
+export interface RewardsCatalogResult {
+  sin: string;
+  balance: number;
+  tag: string;
+  disclaimer: string;
+  catalog: CatalogRewardItem[];
+  redemptions: PointsHistoryEntry[];
+}
+
+export interface RedeemRewardResult {
+  success: boolean;
+  message: string;
+  reward: {
+    id: string;
+    name: string;
+    category: string;
+    partnerName?: string;
+    pointsCost: number;
+    tag: string;
+  };
+  redeemedPoints: number;
+  balance: number;
+  disclaimer: string;
+  redemption: PointsHistoryEntry;
 }
 
 const planPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}`;
@@ -533,6 +576,19 @@ export const usagePlanApi = {
       headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify(body ?? {}),
     }).then((r) => json<{ awardedPoints: number; balance: number; message: string }>(r)),
+};
+
+export const rewardsApi = {
+  catalog: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/rewards`, authed(token, signal)).then((r) =>
+      json<RewardsCatalogResult>(r),
+    ),
+  redeem: (token: string, sin: string, rewardId: string) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/rewards/redeem`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ rewardId }),
+    }).then((r) => json<RedeemRewardResult>(r)),
 };
 
 export type HomeBadge = "green" | "yellow" | "red";

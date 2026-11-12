@@ -353,7 +353,7 @@ export class UsagePlanService {
     const history = await this.bills.bills(sin);
     if (history.length < 2) return;
     const existing = await this.pointsRepo.getEntries(sin);
-    const settled = new Set(existing.map((e) => e.period));
+    const settled = new Set(existing.filter((e) => e.source === "bill_verified").map((e) => e.period));
     const plan = await this.plans.find(sin);
 
     if (plan) {

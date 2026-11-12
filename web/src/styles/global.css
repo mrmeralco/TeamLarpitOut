@@ -509,3 +509,80 @@ button.wide { width: 100%; margin-top: 10px; }
 .home-card-link { align-self: flex-end; color: var(--primary); font-size: 0.85rem; font-weight: 600; }
 .home-ask { margin-top: 10px; }
 .home-ask p { margin: 0 0 6px; font-size: 0.85rem; }
+
+/* Rewards Catalog and Redemption */
+.rewards-header { margin-bottom: 12px; }
+.rewards-title-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.sample-rewards-badge {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+.rewards-disclaimer { margin: 4px 0 10px; font-size: 0.85rem; }
+.rewards-catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.reward-item-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.reward-item-card.affordable { border-color: var(--primary); }
+.reward-item-card.unaffordable { opacity: 0.92; }
+.reward-top-row { display: flex; justify-content: space-between; align-items: center; }
+.sample-rewards-tag {
+  background: var(--muted);
+  border: 1px dashed var(--border);
+  color: var(--foreground);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+.reward-category { font-size: 0.75rem; text-transform: uppercase; }
+.reward-name { margin: 4px 0 0; font-size: 1.05rem; }
+.reward-partner { margin: 0; font-size: 0.8rem; }
+.reward-desc { font-size: 0.85rem; margin: 4px 0; flex-grow: 1; }
+.reward-cost-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.reward-cost { color: var(--primary); font-size: 1rem; }
+.reward-progress-box { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.reward-progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: var(--muted);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.reward-progress-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.reward-progress-text { display: flex; justify-content: space-between; font-size: 0.75rem; }
+.confirmation-box { margin: 12px 0; }
+.confirmation-actions { display: flex; gap: 8px; margin-top: 8px; }
+.redemptions-history { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 14px; }
+.redemptions-list { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 8px; }
+.redemption-entry {
+  padding: 8px 10px;
+  background: var(--muted);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
