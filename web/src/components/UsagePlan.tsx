@@ -136,7 +136,7 @@ export function UsagePlan({ token, household, onExpired }: { token: string; hous
   const hasAircon = missions?.some((m) => m.appliance === "aircon") ?? false;
 
   return (
-    <section className="card usage-plan" aria-live="polite">
+    <section id="missions" className="card usage-plan anchor" aria-live="polite">
       <h2>Target at Missions</h2>
       {error && <p className="error">{error}</p>}
       {!target ? (

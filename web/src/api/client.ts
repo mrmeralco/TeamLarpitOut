@@ -336,3 +336,23 @@ export const usagePlanApi = {
       body: JSON.stringify(body),
     }).then((r) => json<{ active: boolean; plan: UsagePlan }>(r)),
 };
+
+export type HomeBadge = "green" | "yellow" | "red";
+/** Amounts in centavos. Each card names the section ("screen") it links to. */
+export interface HomeSummary {
+  meterType: "traditional" | "smart";
+  bill: { period: string; amountDue: number | null; dueDate: string | null; billDate: string | null };
+  badge: { status: HomeBadge; label: string };
+  bakitGanito: { sentence: string; total: number; screen: "bakit-ganito" } | null;
+  bakitGanitoUnavailable: string | null;
+  tamaBa: { status: HomeBadge; label: string; failedChecks: number; summary: string; screen: "tama-ba" };
+  action:
+    | { kind: "missions" | "householdChange"; label: string; screen: "missions" }
+    | { kind: "askMeralco"; label: string; screen: "tama-ba"; summary: string };
+  smartMeter: { monthToDateKwh: number | null } | null;
+}
+
+export const homeApi = {
+  summary: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/home`, authed(token, signal)).then((r) => json<HomeSummary>(r)),
+};

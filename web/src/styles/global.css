@@ -390,3 +390,27 @@ button.wide { width: 100%; margin-top: 10px; }
 .mission label.check { margin-bottom: 0; }
 .mission .assumptions { display: block; margin-top: 4px; font-size: 0.75rem; }
 .plan-missions li { padding: 6px 0; border-bottom: 1px solid var(--border); }
+
+/* Home */
+.anchor, section.anchor { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 12px); }
+.home { border-width: 2px; }
+.home.badge-green { border-color: var(--down); }
+.home.badge-yellow { border-color: var(--chart-2); }
+.home.badge-red { border-color: var(--destructive); }
+.home-due { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-bottom: 12px; }
+.home-amount { font-size: 2rem; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.home-badge { margin-top: 6px; font-weight: 600; padding: 2px 10px; border-radius: 999px; background: var(--muted); }
+.home-badge.green { color: var(--down); }
+.home-badge.yellow { color: var(--chart-4); }
+.home-badge.red { color: var(--destructive); }
+.home-cards { display: flex; flex-direction: column; gap: 8px; }
+.home-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  width: 100%; padding: 12px; border: 1px solid var(--border); background: var(--card); color: var(--foreground);
+}
+.home-card:hover, .home-card:focus-visible { border-color: var(--primary); }
+.home-card-title { font-weight: 700; }
+.home-card-body { font-size: 0.92rem; }
+.home-card-link { align-self: flex-end; color: var(--primary); font-size: 0.85rem; font-weight: 600; }
+.home-ask { margin-top: 10px; }
+.home-ask p { margin: 0 0 6px; font-size: 0.85rem; }
