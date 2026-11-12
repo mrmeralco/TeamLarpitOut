@@ -163,10 +163,10 @@ export async function seedDatabase(sql: Sql, data: SeedData, { fresh = false }: 
   };
 }
 
-/** Gives a demo Household DEMO_BONUS_POINTS of spendable Points (or removes any prior demo_bonus when 0). */
+/** Gives a demo Household DEMO_BONUS_POINTS of spendable Points (or removes any prior demo_bonus / stale pre-plan bill_verified rows when 0). */
 export async function grantDemoBonus(tx: Sql, sin: string, points = DEMO_BONUS_POINTS) {
   if (points <= 0) {
-    await tx`delete from public.points_entries where id = ${demoBonusId(sin)} or (sin = ${sin} and source = 'demo_bonus')`;
+    await tx`delete from public.points_entries where id = ${demoBonusId(sin)} or (sin = ${sin} and (source = 'demo_bonus' or id like 'pts-%'))`;
     return;
   }
   await tx`

@@ -35,7 +35,7 @@ export class PgPointsRepository implements PointsRepository {
     const rows = await this.sql<PointsRow[]>`
       select id, sin, period, to_char(day, 'YYYY-MM-DD') as day, points, source, saved_centavos, saved_kwh, baseline_kwh, actual_kwh,
              has_outage, excluded_reason, description, reward_id, reward_name, created_at
-      from public.points_entries where sin = ${sin} and source <> 'demo_bonus' order by created_at, id`;
+      from public.points_entries where sin = ${sin} and source <> 'demo_bonus' and id not like 'pts-%' order by created_at, id`;
     return rows.map((row) => {
       const entry: PointsEntry = {
         id: row.id,

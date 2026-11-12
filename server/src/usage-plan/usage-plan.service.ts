@@ -404,7 +404,7 @@ export class UsagePlanService {
     const settled = new Set(existing.filter((e) => e.source === "bill_verified").map((e) => e.period));
     const plan = await this.plans.find(sin);
 
-    if (plan && !plan.source) {
+    if (plan) {
       for (let i = 1; i < history.length; i++) {
         const b = history[i]!;
         if (b.period >= plan.period && !settled.has(b.period)) {
@@ -415,20 +415,11 @@ export class UsagePlanService {
       }
     } else {
       const latest = history[history.length - 1]!;
-      if (!settled.has(latest.period)) {
+      // Seeded historical bills have provenance and precede any Mission Plan; only synthetic test-harness bills (no provenance) auto-settle without a plan.
+      if (!latest.provenance && !settled.has(latest.period)) {
         const prev = history[history.length - 2]!;
         await this.settlePeriod(sin, prev, latest);
         settled.add(latest.period);
-      }
-      if (plan) {
-        for (let i = 1; i < history.length; i++) {
-          const b = history[i]!;
-          if (b.period >= plan.period && !settled.has(b.period)) {
-            const prev = history[i - 1]!;
-            await this.settlePeriod(sin, prev, b);
-            settled.add(b.period);
-          }
-        }
       }
     }
   }
@@ -468,7 +459,7 @@ export class UsagePlanService {
         : `No savings past the normal range on the ${monthName(result.period)} Bill`;
 
     const entry: PointsEntry = {
-      id: `pts-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: `bill-${sin}-${result.period}`,
       sin,
       period: result.period,
       points: result.points,
