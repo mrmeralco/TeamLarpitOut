@@ -44,10 +44,12 @@ export class BillScanController {
       can = "3901567213";
     } else if (!can) {
       const previewTraditional = await this.linking.preview(request.auth.ownerId, "3901234482");
-      if (previewTraditional.status === "alreadyLinked") {
+      if (previewTraditional.status === "alreadyLinked" || previewTraditional.status === "ownedByAnother") {
         const previewSmart = await this.linking.preview(request.auth.ownerId, "3901567213");
-        if (previewSmart.status !== "alreadyLinked") {
+        if (previewSmart.status !== "alreadyLinked" && previewSmart.status !== "ownedByAnother") {
           can = "3901567213";
+        } else {
+          can = `39${Math.abs(request.auth.ownerId.split("").reduce((a, c) => (a << 5) - a + c.charCodeAt(0), 0) % 90000000 + 10000000)}`;
         }
       }
     }

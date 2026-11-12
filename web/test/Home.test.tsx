@@ -89,7 +89,7 @@ describe("Home: gamified with Eelio", () => {
     expect((await screen.findByText("80% charged"))).toBeTruthy();
   });
 
-  it("Eelio's mood follows the household: Fully Charged when usage went down, Low Battery while setup is unfinished", async () => {
+  it("Eelio's mood follows the household: Fully Charged when usage went down, Bill Detective otherwise (always active, never low battery)", async () => {
     home = summary({ bakitGanito: { ...summary().bakitGanito!, total: -59500, habit: -60600 } });
     const { unmount } = render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([false, false, false])} />);
     expect(await screen.findByRole("img", { name: "Eelio, Fully Charged" })).toBeTruthy();
@@ -97,7 +97,7 @@ describe("Home: gamified with Eelio", () => {
     unmount();
     home = summary();
     render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([true, false, false])} />);
-    expect(await screen.findByRole("img", { name: "Eelio, Low Battery" })).toBeTruthy();
+    expect(await screen.findByRole("img", { name: "Eelio, Bill Detective" })).toBeTruthy();
     expect(screen.getByText("20% charged")).toBeTruthy();
   });
 
