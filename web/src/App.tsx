@@ -8,13 +8,11 @@ import { AuthFlow, CreatePassword } from "./components/auth/AuthScreens";
 import { AuthLayout } from "./components/auth/AuthLayout";
 import { ScanBill } from "./components/ScanBill";
 import { HouseholdPicker } from "./components/HouseholdPicker";
-import { BillHistory } from "./components/BillHistory";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
 import { Appliances } from "./components/Appliances";
 import { MissionPlan, PlanSummaryCard } from "./components/MissionPlan";
 import { Home } from "./components/Home";
 import { Rewards } from "./components/Rewards";
-import { BakitGanitoResult } from "./components/BakitGanitoResult";
 import { TabBar } from "./components/TabBar";
 import { stored, useHashRoute, useRawHash } from "./lib/routes";
 
@@ -135,7 +133,6 @@ export function App() {
             })} />
           {asking && <ChargeChat key={`chat:${key}:${asking.line.id}`} token={session.token} sin={selected.sin} line={asking.line}
             previousMonth={asking.previousMonth} onClose={() => setAsking(null)} onExpired={onExpired} />}
-          <BillHistory key={`history:${key}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <BakitGanitoResult r={r} />} />
           {selected.meter_type === "smart" && <SmartMeterUsage key={`usage:${key}`} token={session.token} household={selected} onExpired={onExpired} />}
         </>}
         {tab === "missions" && <MissionsTab token={session.token} household={selected} sub={route.sub} go={go}

@@ -37,58 +37,98 @@ const respond = (body: unknown) => vi.stubGlobal("fetch", vi.fn(async () => new 
 beforeEach(() => respond(summary()));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-describe("Home tab", () => {
-  it("shows the amount due, the change vs. last month and four effects that add up", async () => {
+const next = () => fireEvent.click(screen.getByRole("button", { name: "Next slide" }));
+const slide = () => screen.getByRole("group");
+
+describe("Home tab: the bill as a Wrapped story", () => {
+  it("opens on the amount due, then the change vs. last month", async () => {
     render(<Home token="t" household={household} onExpired={() => {}} />);
-    expect(await screen.findByText("₱6,817")).toBeTruthy();
-    expect(screen.getByText("October bill · due Nov 24")).toBeTruthy();
-    expect(screen.getByText("vs. September")).toBeTruthy();
-    expect(screen.getByText("+₱937")).toBeTruthy();
-    const tiles = within(screen.getByRole("list")).getAllByRole("listitem").map((li) => li.textContent);
-    expect(tiles).toEqual(["Rate+₱148", "Billing days+₱100", "Hotter weather+₱112", "Household usage+₱577"]);
-    expect(screen.getByText("✓ Adds up: +₱937.00")).toBeTruthy();
-    expect(screen.getByText(/CAN 39•• ••• 482/)).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Your October bill, wrapped" })).toBeTruthy();
+    expect(screen.getByLabelText("Amount due ₱6,817.00").textContent).toBe("₱6,817");
+    expect(slide().textContent).toContain("Due Nov 24 · CAN 39•• ••• 482");
+    expect(screen.getByText("1 / 5")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Previous slide" }) as HTMLButtonElement).disabled).toBe(true);
+    next();
+    expect(screen.getByRole("heading", { name: "You paid ₱937 more than in September." })).toBeTruthy();
+    expect(screen.getByLabelText("+₱937.00 vs. September").textContent).toBe("+₱937");
   });
 
-  it("makes every charge line a button for the charge chat, System loss included; View all lists every line", async () => {
+  it("ranks what moved the bill, biggest first, and says it adds up", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    await screen.findByRole("heading", { name: /wrapped/ });
+    next(); next();
+    expect(screen.getByRole("heading", { name: "#1: Household usage added ₱577." })).toBeTruthy();
+    const ranked = within(screen.getByRole("list")).getAllByRole("listitem").map((li) => li.textContent);
+    expect(ranked).toEqual(["1Household usage+₱577", "2Rate+₱148", "3Hotter weather+₱112", "4Billing days+₱100"]);
+    expect(screen.getByText("✓ Adds up to +₱937.00")).toBeTruthy();
+  });
+
+  it("every charge opens the charge chat, System loss included; View all lists every line", async () => {
     const onAsk = vi.fn();
     render(<Home token="t" household={household} onExpired={() => {}} onAskCharge={onAsk} />);
-    const systemLoss = await screen.findByRole("button", { name: /^System loss: ₱410\.00, \+₱45\.00 vs\. last month, Pass-through/ });
+    await screen.findByRole("heading", { name: /wrapped/ });
+    fireEvent.click(screen.getByRole("tab", { name: "Slide 4: Where your money went" }));
+    const systemLoss = screen.getByRole("button", { name: /^System loss: ₱410\.00, \+₱45\.00 vs\. last month, Pass-through/ });
     fireEvent.click(systemLoss);
     expect(onAsk.mock.calls[0]![0].id).toBe("system_loss");
-    for (const l of ["Generation", "Distribution", "Transmission", "Taxes"]) {
-      expect(screen.getByRole("button", { name: new RegExp(`^${l}:`) })).toBeTruthy();
-    }
-    fireEvent.click(screen.getByRole("button", { name: /View all 7/ }));
+    // Top charges are ranked by amount.
+    expect(screen.getAllByRole("button", { name: /Ask about this charge/ }).map((b) => b.getAttribute("aria-label")!.split(":")[0]))
+      .toEqual(["Generation", "Distribution", "Taxes", "Transmission", "System loss"]);
+    fireEvent.click(screen.getByRole("button", { name: "View all 7 charges" }));
     const all = screen.getByLabelText("All charges");
     expect(within(all).getAllByRole("button")).toHaveLength(7);
     fireEvent.click(within(all).getByRole("button", { name: /^Mystery:/ }));
     expect(onAsk.mock.calls[1]![0].id).toBe("other-x");
   });
 
-  it("moves 'Ask Meralco' and the copyable summary to the top on a red badge", async () => {
+  it("the last slide's save card opens rewards onboarding, or shows the plan summary once set up", async () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<Home token="t" household={household} onExpired={() => {}} onSave={onSave} />);
+    await screen.findByRole("heading", { name: /wrapped/ });
+    fireEvent.keyDown(screen.getByRole("region", { name: "Home" }), { key: "ArrowRight" });
+    expect(screen.getByText("2 / 5")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Slide 5: Your next move" }));
+    expect(screen.getByRole("heading", { name: "₱577 came from how you used power. Win it back next month." })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Want to save on your next bill\?.*₱577 came from usage/ }));
+    expect(onSave).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Replay" }));
+    expect(screen.getByText("1 / 5")).toBeTruthy();
+    unmount();
+    render(<Home token="t" household={household} onExpired={() => {}} saveCard={<p>Mission Plan: 5% less</p>} />);
+    await screen.findByRole("heading", { name: /wrapped/ });
+    fireEvent.click(screen.getByRole("tab", { name: "Slide 5: Your next move" }));
+    expect(screen.getByText("Mission Plan: 5% less")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Want to save/ })).toBeNull();
+  });
+
+  it("no Ask Meralco, bill checks or badge on Home, even when checks fail", async () => {
     respond(summary({
       badge: { status: "red", label: "Something doesn't match" },
       tamaBa: { status: "red", label: "Something doesn't match", failedChecks: 1, summary: "Total ₱3,000 vs lines ₱2,690", screen: "tama-ba" },
       action: { kind: "askMeralco", label: "Ask Meralco", screen: "tama-ba", summary: "Total ₱3,000 vs lines ₱2,690" },
     }));
     render(<Home token="t" household={household} onExpired={() => {}} />);
-    const ask = await screen.findByRole("alert");
-    expect(ask.textContent).toContain("Ask Meralco");
-    expect(ask.textContent).toContain("Total ₱3,000 vs lines ₱2,690");
-    const order = [...document.querySelectorAll(".home-main > *")].map((el) => el.className);
-    expect(order.indexOf("card home-ask")).toBeLessThan(order.indexOf("card home-due"));
-    expect(within(ask).getByRole("button", { name: "Copy summary" })).toBeTruthy();
+    await screen.findByRole("heading", { name: /wrapped/ });
+    expect(document.body.textContent).not.toMatch(/Ask Meralco|Something doesn't match|Bill verified/);
   });
 
-  it("the save card opens rewards onboarding with the Habit Effect, or shows the plan summary once set up", async () => {
-    const onSave = vi.fn();
-    const { unmount } = render(<Home token="t" household={household} onExpired={() => {}} onSave={onSave} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Want to save on your next bill\?.*₱577 came from usage/ }));
-    expect(onSave).toHaveBeenCalled();
-    unmount();
-    render(<Home token="t" household={household} onExpired={() => {}} saveCard={<p>Mission Plan: 5% less</p>} />);
-    expect(await screen.findByText("Mission Plan: 5% less")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Want to save/ })).toBeNull();
+  it("a lower bill says how much less, without a minus sign in the sentence", async () => {
+    const base = summary().bakitGanito!;
+    respond(summary({ bakitGanito: { ...base, total: -59500, habit: -60600, effects: [{ key: "rate", label: "Rate Effect", amount: 1100 }, { key: "habit", label: "Habit Effect", amount: -60600 }] } }));
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    await screen.findByRole("heading", { name: /wrapped/ });
+    next();
+    expect(screen.getByRole("heading", { name: "You paid ₱595 less than in September." })).toBeTruthy();
+    next();
+    expect(screen.getByRole("heading", { name: "#1: Household usage saved you ₱606." })).toBeTruthy();
+  });
+
+  it("without last month to compare, says so and skips the reasons", async () => {
+    respond(summary({ bakitGanito: null, bakitGanitoUnavailable: "Two Bills are needed to compare." }));
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    await screen.findByRole("heading", { name: /wrapped/ });
+    expect(screen.getByText("1 / 4")).toBeTruthy();
+    next();
+    expect(screen.getByRole("heading", { name: "Two Bills are needed to compare." })).toBeTruthy();
   });
 });
