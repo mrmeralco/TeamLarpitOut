@@ -1,5 +1,7 @@
 # Completing Household Setup earns Welcome Points that stay locked until the first Verified Savings
 
+> **Setup contents updated** by [ADR-0006](0006-setup-by-tapping-appliances-and-one-routine.md) on 2026-11-12: setup is now household info, an appliance tap grid and one routine. The Welcome Points rule below is unchanged; setup now starts from the Missions tab after "Want to save on your next bill?".
+
 Most users skip optional prompts, so an opt-in "Gusto mo bang ma-reward?" question in front of the appliance setup would send most households past it, and without appliances there are no Missions and no Points. We want about 90% of households to reach Manage your usage, so setup itself is rewarded: a household that finishes **Household Setup** (who lives there and when the house is occupied, the aircon by label scan or visual questions, and a confirmation of the aircon hours) gets **Welcome Points** once. They show in the balance at once but are **locked**: they unlock only when the Household earns its first Verified Savings. Setup is shown as a checklist on Home ("Simulan: 2/3 · +100 pts") and the Missions screen stays locked behind it, never as a dialog that can be dismissed.
 
 This keeps the rule that Points come from saved kWh: no Reward can be redeemed on setup alone, while the locked balance pulls the household both into setup and back at the next Bill. Welcome Points are granted once per Household, not per login, since a Household has one owner.
