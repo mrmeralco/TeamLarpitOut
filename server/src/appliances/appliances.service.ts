@@ -43,8 +43,11 @@ export class AppliancesService {
     return { saved: true, updatedAt: stored.updatedAt, appliances: stored.appliances.map((a) => this.describe(a)) };
   }
 
-  /** "Saan napupunta?" for the Household's latest Bill. */
-  async breakdown(sin: string) {
+  /**
+   * Each saved appliance's use on the latest Bill, calibrated so the total
+   * equals the Bill's kWh. Shared by "Saan napupunta?" and Missions.
+   */
+  async calibratedUsage(sin: string) {
     const stored = await this.repository.find(sin);
     if (!stored || stored.appliances.length === 0) {
       throw new ConflictException({ error: "Ilista muna ang mga appliance sa bahay." });
@@ -64,14 +67,17 @@ export class AppliancesService {
     if (estimates.every((e) => e.kwhPerDay === 0)) {
       throw new ConflictException({ error: "Lahat ng appliance ay walang oras ng gamit. Lagyan ng routine." });
     }
-    const rows = calibrateToBill(estimates, stored.appliances, latest, perKwhCharges).map((r) => ({
-      ...r,
-      label: findAppliance(r.type)!.label,
-    }));
+    const rows = calibrateToBill(estimates, stored.appliances, latest, perKwhCharges);
+    return { bill: latest, schedule, perKwhCharges, fixedCharges, appliances: stored.appliances, estimates, rows };
+  }
 
+  /** "Saan napupunta?" for the Household's latest Bill. */
+  async breakdown(sin: string) {
+    const { bill, perKwhCharges, fixedCharges, rows: calibrated } = await this.calibratedUsage(sin);
+    const rows = calibrated.map((r) => ({ ...r, label: findAppliance(r.type)!.label }));
     return {
       currency: "PHP-centavos",
-      bill: { period: latest.period, kwh: latest.kwh, billingDays: latest.billingDays },
+      bill: { period: bill.period, kwh: bill.kwh, billingDays: bill.billingDays },
       rows: rows.sort((a, b) => b.kwh - a.kwh),
       totals: {
         kwh: rows.reduce((s, r) => s + Math.round(r.kwh * 100), 0) / 100,

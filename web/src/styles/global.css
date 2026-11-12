@@ -373,3 +373,20 @@ button.wide { width: 100%; margin-top: 10px; }
 .usage-total { border-top: 2px solid var(--foreground); padding-top: 10px; margin: 8px 0 4px; }
 .tag.source-answers { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border); }
 .tag.source-default { color: var(--muted-foreground); border-style: dashed; }
+
+/* Target and Missions */
+.usage-plan h3 { font-size: 0.95rem; margin: 16px 0 8px; }
+.cuts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cut {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 6px; border: 1px solid var(--border); background: var(--card); color: var(--foreground);
+}
+.cut small { color: var(--muted-foreground); font-size: 0.75rem; }
+.cut.selected { border: 2px solid var(--primary); background: var(--muted); }
+.missions, .plan-missions { list-style: none; margin: 8px 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.mission { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.mission.chosen { border-color: var(--primary); }
+.mission p { margin: 4px 0 6px; font-size: 0.9rem; }
+.mission label.check { margin-bottom: 0; }
+.mission .assumptions { display: block; margin-top: 4px; font-size: 0.75rem; }
+.plan-missions li { padding: 6px 0; border-bottom: 1px solid var(--border); }

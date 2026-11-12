@@ -228,7 +228,9 @@ function Breakdown({ data, onEdit }: { data: ApplianceBreakdown; onEdit: () => v
 }
 
 /** Appliances (asked once per Household) and "Saan napupunta?". Parent keys it by session and SIN. */
-export function Appliances({ token, household, onExpired }: { token: string; household: Household; onExpired: () => void }) {
+export function Appliances({ token, household, onExpired, onSaved }: {
+  token: string; household: Household; onExpired: () => void; onSaved?: () => void;
+}) {
   const [catalog, setCatalog] = useState<CatalogAppliance[] | null>(null);
   const [saved, setSaved] = useState<ApplianceInput[] | null>(null);
   const [breakdown, setBreakdown] = useState<ApplianceBreakdown | null>(null);
@@ -280,6 +282,7 @@ export function Appliances({ token, household, onExpired }: { token: string; hou
       await appliancesApi.save(token, household.sin, list);
       setSaved(list);
       setEditing(false);
+      onSaved?.();
       setBreakdown(null);
       await loadBreakdown();
     } catch (err) {

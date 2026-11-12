@@ -7,9 +7,19 @@ import { BillScanModule } from "./bill-scan/bill-scan.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { HouseholdsModule } from "./households/households.module.js";
 import { RateSchedulesModule } from "./rate-schedules/rate-schedules.module.js";
+import { UsagePlanModule } from "./usage-plan/usage-plan.module.js";
 
 @Module({
-  imports: [RateSchedulesModule, BillChangeModule, BillScanModule, BillBreakdownModule, HouseholdsModule, AppliancesModule, BillChecksModule],
+  imports: [
+    RateSchedulesModule,
+    BillChangeModule,
+    BillScanModule,
+    BillBreakdownModule,
+    HouseholdsModule,
+    AppliancesModule,
+    BillChecksModule,
+    UsagePlanModule,
+  ],
   controllers: [HealthController],
 })
 export class AppModule {}

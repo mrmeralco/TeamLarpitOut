@@ -11,6 +11,7 @@ import { InMemoryApplianceRepository } from "./in-memory-appliance.repository.js
 @Module({
   imports: [HouseholdsModule, BillsModule, RateSchedulesModule],
   controllers: [ApplianceCatalogController, AppliancesController],
+  exports: [AppliancesService],
   providers: [AppliancesService, { provide: APPLIANCE_REPOSITORY, useFactory: () => new InMemoryApplianceRepository() }],
 })
 export class AppliancesModule {}
