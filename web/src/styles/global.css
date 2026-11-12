@@ -321,8 +321,6 @@ button.wide { width: 100%; margin-top: 10px; }
 .anchor, section.anchor { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 12px); }
 
 /* Rewards Catalog and Redemption */
-.rewards-header { margin-bottom: 12px; }
-.rewards-title-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .sample-rewards-badge {
   background: var(--muted);
   border: 1px solid var(--border);
@@ -332,70 +330,81 @@ button.wide { width: 100%; margin-top: 10px; }
   font-size: 0.75rem;
   letter-spacing: 0.05em;
 }
-.rewards-disclaimer { margin: 4px 0 10px; font-size: 0.85rem; }
-.rewards-catalog {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-  margin-top: 14px;
-}
-.reward-item-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.reward-item-card.affordable { border-color: var(--primary); }
-.reward-item-card.unaffordable { opacity: 0.92; }
-.reward-top-row { display: flex; justify-content: space-between; align-items: center; }
+/* Rewards, laid out like Missions: Eelio hero + next-reward meter on top, the shop as quest rows below.
+   Built on .hero, .goal-meter, .quests-card, .mission-quest and .coin from the Missions styles. */
+.rewards-dash .hero h2 { font-size: 1.15rem; }
+.rewards-dash .hero-amount-unit { font-size: 1rem; font-weight: 700; letter-spacing: 0; opacity: 0.9; }
+.rewards-hero-chip { align-self: flex-start; }
+.rewards-locked { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 12px; background: rgba(0, 0, 0, 0.16); font-size: 0.82rem; }
+.rewards-lock { display: inline-flex; }
+.rewards-lock svg { width: 16px; height: 16px; }
+.rewards-earn-note { font-size: 0.78rem; opacity: 0.85; }
+.rewards-disclaimer { margin: 0; font-size: 0.78rem; line-height: 1.45; }
 .sample-rewards-tag {
-  background: var(--muted);
-  border: 1px dashed var(--border);
-  color: var(--foreground);
-  font-size: 0.7rem;
-  font-weight: 500;
+  margin-left: 2px; padding: 1px 6px; border-radius: 999px; background: var(--muted); border: 1px solid var(--border);
+  color: var(--muted-foreground); font-size: 0.62rem; font-weight: 700; letter-spacing: 0.02em; text-transform: none;
 }
-.reward-category { font-size: 0.75rem; text-transform: uppercase; }
-.reward-name { margin: 4px 0 0; font-size: 1.05rem; }
-.reward-partner { margin: 0; font-size: 0.8rem; }
-.reward-desc { font-size: 0.85rem; margin: 4px 0; flex-grow: 1; }
-.reward-cost-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-  border-top: 1px solid var(--border);
-  font-size: 0.9rem;
+
+/* Filter (and history tabs): one segmented control on its own row */
+.rewards-history-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.rewards-filter {
+  display: inline-flex; align-self: flex-start; max-width: 100%; overflow-x: auto; gap: 2px; padding: 4px;
+  border-radius: 14px; background: var(--muted); box-shadow: inset 0 2px 4px rgba(31, 27, 22, 0.06);
 }
-.reward-cost { color: var(--primary); font-size: 1rem; }
-.reward-progress-box { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
-.reward-progress-bar-bg {
-  width: 100%;
-  height: 6px;
-  background: var(--muted);
-  border-radius: 999px;
-  overflow: hidden;
+.rewards-filter button {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border: 0; border-radius: 10px;
+  background: none; color: var(--muted-foreground); font: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
 }
-.reward-progress-bar-fill {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 999px;
-  transition: width 0.3s ease;
+.rewards-filter button:hover { color: var(--foreground); }
+.rewards-filter button.active { background: var(--card); color: var(--foreground); box-shadow: 0 2px 0 var(--border), 0 1px 3px rgba(31, 27, 22, 0.08); }
+.rewards-filter-count { min-width: 18px; padding: 0 5px; border-radius: 999px; background: var(--border); font-size: 0.7rem; line-height: 18px; text-align: center; }
+.rewards-filter button.active .rewards-filter-count { background: var(--brand-soft); color: var(--brand-ink); }
+
+/* Reward quest rows (not a button themselves: the action sits on the right) */
+.reward-quest { cursor: default; }
+.reward-quest:hover { transform: none; box-shadow: 0 4px 0 var(--border); border-color: var(--border); }
+.reward-quest.affordable { border-color: var(--primary); box-shadow: 0 4px 0 rgba(194, 80, 12, 0.35); }
+.reward-quest.affordable:hover { border-color: var(--primary); box-shadow: 0 4px 0 rgba(194, 80, 12, 0.35); }
+.reward-quest.affordable:hover .mission-quest-icon { animation: quest-wiggle 0.4s ease; }
+.reward-quest.unaffordable .mission-quest-icon { filter: grayscale(0.35); opacity: 0.85; }
+.reward-progress-box { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-width: 360px; }
+.goal-track.reward-track { height: 12px; padding: 2px; border-radius: 8px; }
+.goal-track.reward-track .goal-seg { border-radius: 6px; }
+.reward-progress-text { display: flex; justify-content: space-between; gap: 8px; font-size: 0.74rem; font-weight: 700; color: var(--muted-foreground); }
+.reward-redeem { min-width: 110px; padding: 8px 16px; border-radius: 999px; font-weight: 800; box-shadow: 0 3px 0 var(--primary-hover); }
+.reward-redeem:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--primary-hover); }
+@media (max-width: 600px) { .reward-progress-box { max-width: none; } }
+
+/* Redemption confirmation */
+.redeem-sheet-backdrop {
+  position: fixed; inset: 0; z-index: 50; background: rgba(31, 27, 22, 0.45);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
 }
-.reward-progress-text { display: flex; justify-content: space-between; font-size: 0.75rem; }
-.confirmation-box { margin: 12px 0; }
-.confirmation-actions { display: flex; gap: 8px; margin-top: 8px; }
-.redemptions-history { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 14px; }
-.redemptions-list { list-style: none; padding: 0; margin: 8px 0; display: flex; flex-direction: column; gap: 8px; }
+.redeem-sheet {
+  width: 100%; max-width: 380px; background: var(--card); border-radius: 22px; padding: 22px; text-align: center;
+  border: 1.5px solid var(--border); box-shadow: 0 6px 0 var(--border), var(--shadow-raised);
+  display: flex; flex-direction: column; align-items: center; gap: 6px; animation: tile-in 0.25s ease both;
+}
+.redeem-sheet h4 { margin: 6px 0 0; font-size: 1.15rem; }
+.redeem-sheet p { margin: 0; }
+.confirmation-actions { display: flex; gap: 8px; margin-top: 12px; width: 100%; }
+.confirmation-actions button { flex: 1; }
+
+/* Points history */
+.redemptions-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .redemption-entry {
-  padding: 8px 10px;
-  background: var(--muted);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  border: 1.5px solid var(--border); border-radius: 14px; background: var(--card);
 }
+.history-icon { flex: none; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--muted); color: var(--muted-foreground); }
+.history-icon svg { width: 16px; height: 16px; }
+.history-icon.plus { background: var(--ok-soft); color: var(--ok); }
+.history-icon.minus { background: var(--brand-soft); color: var(--primary); }
+.history-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.88rem; }
+.history-pts { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 800; }
+.history-pts.plus { color: var(--ok); }
+
+@media (prefers-reduced-motion: reduce) { .redeem-sheet, .reward-quest .mission-quest-icon { animation: none !important; } }
 
 /* Sign-in and link flow (one screen at a time) */
 .flow {
@@ -872,8 +881,9 @@ button.wide { width: 100%; margin-top: 10px; }
   align-items: center;
   justify-content: center;
   padding: 48px clamp(32px, 6vw, 80px);
-  background: radial-gradient(circle at 50% 46%, #FDEEE3 0%, var(--background) 72%);
-  border-right: 1px solid var(--border);
+  /* Brand orange: lighter behind Eelio, deepening to the hover shade at the edges. */
+  background: radial-gradient(circle at 50% 46%, #D9681F 0%, var(--primary) 45%, var(--primary-hover) 100%);
+  color: var(--primary-foreground);
   position: relative;
   overflow: visible;
 }
@@ -1003,6 +1013,9 @@ button.wide { width: 100%; margin-top: 10px; }
   100%     { opacity: 0; }
 }
 
+/* On the orange panel: a soft light glow and a deeper shadow so Eelio stands out from the background. */
+.auth-aside .auth-mascot-glow, .auth-hero .auth-mascot-glow { background: radial-gradient(circle, rgba(255, 226, 190, 0.55) 0%, rgba(255, 190, 120, 0.18) 48%, transparent 70%); }
+.auth-aside .auth-mascot-frame, .auth-hero .auth-mascot-frame { filter: drop-shadow(0 18px 26px rgba(80, 24, 0, 0.35)); }
 .auth-aside-copy {
   display: flex;
   flex-direction: column;
@@ -1013,7 +1026,7 @@ button.wide { width: 100%; margin-top: 10px; }
   font-size: clamp(2.4rem, 3.8vw, 3.2rem);
   font-weight: 800;
   letter-spacing: -0.035em;
-  color: var(--foreground);
+  color: var(--primary-foreground);
   line-height: 1.1;
   animation: eelio-brand-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) 1.85s both;
 }
@@ -1021,7 +1034,7 @@ button.wide { width: 100%; margin-top: 10px; }
   margin: 0;
   font-size: clamp(1.05rem, 1.4vw, 1.25rem);
   line-height: 1.55;
-  color: var(--muted-foreground);
+  color: rgba(255, 255, 255, 0.86);
   max-width: 34ch;
   animation: eelio-tagline-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) 2s both;
 }
@@ -1220,8 +1233,12 @@ button.wide { width: 100%; margin-top: 10px; }
 .auth-panel > .screen.top { padding-top: 32px; }
 .auth-panel > .screen .screen-bottom { margin-top: 8px; }
 .auth-panel > .screen .camera { min-height: 380px; }
-.auth-panel > .screen > .brand { display: none; }
+.auth-panel > .screen > .brand, .auth-panel .auth-hero > .brand { display: none; }
+/* The sign-in / sign-up header; on desktop it adds nothing (its Brand and Eelio are hidden). */
+.auth-hero { display: contents; }
 .auth-panel > .screen .features { display: none; }
+/* Eelio on sign-in / sign-up for phones; the desktop shows it in the brand panel instead. */
+.auth-panel > .screen .auth-mascot-mobile { display: none; }
 
 /* Tablets: the content narrows; two-column views keep their columns down to 900px. */
 @media (max-width: 1080px) {
@@ -1267,8 +1284,23 @@ button.wide { width: 100%; margin-top: 10px; }
   .auth-panel > .screen.top { padding-top: max(32px, env(safe-area-inset-top)); }
   .auth-panel > .screen .screen-bottom { margin-top: auto; }
   .auth-panel > .screen .camera { min-height: 360px; }
-  .auth-panel > .screen > .brand { display: flex; }
+  .auth-panel > .screen > .brand, .auth-panel .auth-hero > .brand { display: flex; }
   .auth-panel > .screen .features { display: flex; }
+  .auth-panel > .screen .auth-mascot-mobile { display: flex; width: 150px; height: 150px; margin: -8px auto -12px; }
+  .auth-panel > .screen .auth-hero + .screen-intro.spaced { margin-top: 0; }
+  /* Same brand orange as the desktop panel, as a full-width header band behind the logo and Eelio. */
+  .auth-panel > .screen .auth-hero {
+    display: flex; flex-direction: column; gap: 4px;
+    margin: calc(-1 * max(32px, env(safe-area-inset-top))) -20px 0;
+    padding: max(32px, env(safe-area-inset-top)) 20px 20px;
+    background: radial-gradient(circle at 50% 62%, #D9681F 0%, var(--primary) 45%, var(--primary-hover) 100%);
+    color: var(--primary-foreground);
+    border-radius: 0 0 28px 28px;
+  }
+  .auth-panel > .screen .auth-hero .auth-mascot-mobile { margin: 0 auto -8px; }
+  .auth-mascot-mobile .auth-mascot-runner { width: 140px; height: 150px; }
+  .auth-mascot-mobile .auth-mascot-glow { width: 170px; height: 170px; filter: blur(18px); }
+  .auth-mascot-mobile .auth-mascot-trail { width: 120px; height: 40px; filter: blur(9px); }
 }
 @media (min-width: 520px) and (max-width: 768px) {
   .tabbar { left: 50%; width: 480px; transform: translateX(-50%); border-left: 1px solid var(--border); border-right: 1px solid var(--border); }

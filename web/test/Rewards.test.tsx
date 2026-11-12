@@ -82,11 +82,14 @@ describe("Rewards component", () => {
     expect(sampleBadges.length).toBeGreaterThanOrEqual(2);
 
     // Disclaimer
-    expect(screen.getByText(/Not a deduction or discount on your Meralco bill/)).toBeTruthy();
+    expect(screen.getByText(/Not a Meralco bill discount/)).toBeTruthy();
 
     // Check items
     expect(screen.getByText("₱50 Mobile Load")).toBeTruthy();
-    expect(screen.getByText("₱100 E-Wallet Credit")).toBeTruthy();
+    expect(within(screen.getByTestId("reward-card-reward-ewallet-100")).getByText("₱100 E-Wallet Credit")).toBeTruthy();
+    // The closest locked reward is shown as the next goal
+    expect(screen.getByTestId("rewards-balance").textContent).toContain("1 ready to redeem");
+    expect(screen.getByRole("complementary", { name: "Next reward" }).textContent).toContain("400 pts to go");
   });
 
   it("shows progress toward unaffordable items and enables button for affordable ones", async () => {
@@ -102,11 +105,11 @@ describe("Rewards component", () => {
     // ₱100 credit is unaffordable (600 balance < 1000 cost)
     const unaffordableCard = screen.getByTestId("reward-card-reward-ewallet-100");
     const progressBox = within(unaffordableCard).getByTestId("progress-reward-ewallet-100");
-    expect(progressBox.textContent).toContain("60% naipon");
-    expect(progressBox.textContent).toContain("400 more pts needed");
+    expect(progressBox.textContent).toContain("60%");
+    expect(progressBox.textContent).toContain("400 pts to go");
 
-    const disabledBtn = within(unaffordableCard).getByRole("button", { name: /Not enough Points/ }) as HTMLButtonElement;
-    expect(disabledBtn.disabled).toBe(true);
+    // A locked reward shows its progress instead of a redeem button
+    expect(within(unaffordableCard).queryByRole("button")).toBeNull();
   });
 
   it("handles redemption confirmation and successful deduct flow", async () => {
@@ -185,8 +188,8 @@ describe("locked Welcome Points", () => {
   it("shows Welcome Points in the balance marked locked", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...mockCatalog, balance: 100, lockedPoints: 100, spendable: 0 }), { status: 200 })));
     render(<Rewards token="t" household={household} onExpired={() => {}} />);
-    expect(await screen.findByText(/100 Points/)).toBeTruthy();
-    expect(screen.getByTestId("locked-points").textContent).toMatch(/100 Welcome Points unlock with your first savings on a coming Bill/);
+    expect((await screen.findByTestId("rewards-balance")).textContent).toContain("100 Points");
+    expect(screen.getByTestId("locked-points").textContent).toMatch(/100 Welcome Points unlock after your first savings/);
   });
 });
 
@@ -208,6 +211,6 @@ describe("smart meter daily Points (ADR-0008)", () => {
     const list = await screen.findByTestId("earned-history");
     expect(within(list).getByText("+10 pts")).toBeTruthy();
     expect(within(list).getByText(/does not qualify for Points/)).toBeTruthy();
-    expect(screen.getByTestId("rewards-balance").textContent).toMatch(/each day your smart meter reads/);
+    expect(screen.getByTestId("rewards-balance").textContent).toMatch(/1 pt per ₱2 saved daily/);
   });
 });
