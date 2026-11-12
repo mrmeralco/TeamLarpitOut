@@ -22,7 +22,7 @@ export interface SeedData {
   links: HouseholdLink[];
   /** Households whose links the seed resets, so re-seeding gives the demo its starting state. */
   resetLinksFor: string[];
-  /** Data that used to live in code or JSON (migration 20261113000400). */
+  /** Data that used to live in code or JSON (migration 20261113000600). */
   reference: ReferenceData;
 }
 
