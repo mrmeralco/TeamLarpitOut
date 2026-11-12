@@ -11,4 +11,8 @@ export interface Bill {
   kwh: number;
   billingDays: number;
   chargeLines?: ChargeLine[];
+  /** "YYYY-MM-DD", as printed. */
+  dueDate?: string;
+  previousReading?: number;
+  presentReading?: number;
 }

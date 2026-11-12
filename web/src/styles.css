@@ -96,3 +96,27 @@ button.ghost { background: none; border: 1px dashed var(--line); color: var(--mu
 .bar span.down { background: var(--down); }
 .effects li.total { border-bottom: 0; border-top: 2px solid var(--ink); margin-top: 4px; }
 .effects li.total strong { font-size: 1.15rem; }
+
+/* Bill scan */
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+.card-head h2 { margin: 0; }
+button.scan {
+  border: 1px solid var(--brand);
+  background: none;
+  color: var(--brand);
+  padding: 8px 12px;
+  font-weight: 600;
+}
+button.scan:disabled { opacity: 0.5; cursor: progress; }
+.hero-scan { display: flex; flex-direction: column; gap: 10px; }
+.hero-scan p { margin: 0; color: var(--muted); }
+.hero-scan button.scan { padding: 14px; font-size: 1.05rem; background: var(--brand); color: #fff; border: 0; }
+.notice p { margin: 0 0 10px; }
+.notice.warn { border-color: var(--up); }
+.notice.confirm { border: 2px solid var(--brand); }
+.muted { color: var(--muted); }
+label em { font-style: normal; font-weight: 600; }
+label.missing em, label.missing span { color: var(--up); }
+label.missing input, label.missing select { border-color: var(--up); }
+label.estimated em { color: var(--brand); }
+label.estimated input { border-color: var(--brand); border-style: dashed; }
