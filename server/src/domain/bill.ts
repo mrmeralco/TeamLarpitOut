@@ -15,4 +15,8 @@ export interface Bill {
   dueDate?: string;
   previousReading?: number;
   presentReading?: number;
+  /** The Bill says its reading was estimated, not read from the meter. */
+  estimated?: boolean;
+  /** The household is registered for the lifeline discount. */
+  lifelineEligible?: boolean;
 }

@@ -8,6 +8,11 @@ export interface BillInput {
   kwh: number;
   billingDays: number;
   chargeLines: ChargeLine[];
+  dueDate?: string;
+  previousReading?: number;
+  presentReading?: number;
+  estimated?: boolean;
+  lifelineEligible?: boolean;
 }
 
 export interface Effect {
@@ -22,6 +27,17 @@ export interface BillSide {
   billingDays: number;
   rebuiltTotal: number;
   printedTotal: number | null;
+  estimated: boolean;
+  extras: { label: string; amount: number; kind: string; kindLabel: string }[];
+  extrasTotal: number;
+}
+
+export interface ExtraLineItem {
+  key: "lifeline" | "catchUp";
+  label: string;
+  amount: number;
+  status?: "gained" | "lost" | "changed";
+  kwh?: number;
 }
 
 /** All amounts are integer centavos. */
@@ -29,8 +45,13 @@ export interface BakitGanito {
   before: BillSide;
   now: BillSide;
   effects: Effect[];
+  /** Lifeline / catch-up lines, only when they apply. */
+  lines: ExtraLineItem[];
+  habitMeasurable: boolean;
   total: number;
   printedChange: number | null;
+  extrasChange: number;
+  unexplained: number | null;
 }
 
 async function json<T>(res: Response): Promise<T> {
@@ -57,6 +78,7 @@ export interface DraftBill {
   previousReading?: number;
   presentReading?: number;
   chargeLines?: ChargeLine[];
+  estimated?: boolean;
 }
 
 export type ScanOutcome =

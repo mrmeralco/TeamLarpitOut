@@ -45,6 +45,12 @@ describe("POST /api/bills/scan", () => {
     expect(body.missing).toEqual([]);
   });
 
+  it("carries the printed 'estimated' mark into the draft", async () => {
+    const api = await harness({ vision: { ...october, estimated: true } });
+    const { body } = await api.upload("/api/bills/scan");
+    expect(body.now.estimated).toBe(true);
+  });
+
   it("does not use the reading: no split is computed until the user confirms", async () => {
     const api = await harness({ vision: october });
     const { body } = await api.upload("/api/bills/scan");

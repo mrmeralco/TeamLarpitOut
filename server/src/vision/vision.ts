@@ -20,6 +20,8 @@ export interface RawBillReading {
   dueDate?: string | null;
   previousReading?: number | null;
   presentReading?: number | null;
+  /** The Bill marks this reading as estimated. */
+  estimated?: boolean | null;
   chargeLines?: { label: string; amount: number }[] | null;
   /** The bill's printed consumption history, if any. */
   history?: { period: string; kwh: number }[] | null;

@@ -9,6 +9,7 @@ Extract only what is printed. Never guess or compute a value that is not printed
 - kwh: total kWh consumed this period.
 - dueDate: "YYYY-MM-DD".
 - previousReading / presentReading: meter readings.
+- estimated: true only if the bill marks the reading as estimated (e.g. "ESTIMATED", "EST"); otherwise false.
 - serviceIdNumber: the Service ID Number (SIN), digits only.
 - chargeLines: every charge line with its peso amount, as printed (label in the bill's own words).
 - history: the printed monthly consumption history (kWh per month), if the bill shows one.
@@ -28,6 +29,7 @@ const SCHEMA = {
     dueDate: nullable("string"),
     previousReading: nullable("number"),
     presentReading: nullable("number"),
+    estimated: nullable("boolean"),
     chargeLines: {
       type: ["array", "null"],
       items: {

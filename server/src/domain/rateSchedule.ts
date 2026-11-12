@@ -25,11 +25,27 @@ export interface FixedCharge {
   amount: number;
 }
 
+/**
+ * Lifeline discount for eligible (registered) households: the tier is picked
+ * by total kWh, and its discount applies to the listed per-kWh charges.
+ */
+export interface LifelineRule {
+  discountedCodes: string[];
+  /** Ascending by upToKwh; above the last tier there is no discount. */
+  tiers: { upToKwh: number; discount: number }[];
+}
+
 /** Meralco's published charges for one billing month ("YYYY-MM"). */
 export interface RateSchedule {
   period: string;
   perKwh: PerKwhCharge[];
   fixed: FixedCharge[];
+  lifeline?: LifelineRule;
+}
+
+export interface CostOptions {
+  /** The household is registered for the lifeline discount. */
+  lifelineEligible?: boolean;
 }
 
 export interface CostLine {
@@ -59,12 +75,28 @@ export function costLines(kwh: number, _days: number, schedule: RateSchedule): C
   ];
 }
 
-/**
- * cost(kWh, days, schedule) in centavos. `days` is part of the signature so
- * lifeline, tiers and pro-rated charges (later tickets) can use it.
- */
-export function cost(kwh: number, days: number, schedule: RateSchedule): Centavos {
+/** The lifeline discount (centavos, ≥ 0) at this kWh, before eligibility is considered. */
+export function lifelineDiscount(kwh: number, schedule: RateSchedule): Centavos {
+  const rule = schedule.lifeline;
+  const tier = rule?.tiers.find((t) => kwh <= t.upToKwh);
+  if (!rule || !tier) return 0;
+  const discounted = schedule.perKwh
+    .filter((c) => rule.discountedCodes.includes(c.code))
+    .reduce((sum, c) => sum + toCentavos(c.rate * kwh), 0);
+  return Math.round(discounted * tier.discount);
+}
+
+/** cost() before any lifeline discount. */
+export function baseCost(kwh: number, days: number, schedule: RateSchedule): Centavos {
   return costLines(kwh, days, schedule).reduce((sum, l) => sum + l.amount, 0);
+}
+
+/**
+ * cost(kWh, days, schedule) in centavos, lifeline discount included for an
+ * eligible household. `days` is in the signature for pro-rated charges.
+ */
+export function cost(kwh: number, days: number, schedule: RateSchedule, opts: CostOptions = {}): Centavos {
+  return baseCost(kwh, days, schedule) - (opts.lifelineEligible ? lifelineDiscount(kwh, schedule) : 0);
 }
 
 /** Lookup into the one Rate Schedule table. */
