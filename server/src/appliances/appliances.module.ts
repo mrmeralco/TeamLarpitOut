@@ -16,7 +16,7 @@ import { AirconPatternService } from "./aircon-pattern.service.js";
 @Module({
   imports: [HouseholdsModule, BillsModule, RateSchedulesModule, WeatherModule, VisionModule, SmartMeterModule],
   controllers: [ApplianceCatalogController, AppliancesController],
-  exports: [AppliancesService],
+  exports: [AppliancesService, AirconPatternService],
   providers: [AppliancesService, ApplianceLabelScanService, AirconPatternService, { provide: APPLIANCE_REPOSITORY, useFactory: () => new InMemoryApplianceRepository() }],
 })
 export class AppliancesModule {}

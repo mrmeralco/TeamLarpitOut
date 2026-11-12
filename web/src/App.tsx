@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, ApiError, setupApi, type HomeChargeLine, type Household, type LoginResult, type SetupStatus } from "./api/client";
 import { MissionsTab } from "./components/MissionsTab";
+import { SetupAppliances } from "./components/SetupAppliances";
+import { AirconAgreement } from "./components/AirconAgreement";
 import { ChargeChat } from "./components/ChargeChat";
 import { SignIn } from "./components/SignIn";
 import { LinkFlow } from "./components/LinkFlow";
@@ -78,7 +80,12 @@ export function App() {
     });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setupKey, applianceVersion]);
+  }, [setupKey]);
+  /** After appliances change elsewhere (Account), re-read setup without blanking the Missions tab. */
+  const refreshSetup = () => {
+    if (!session || !selectedSin) return;
+    setupApi.status(session.token, selectedSin).then(setSetup).catch((err) => { if (err instanceof ApiError && err.status === 401) onExpired(); });
+  };
 
   const select = (sin: string) => { setSelectedSin(sin); setAsking(null); stored.set("household", sin); };
   const selected: Household | undefined = session?.households.find((h) => h.sin === selectedSin);
@@ -126,7 +133,9 @@ export function App() {
           {selected.meter_type === "smart" && <SmartMeterUsage key={`usage:${key}`} token={session.token} household={selected} onExpired={onExpired} />}
         </>}
         {tab === "missions" && <MissionsTab token={session.token} household={selected} sub={route.sub} go={go}
-          setup={setup} onSetup={setSetup} onExpired={onExpired}>
+          setup={setup} onSetup={(s) => { setSetup(s); setApplianceVersion((v) => v + 1); }} onExpired={onExpired}
+          appliancesStep={(done, back) => setup && <SetupAppliances token={session.token} sin={selected.sin} status={setup} onSaved={done} onBack={back} onExpired={onExpired} />}
+          routineAgreement={(aircon) => <AirconAgreement token={session.token} sin={selected.sin} aircon={aircon} />}>
           {selected.meter_type === "traditional" ? <>
             <UsagePlan key={`plan:${key}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />
             <Forecast key={`forecast:${key}`} token={session.token} household={selected} onExpired={onExpired} />
@@ -142,7 +151,7 @@ export function App() {
             });
           }} />
           <button type="button" className="ghost wide" onClick={() => setLinking(true)}>+ Link another Household</button>
-          <Appliances key={`appliances:${key}`} token={session.token} household={selected} onExpired={onExpired} onSaved={() => setApplianceVersion((v) => v + 1)} />
+          <Appliances key={`appliances:${key}`} token={session.token} household={selected} onExpired={onExpired} onSaved={() => { setApplianceVersion((v) => v + 1); refreshSetup(); }} />
         </>}
       </main>
       <TabBar tab={tab} />

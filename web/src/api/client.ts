@@ -718,7 +718,14 @@ export interface SetupStatus {
   household: { size: number } | null;
   routine: { home: HomePattern; aircon: AirconPattern | null } | null;
   hasAircon: boolean;
+  grid?: Record<string, number> | null;
+  gridCatalog?: GridTile[];
   welcomePoints: { points: number; granted: boolean; locked: boolean };
+}
+export interface GridTile { type: string; label: string; kwh: number; unit: string; tag: "Typical value" | "Estimated from photo" }
+export interface AirconCheck {
+  source: "bills" | "smartMeter"; available: boolean; chosenHours: number;
+  estimatedHours?: number; agrees?: boolean; message?: string; reason?: string;
 }
 
 const setupPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/setup`;
@@ -729,6 +736,18 @@ export const setupApi = {
     fetch(`${setupPath(sin)}/household`, {
       method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ size }),
     }).then((r) => json<SetupStatus>(r)),
+  grid: (token: string, sin: string, counts: Record<string, number>) =>
+    fetch(`${setupPath(sin)}/appliances`, {
+      method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ counts }),
+    }).then((r) => json<SetupStatus>(r)),
+  airconPhoto: (token: string, sin: string, photo: File) => {
+    const form = new FormData();
+    form.append("photo", photo);
+    return fetch(`${setupPath(sin)}/aircon-photo`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form })
+      .then((r) => json<{ answers: Record<string, string>; kwhPerHour: number; tag: "Estimated from photo" }>(r));
+  },
+  airconCheck: (token: string, sin: string, aircon: AirconPattern, signal?: AbortSignal) =>
+    fetch(`${setupPath(sin)}/aircon-check?aircon=${aircon}`, authed(token, signal)).then((r) => json<AirconCheck>(r)),
   routine: (token: string, sin: string, home: HomePattern, aircon: AirconPattern | null) =>
     fetch(`${setupPath(sin)}/routine`, {
       method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ home, aircon }),
