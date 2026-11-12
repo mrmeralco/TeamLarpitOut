@@ -9,3 +9,5 @@ export const MY_MERALCO_SOURCE = Symbol("MY_MERALCO_SOURCE");
 export const WEATHER_PROVIDER = Symbol("WEATHER_PROVIDER");
 /** Injectable time source for session expiry. */
 export const AUTH_CLOCK = Symbol("AUTH_CLOCK");
+/** Per-Household appliance storage (in-memory now; database later). */
+export const APPLIANCE_REPOSITORY = Symbol("APPLIANCE_REPOSITORY");

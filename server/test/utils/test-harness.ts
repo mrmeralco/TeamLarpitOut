@@ -135,6 +135,12 @@ export async function harness(opts: HarnessOptions = {}) {
       const res = await req.send(body as object);
       return { status: res.status, body: res.body as any };
     },
+    async put(path: string, body: unknown, token?: string) {
+      const req = request(server).put(path);
+      if (token !== undefined) req.set("Authorization", `Bearer ${token}`);
+      const res = await req.send(body as object);
+      return { status: res.status, body: res.body as any };
+    },
     /** Upload a photo as multipart form data, like the PWA does. */
     async upload(path: string, photo: Buffer = Buffer.from("fake-jpeg"), mimeType = "image/jpeg") {
       const res = await request(server).post(path).attach("photo", photo, { filename: "bill.jpg", contentType: mimeType });
