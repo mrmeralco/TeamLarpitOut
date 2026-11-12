@@ -493,55 +493,6 @@ export interface UsagePlan {
   createdAt: string;
 }
 
-export interface ForecastRange {
-  minKwh: number;
-  maxKwh: number;
-  minPesos: number;
-  maxPesos: number;
-}
-
-export interface ForecastProjected {
-  kwh: number;
-  pesos: number;
-  kwhSoFar: number;
-  elapsedDays: number;
-  remainingDays: number;
-  reading: number;
-  readingDate: string | null;
-}
-
-export interface TargetComparison {
-  targetKwh: number;
-  targetPesos: number;
-  diffPesos: number;
-  diffKwh: number;
-  status: "within_target" | "over_target";
-  label: string;
-}
-
-export interface ForecastResult {
-  currency: "PHP-centavos";
-  period: string;
-  billingDays: number;
-  rateSchedulePeriod: string;
-  hasReading: boolean;
-  lastReading: number | null;
-  range: ForecastRange | null;
-  projected: ForecastProjected | null;
-  targetComparison: TargetComparison | null;
-  heatWave: {
-    active: boolean;
-    heatIndex: number | null;
-    banner: string | null;
-    kwhAdjustmentPerDay: number;
-  };
-  heatSensitivity: {
-    value: number;
-    source: string;
-    label: string;
-    sigma: number;
-  };
-}
 
 export interface PointsHistoryEntry {
   id: string;
@@ -629,19 +580,6 @@ export const usagePlanApi = {
       headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify(body),
     }).then((r) => json<{ active: boolean; plan: UsagePlan }>(r)),
-  forecast: (token: string, sin: string, signal?: AbortSignal) =>
-    fetch(`${planPath(sin)}/forecast`, authed(token, signal)).then((r) => json<ForecastResult>(r)),
-  saveReading: (token: string, sin: string, body: { reading: number; elapsedDays?: number; readingDate?: string }) =>
-    fetch(`${planPath(sin)}/mid-month-reading`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify(body),
-    }).then((r) => json<ForecastResult>(r)),
-  deleteReading: (token: string, sin: string) =>
-    fetch(`${planPath(sin)}/mid-month-reading`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((r) => json<ForecastResult>(r)),
   points: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(`${planPath(sin)}/points`, authed(token, signal)).then((r) => json<PointsResult>(r)),
   selfReport: (token: string, sin: string, body?: { missionId?: string; status?: string }) =>

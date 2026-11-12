@@ -6,7 +6,7 @@ const monthName = (period: string) => new Date(`${period}-01T00:00:00`).toLocale
 const reminderKey = (sin: string, id: string) => `kuryenteko.reminder.${sin}.${id}`;
 
 /** Missions tab once setup is done (mockup screens 12–13): the 5% goal, the plan, shuffle and the Mission detail. */
-export function MissionPlan({ token, household, missionId, onOpen, onBack, onExpired, children }: {
+export function MissionPlan({ token, household, missionId, onOpen, onBack, onExpired }: {
   token: string;
   household: Household;
   /** The open Mission detail, from `#/missions/m/<id>`. */
@@ -14,8 +14,6 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
   onOpen: (id: string) => void;
   onBack: () => void;
   onExpired: () => void;
-  /** Forecast and mid-month reading, shown under the plan. */
-  children?: React.ReactNode;
 }) {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [busy, setBusy] = useState(false);
@@ -100,7 +98,6 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
       </p>
       </div>
       </div>
-      {children}
     </section>
   );
 }
