@@ -232,3 +232,58 @@ export const appliancesApi = {
   breakdown: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(`${householdPath(sin)}/breakdown`, authed(token, signal)).then((r) => json<ApplianceBreakdown>(r)),
 };
+
+/** Amounts in centavos. */
+export interface TargetResult {
+  period: string;
+  billingDays: number;
+  rateSchedulePeriod: string;
+  baseline: {
+    kwh: number;
+    kwhPerDay: number;
+    pesos: number;
+    weatherAdjusted: boolean;
+    weatherKwhPerDay: number;
+    heatSensitivity: { value: number; source: string; label: string };
+  };
+  options: { cut: 5 | 10 | 15; kwh: number; pesos: number; savings: number }[];
+}
+export interface Mission {
+  id: string;
+  title: string;
+  appliance: string;
+  basis: "physics" | "assumption";
+  assumptions: { key: string; label: string; value: number }[];
+  kwhSaved: number;
+  pesoValue: number;
+  /** Worded by the Coach; numbers shown in the app come from kwhSaved and pesoValue. */
+  message: string;
+}
+export interface UsagePlan {
+  period: string;
+  cut: 5 | 10 | 15;
+  targetKwh: number;
+  targetPesos: number;
+  airconSetting: number | null;
+  missions: { id: string; title: string; kwhSaved: number; pesoValue: number }[];
+  createdAt: string;
+}
+
+const planPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}`;
+
+export const usagePlanApi = {
+  target: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`${planPath(sin)}/target`, authed(token, signal)).then((r) => json<TargetResult>(r)),
+  missions: (token: string, sin: string, airconSetting?: number, signal?: AbortSignal) =>
+    fetch(`${planPath(sin)}/missions${airconSetting ? `?airconSetting=${airconSetting}` : ""}`, authed(token, signal)).then((r) =>
+      json<{ period: string; perKwhRate: number; missions: Mission[] }>(r),
+    ),
+  plan: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`${planPath(sin)}/usage-plan`, authed(token, signal)).then((r) => json<{ active: boolean; plan: UsagePlan | null }>(r)),
+  save: (token: string, sin: string, body: { cut: number; missionIds: string[]; airconSetting?: number }) =>
+    fetch(`${planPath(sin)}/usage-plan`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => json<{ active: boolean; plan: UsagePlan }>(r)),
+};
