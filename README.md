@@ -98,7 +98,7 @@ The existing `PUT /api/households/:sin/appliances` accepts an optional `energyLa
 
 Scan errors: `400` missing photo, unsupported type or MIME; `413` oversized photo; `422` unreadable label or detected appliance mismatch; `503` missing vision configuration; `502` provider failure. Missing/expired login returns `401`, unknown/unlinked Households return the same `404`. A failed scan leaves answers/defaults usable. The browser cancels scans on retake, card removal, Household/session change, or logout, and ignores delayed results.
 
-Label scanning uses the same `GEMINI_API_KEY` / `GEMINI_MODEL` configuration as Bill scanning. Photos and scan drafts are not retained by the application. Only confirmed label values are saved with appliances in the current **in-memory, per-Household repository**, lost on server restart; no migration is required. Automated checks use an injected fake vision provider and do not call Gemini.
+Label scanning uses the same `GEMINI_API_KEY` / `GEMINI_MODEL` configuration as Bill scanning. Photos and scan drafts are not retained by the application. Only confirmed label values are saved with appliances in the per-Household repository (`public.appliances` when `DATABASE_URL` is set, otherwise in memory and lost on restart). Automated checks use an injected fake vision provider and do not call Gemini.
 
 ### Mock My Meralco login
 
@@ -125,7 +125,7 @@ Scanning and `POST /api/bakit-ganito` remain public. A scan grants no access to 
 
 ### Database (Supabase) and the real-Bill Household
 
-**Without `DATABASE_URL`** everything runs in memory as before. **With it**, logins (`public.accounts`), Household links (`public.household_links`) and the mock Meralco data (`meralco.*`: accounts by CAN, Bills with every printed group and rate component, payments) live in Supabase. Setup, appliances, Missions, readings and Points are still in memory; their tables are already in the migration. Tests never use the database.
+**Without `DATABASE_URL`** everything runs in memory as before. **With it**, logins (`public.accounts`), Household links (`public.household_links`) and the mock Meralco data (`meralco.*`: accounts by CAN, Bills with every printed group and rate component, payments) live in Supabase, as do Household Setup (`public.household_setup`), appliances (`public.appliances`), the Target and Mission Plan (`public.usage_plans`, `public.usage_plan_missions`), Mid-month Readings (`public.mid_month_readings`) and the Points ledger (`public.points_entries`), so they survive a server restart. Tests never use the database.
 
 1. Apply `supabase/migrations/*.sql` (Supabase SQL editor, or `supabase db push`).
 2. Set `DATABASE_URL` in `server/.env` (Transaction pooler, port 6543, `?sslmode=require`).
