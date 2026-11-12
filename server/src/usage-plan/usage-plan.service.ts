@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { AppliancesService } from "../appliances/appliances.service.js";
 import type { BillSource } from "../bills/bill-source.js";
 import type { OutageSource } from "../bills/outage-source.js";
@@ -22,6 +22,8 @@ import { calculateHeatSensitivity, predictKwhPerDay } from "../domain/heat-sensi
 import { rankMissions, type ApplianceUsage } from "../domain/mission-catalog.js";
 import { computeVerifiedSavings, type VerifiedSavingsResult } from "../domain/points.js";
 import { cost, type RateScheduleTable } from "../domain/rate-schedule.js";
+import { lockedPoints } from "../domain/welcome-points.js";
+import { SetupService } from "../setup/setup.service.js";
 import type { WeatherProvider } from "../weather/weather-provider.interface.js";
 import type { MidMonthReading, MidMonthReadingRepository } from "./mid-month-reading-repository.interface.js";
 import type { PointsEntry, PointsRepository } from "./points-repository.interface.js";
@@ -46,6 +48,7 @@ export class UsagePlanService {
     @Inject(POINTS_REPOSITORY) private readonly pointsRepo: PointsRepository,
     @Inject(OUTAGE_SOURCE) private readonly outageSource: OutageSource,
     private readonly appliances: AppliancesService,
+    private readonly setup: SetupService,
   ) {}
 
   /** The weather- and days-adjusted Baseline for next period, and the Target for each cut. */
@@ -135,6 +138,9 @@ export class UsagePlanService {
   }
 
   async savePlan(sin: string, input: { cut: TargetCut; missionIds: string[]; airconSetting?: number }) {
+    if (!(await this.setup.isComplete(sin))) {
+      throw new ConflictException({ error: "Tapusin ang setup para ma-unlock ang Missions.", reason: "setupIncomplete" });
+    }
     const [target, available] = await Promise.all([this.target(sin), this.missions(sin, input.airconSetting)]);
     const chosen = input.missionIds.map((id) => available.missions.find((m) => m.id === id));
     const missing = input.missionIds.filter((_, i) => !chosen[i]);
@@ -327,9 +333,13 @@ export class UsagePlanService {
       this.pointsRepo.getBalance(sin),
       this.pointsRepo.getEntries(sin),
     ]);
+    const locked = Math.min(lockedPoints(entries), Math.max(balance, 0));
     return {
       currency: "PHP-centavos",
       balance,
+      /** Welcome Points that cannot be spent until the first Verified Savings (ADR-0004). */
+      lockedPoints: locked,
+      spendable: balance - locked,
       history: entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     };
   }
