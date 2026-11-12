@@ -127,7 +127,7 @@ export class GeminiVisionProvider implements VisionProvider {
 
   constructor(
     apiKey = process.env.GEMINI_API_KEY,
-    private readonly model = process.env.GEMINI_MODEL ?? "gemini-3.8-flash",
+    private readonly model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite",
   ) {
     this.client = apiKey ? new GoogleGenAI({ apiKey }) : null;
   }

@@ -218,7 +218,7 @@ A signed-in `POST /api/bills/scan` includes `scanToken`, an opaque reference val
 ## Third-Party Services, Libraries, Assets & Data Attributions
 
 ### AI Models & Local ML
-- **Google Gemini API** (`@google/genai` `^3.2.0`, default `gemini-3.8-flash` via `GEMINI_MODEL`): Used in `server/src/coach/gemini-coach.provider.ts` (charge chat and mission plan coaching) and `server/src/vision/gemini-vision.provider.ts` (bill photo, DOE energy label, and appliance photo reading).
+- **Google Gemini API** (`@google/genai` `^3.2.0`, default `gemini-3.5-flash-lite` via `GEMINI_MODEL`): Used in `server/src/coach/gemini-coach.provider.ts` (charge chat and mission plan coaching) and `server/src/vision/gemini-vision.provider.ts` (bill photo, DOE energy label, and appliance photo reading).
 - **RapidOCR / PaddleOCR on ONNX Runtime** (`rapidocr==3.10.0`, `onnxruntime==1.31.1`, `pillow==13.0.0`): Local offline OCR fallback for bill photos in `ml-service/app/ocr/engine.py` (no network calls; photos are decoded in memory and not saved to disk).
 - **BM25 Local Retrieval** (`ml-service/app/rag/search.py`): Pure-Python BM25 keyword search with Tagalog/Taglish synonym mapping over `ml-service/app/rag/meralco-knowledge.json` (no external embedding model).
 
