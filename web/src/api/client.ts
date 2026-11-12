@@ -301,6 +301,35 @@ export interface ApplianceBreakdown {
   totals: { kwh: number; perKwhCharges: number; fixedCharges: number };
 }
 
+export interface AirconProposalOption {
+  action: "confirm" | "longer" | "shorter";
+  label: string;
+  hours: number;
+}
+
+export interface AirconProposalResult {
+  canPropose: boolean;
+  hours: number | null;
+  coolingKwhPerDay?: number;
+  airconKw?: number;
+  prompt?: string;
+  options?: AirconProposalOption[];
+  reason?: string;
+  fallback?: "routine";
+}
+
+/** Create a standard daily time range yielding the given hours (starting at 22:00). */
+export function rangeFromHours(hours: number): TimeRange {
+  const clamped = Math.max(1, Math.min(23, Math.round(hours)));
+  const startHour = 22;
+  const endHour = (startHour + clamped) % 24;
+  return {
+    start: "22:00",
+    end: `${String(endHour).padStart(2, "0")}:00`,
+    days: "everyday",
+  };
+}
+
 const authed = (token: string, signal?: AbortSignal): RequestInit => ({
   headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
 });
@@ -311,6 +340,13 @@ export const appliancesApi = {
     fetch("/api/appliances/catalog", { signal }).then((r) => json<{ appliances: CatalogAppliance[] }>(r)),
   list: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(householdPath(sin), authed(token, signal)).then((r) => json<HouseholdAppliances>(r)),
+  airconProposal: (token: string, sin: string, query?: Record<string, string>, signal?: AbortSignal) => {
+    const cleanQuery = query
+      ? Object.fromEntries(Object.entries(query).filter(([, v]) => v !== undefined && v !== ""))
+      : undefined;
+    const qs = cleanQuery && Object.keys(cleanQuery).length > 0 ? "?" + new URLSearchParams(cleanQuery).toString() : "";
+    return fetch(`${householdPath(sin)}/aircon-proposal${qs}`, authed(token, signal)).then((r) => json<AirconProposalResult>(r));
+  },
   save: (token: string, sin: string, appliances: ApplianceInput[]) =>
     fetch(householdPath(sin), {
       method: "PUT",
