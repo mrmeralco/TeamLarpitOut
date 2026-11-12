@@ -27,10 +27,24 @@ export class ApiError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
 }
 
+export interface WeatherDetail {
+  heatSensitivity: number;
+  source: "history" | "cooling_appliance_estimate";
+  label: string;
+  hotDayKwh: number;
+  cddPerDayBefore?: number;
+  cddPerDayNow?: number;
+}
+
 export interface Effect {
   key: "rate" | "billingDays" | "weather" | "habit";
   label: string;
   amount: number;
+  estimate?: boolean;
+  sensitivity?: number;
+  sensitivitySource?: "history" | "cooling_appliance_estimate";
+  sensitivityLabel?: string;
+  hotDayKwh?: number;
 }
 
 export interface BillSide {
@@ -64,6 +78,7 @@ export interface BakitGanito {
   printedChange: number | null;
   extrasChange: number;
   unexplained: number | null;
+  weatherDetail?: WeatherDetail;
 }
 
 async function json<T>(res: Response): Promise<T> {

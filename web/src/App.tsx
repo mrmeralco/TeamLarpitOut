@@ -23,7 +23,7 @@ import { peso, monthLabel } from "./lib/format";
 const EFFECT_HINT: Record<string, string> = {
   rate: "Nagbago ang singil kada kWh. Hindi mo ito kontrolado.",
   billingDays: "Mas mahaba o maikli ang billing period.",
-  weather: "Epekto ng init ng panahon. (Darating pa)",
+  weather: "Epekto ng init ng panahon (tantya). Pindutin para sa detalye.",
   habit: "Ang bahaging galing sa sariling gamit ng bahay.",
 };
 
@@ -243,10 +243,20 @@ const LINE_HINT: Record<string, (l: ExtraLineItem) => string> = {
 };
 
 function Result({ r }: { r: BakitGanito }) {
+  const [weatherExpanded, setWeatherExpanded] = useState(false);
   const rows = [...r.effects, ...r.lines];
   const max = Math.max(...rows.map((e) => Math.abs(e.amount)), 1);
   const extras = r.now.extras;
   const reconciled = r.unexplained === null || r.unexplained === 0;
+
+  const weatherEffect = r.effects.find((e) => e.key === "weather");
+  const sensitivity = weatherEffect?.sensitivity ?? r.weatherDetail?.heatSensitivity ?? 1.0;
+  const sensitivitySource = weatherEffect?.sensitivitySource ?? r.weatherDetail?.source ?? "cooling_appliance_estimate";
+  const weatherTapText =
+    sensitivitySource === "history"
+      ? `bawat mas mainit na araw ≈ +${sensitivity} kWh mula sa sariling mga Bill`
+      : `bawat mas mainit na araw ≈ +${sensitivity} kWh (Cooling Appliance estimate)`;
+
   return (
     <section className="card result" aria-live="polite">
       <h2>Bakit ganito?</h2>
@@ -254,24 +264,47 @@ function Result({ r }: { r: BakitGanito }) {
         {monthLabel(r.before.period)} {peso(r.before.rebuiltTotal)} → {monthLabel(r.now.period)} {peso(r.now.rebuiltTotal)}
       </p>
       <ul className="effects">
-        {rows.map((e) => (
-          <li key={e.key} className={e.key === "lifeline" || e.key === "catchUp" ? "extra-line" : ""}>
-            <div className="effect-head">
-              <span>{e.label}</span>
-              <strong className={e.amount < 0 ? "down" : e.amount > 0 ? "up" : ""}>{peso(e.amount, true)}</strong>
-            </div>
-            <div className="bar">
-              <span className={e.amount < 0 ? "down" : "up"} style={{ width: `${(Math.abs(e.amount) / max) * 100}%` }} />
-            </div>
-            <small>
-              {"status" in e || e.key === "catchUp"
-                ? LINE_HINT[e.key]!(e as ExtraLineItem)
-                : e.key === "habit" && !r.habitMeasurable
-                  ? "Hindi pa masukat: tantya ang nakaraang Bill, kaya pinagsama ang dalawang buwan."
-                  : EFFECT_HINT[e.key]}
-            </small>
-          </li>
-        ))}
+        {rows.map((e) => {
+          const isWeather = e.key === "weather";
+          const isExtra = e.key === "lifeline" || e.key === "catchUp";
+          return (
+            <li
+              key={e.key}
+              className={`${isExtra ? "extra-line" : ""} ${isWeather ? "interactive" : ""}`.trim()}
+              onClick={isWeather ? () => setWeatherExpanded((v) => !v) : undefined}
+              onKeyDown={
+                isWeather
+                  ? (evt) => {
+                      if (evt.key === "Enter" || evt.key === " ") {
+                        evt.preventDefault();
+                        setWeatherExpanded((v) => !v);
+                      }
+                    }
+                  : undefined
+              }
+              tabIndex={isWeather ? 0 : undefined}
+              role={isWeather ? "button" : undefined}
+              aria-expanded={isWeather ? weatherExpanded : undefined}
+            >
+              <div className="effect-head">
+                <span>{e.label}</span>
+                <strong className={e.amount < 0 ? "down" : e.amount > 0 ? "up" : ""}>{peso(e.amount, true)}</strong>
+              </div>
+              <div className="bar">
+                <span className={e.amount < 0 ? "down" : "up"} style={{ width: `${(Math.abs(e.amount) / max) * 100}%` }} />
+              </div>
+              <small>
+                {"status" in e || e.key === "catchUp"
+                  ? LINE_HINT[e.key]!(e as ExtraLineItem)
+                  : isWeather && weatherExpanded
+                    ? weatherTapText
+                    : e.key === "habit" && !r.habitMeasurable
+                      ? "Hindi pa masukat: tantya ang nakaraang Bill, kaya pinagsama ang dalawang buwan."
+                      : EFFECT_HINT[e.key]}
+              </small>
+            </li>
+          );
+        })}
         <li className="total">
           <div className="effect-head">
             <span>Kabuuang pagbabago</span>

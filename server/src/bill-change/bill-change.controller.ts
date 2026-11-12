@@ -14,7 +14,7 @@ export class BillChangeController {
   @Post("bakit-ganito")
   @HttpCode(200)
   fromBills(@Body() body: BillChangeRequestDto) {
-    return this.billChange.explain(body.before, body.now);
+    return this.billChange.explainWithFallback(body.before, body.now);
   }
 
   /** From a Household's two latest Bills in its Bill source. */
