@@ -1,4 +1,4 @@
-import type { ChargeFacts } from "../domain/charge-chat.js";
+import type { ChargeFacts, ChargeReference } from "../domain/charge-chat.js";
 import type { PlannedMission } from "../domain/mission-plan.js";
 
 /** One computed candidate, as the AI sees it: no personal data, only this Mission's figures. */
@@ -33,7 +33,7 @@ export interface CoachProvider {
    * Answers one question about one charge line from that line's computed facts only.
    * Returns null when it has no answer (no AI configured, error, timeout); the server then uses the template.
    */
-  answerCharge?(input: { facts: ChargeFacts; question: string }): Promise<string | null>;
+  answerCharge?(input: { facts: ChargeFacts; question: string; references?: ChargeReference[] }): Promise<string | null>;
   /**
    * Picks up to five candidate ids that together reach about 5% and words each for this home.
    * `avoid` lists sets already shown (for shuffle). Null when it has no answer; the server then picks.

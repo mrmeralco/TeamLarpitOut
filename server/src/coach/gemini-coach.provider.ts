@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { chargePrompt, type ChargeFacts } from "../domain/charge-chat.js";
+import { chargePrompt, type ChargeFacts, type ChargeReference } from "../domain/charge-chat.js";
 import type { CandidateFacts, CoachProvider, MissionFacts } from "./coach-provider.interface.js";
 import type { PlannedMission } from "../domain/mission-plan.js";
 import { TemplateCoachProvider } from "./template-coach.provider.js";
@@ -41,12 +41,12 @@ export class GeminiCoachProvider implements CoachProvider {
     }
   }
 
-  /** The prompt holds only this line's facts and the question. Null on no key, error or timeout. */
-  async answerCharge({ facts, question }: { facts: ChargeFacts; question: string }): Promise<string | null> {
+  /** The prompt holds only this line's facts, public Meralco reference text and the question. Null on no key, error or timeout. */
+  async answerCharge({ facts, question, references }: { facts: ChargeFacts; question: string; references?: ChargeReference[] }): Promise<string | null> {
     if (!this.client) return null;
     try {
       const reply = await Promise.race([
-        this.client.models.generateContent({ model: this.model, contents: chargePrompt(facts, question) }),
+        this.client.models.generateContent({ model: this.model, contents: chargePrompt(facts, question, references) }),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error("coach timeout")), TIMEOUT_MS)),
       ]);
       const text = (reply.text ?? "").trim().replace(/\s+/g, " ");

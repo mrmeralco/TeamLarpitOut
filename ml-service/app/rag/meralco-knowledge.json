@@ -1,0 +1,117 @@
+{
+  "note": "Public text from Meralco's 'Understand Your Bill' guide (docs/kyb/know-your-bill-official.md). No customer data. Each passage keeps its official source.",
+  "passages": [
+    {
+      "id": "generation",
+      "charges": ["generation"],
+      "title": "Generation Charge",
+      "text": "The Generation Charge is the cost of power Meralco buys from Independent Power Producers (IPPs), Power Supply Agreement (PSA) holders, the Wholesale Electricity Spot Market (WESM), and exported energy from Net Metering and Distributed Energy Resource (DER) participants. It is pass-through: Meralco remits it to the power suppliers. It is regulated by the ERC to ensure lowest-cost sourcing, and it was about 64% of the 2025 average residential bill.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "distribution",
+      "charges": ["distribution", "supply", "metering"],
+      "title": "Distribution Charge (Meralco's share)",
+      "text": "The Distribution Charge is the part Meralco keeps. It covers building and maintaining the distribution network, delivering electricity safely and reliably, and customer service, metering and billing. It was about 12% of the 2025 average residential bill. Meralco has not increased its distribution charges since 2015.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "transmission",
+      "charges": ["transmission"],
+      "title": "Transmission Charge",
+      "text": "The Transmission Charge is the cost of delivering electricity from power plants to Meralco's system over transmission lines, plus ancillary services for grid stability and reliability. It is remitted to the National Grid Corporation of the Philippines (NGCP) and was about 8% of the 2025 average residential bill.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "system_loss",
+      "charges": ["system_loss"],
+      "title": "System Loss Charge",
+      "text": "The System Loss Charge covers technical and non-technical electricity losses during generation and transmission. It is remitted to generation companies and NGCP and is subject to an ERC-mandated system loss cap: losses above the cap cannot be passed on to customers. It was about 5% of the 2025 average residential bill.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "taxes",
+      "charges": ["vat", "local_tax"],
+      "title": "Government Taxes",
+      "text": "Government taxes on the bill include Value Added Tax (VAT) and the Energy Tax (for residential customers consuming over 650 kWh), remitted to the national government, and Real Property Tax and Local Franchise Tax, remitted to Local Government Units (LGUs). Meralco only collects them.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "lifeline",
+      "charges": ["lifeline"],
+      "title": "Lifeline Subsidy",
+      "text": "The Lifeline Subsidy gives bill discounts to 4Ps beneficiaries and certified marginalized customers consuming 100 kWh and below. Other customers contribute to it. It is remitted to the Power Sector Assets and Liabilities Management (PSALM).",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "senior_citizen",
+      "charges": ["senior_citizen"],
+      "title": "Senior Citizen Subsidy",
+      "text": "The Senior Citizen Subsidy gives bill discounts to senior citizens consuming 100 kWh and below and to DSWD-accredited institutions for the elderly. Other customers contribute a small amount to fund it.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill/senior-citizen-discount"
+    },
+    {
+      "id": "fit_all",
+      "charges": ["fit_all"],
+      "title": "Feed-in Tariff Allowance (FiT-All)",
+      "text": "The Feed-in Tariff Allowance (FiT-All) supports renewable energy projects under the Feed-in Tariff Program. It is set annually by the ERC and remitted to the National Transmission Corporation (TransCo).",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "gea_all",
+      "charges": ["gea_all", "fit_all"],
+      "title": "Green Energy Auction Allowance (GEA-All)",
+      "text": "The Green Energy Auction Allowance (GEA-All) funds solar, wind and hydro projects selected through competitive bidding under the government's Green Energy Auction Program (GEAP). It is remitted to TransCo.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "universal",
+      "charges": ["universal"],
+      "title": "Universal Charges",
+      "text": "Universal Charges are remitted to PSALM. They fund Missionary Electrification (electricity service in remote or off-grid communities not connected to the national grid), the Environmental Charge (watershed rehabilitation and management, managed by the National Power Corporation), and NPC Stranded Debts (unpaid financial obligations of the NPC).",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "pass_through",
+      "charges": [],
+      "title": "Does Meralco keep every charge on the bill?",
+      "text": "No. Pass-through, tax and universal charges (88% of the 2025 average bill) are collected for power generators, the transmission system (NGCP), government agencies and other regulated funds. Only the distribution-related charges (about 12%) go to Meralco. All bill components follow Philippine law and Energy Regulatory Commission (ERC) rules.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    },
+    {
+      "id": "why_bill_changes",
+      "charges": [],
+      "title": "Why a monthly bill changes",
+      "text": "Meralco lists five reasons a bill changes from month to month: electricity use changed (weather, household occupancy, appliance use and operating hours); the billing period had more or fewer days (compare daily consumption alongside total kWh); rates or pass-through charges changed (generation, transmission, tax and other ERC-approved rates move each billing period); a meter reading or adjustment was posted (estimated readings, corrections, credits); or a prior balance or payment changed.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill#SolutionsFaq-2168"
+    },
+    {
+      "id": "why_higher",
+      "charges": [],
+      "title": "Why is my bill higher this month?",
+      "text": "Compare consumption, billing days, current rates, meter readings, adjustments, prior balances and posted payments, as multiple factors can change at the same time.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill#SolutionsFaq-2178"
+    },
+    {
+      "id": "meter_readings",
+      "charges": ["metering"],
+      "title": "Where to find meter readings",
+      "text": "The Metering Information section of the bill lists the meter number, current and previous readings, reading dates, the multiplier when applicable, and the consumption calculated for the billing period.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill#SolutionsFaq-2178"
+    },
+    {
+      "id": "ask_meralco",
+      "charges": [],
+      "title": "How to ask about a specific bill",
+      "text": "Prepare the Customer Account Number (CAN) and the bill, then contact Meralco through My Meralco or an official Meralco support channel such as the 16211 hotline or customercare@meralco.com.ph.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill#SolutionsFaq-2178"
+    },
+    {
+      "id": "rate_per_kwh",
+      "charges": [],
+      "title": "Your rate this month",
+      "text": "The rate per kWh shown on the bill is the Total Energy Amount divided by the Actual Consumption in kWh. Charges billed per kWh go down when you use fewer kWh; fixed monthly charges do not.",
+      "source": "https://www.meralco.com.ph/residential/understand-your-bill"
+    }
+  ]
+}

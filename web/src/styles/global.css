@@ -613,6 +613,33 @@ button.wide { width: 100%; margin-top: 10px; }
 .tabbar a:hover { background: var(--sidebar-accent); color: var(--foreground); }
 .tabbar a[aria-current="page"] { color: var(--brand-ink); font-weight: 600; background: var(--brand-soft); }
 .tabbar a:focus-visible { outline: 2px solid var(--ring); outline-offset: -2px; }
+.tabbar-logout {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+.tabbar-logout:hover {
+  background: var(--sidebar-accent);
+  color: var(--destructive);
+}
+.tabbar-logout:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
 
 /* Home: the bill explanation on the left, charges and the save card on the right. */
 
@@ -671,6 +698,7 @@ button.wide { width: 100%; margin-top: 10px; }
     background: var(--card); border-right: 0; border-top: 1px solid var(--border);
   }
   .tabbar-brand { display: none; }
+  .tabbar-logout { display: none; }
   .tabbar a { flex-direction: column; justify-content: center; gap: 3px; min-height: 48px; padding: 0; border-radius: 0; font-size: 0.72rem; }
   .tabbar a:hover { background: none; }
   .tabbar a[aria-current="page"] { background: none; }

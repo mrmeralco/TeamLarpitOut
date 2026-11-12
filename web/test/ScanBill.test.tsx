@@ -123,4 +123,13 @@ describe("demo fallback", () => {
     await waitFor(() => expect(onLinked).toHaveBeenCalled());
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/households/link/confirm")).toBe(true);
   });
+
+  it("renders a Log out button when onLogout is provided and invokes it on click", () => {
+    const onLogout = vi.fn();
+    render(<ScanBill token="t" onLinked={onLinked} onExpired={() => {}} onLogout={onLogout} />);
+    const logoutBtn = screen.getByRole("button", { name: "Log out" });
+    expect(logoutBtn).toBeTruthy();
+    fireEvent.click(logoutBtn);
+    expect(onLogout).toHaveBeenCalledTimes(1);
+  });
 });

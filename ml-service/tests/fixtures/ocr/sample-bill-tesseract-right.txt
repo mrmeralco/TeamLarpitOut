@@ -1,0 +1,56 @@
+Billing Invoice
+
+No. 123456789123
+
+MANILA ELECTRIC COMPANY
+
+LOPEZ BLDG., ORTIGAS AVENUE, PASIG CITY
+
+VAT REG. TIN 000-101-528-00000
+
+Registered Name:
+
+Customer TIN: 271.386-699-099 MERALCO
+
+Page 1 of 2 baie
+
+Customer Account Number (CAN) Due Date
+1234567890 20 May 2026
+Please Pay
+P 2,866.90
+
+Bill Computation Summary
+
+Remaining Balance from previous bill 0.00
+(see other bills due for payment under What Remains Unpaid; does not
+include bills under review and installment)
+
+Charges for this billing period 2,866.90
+Generation 1,758.84
+Transmission 281.48
+System Loss 159.88
+Distribution (Meralco) 298.00
+Senior Citizen 0.02
+Government Taxes 262.14
+Universal Charges 64.32
+FiT-All (Renewable) 40.22
+GEA-AII (Renewable) 0.00
+Lifeline 2.00
+
+Total Amount Due ® 2,866.90
+
+. {
+|
+\ .
+a S- sa bill?
+\ y ‘ I Nandito kami para tumulong.
+| (~w) Mag-PM anytime sa
+in Facebook Messenger.
+Image crafted with N@OTE Sagem epee ROUTES
+Not based on a real persagm
+Please be informed that MERALCO may conduct a routine maintenance/inspection of our
+customer metering facilities within your area this quarter
+Customer Account No. (CAN) Please pay
+1234567890 ® 2,866.90
+(7) MERALCO
+=) customercare@meralco.com.ph © www.meralco.com.ph S 16211

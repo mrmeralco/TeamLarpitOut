@@ -530,6 +530,8 @@ export interface ChargeAnswer {
   source: "ai" | "template";
   answer: string;
   summary?: string | null;
+  /** Official explanation from Meralco's public bill guide, retrieved for this charge (empty if unavailable). */
+  sources?: { title: string; text: string; url: string }[];
 }
 
 export const chargeApi = {

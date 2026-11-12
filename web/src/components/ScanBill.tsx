@@ -19,8 +19,8 @@ const INFO = "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v4M12 16h.01";
  * 5 · Scan your latest bill, then 6 · Confirm scanned values. The CAN on the Bill links the
  * Household (no CAN screen); nothing is linked until "Yes, explain my bill".
  */
-export function ScanBill({ token, onLinked, onExpired, onBack }: {
-  token: string; onLinked: (householdSin: string) => void; onExpired: () => void; onBack?: () => void;
+export function ScanBill({ token, onLinked, onExpired, onBack, onLogout }: {
+  token: string; onLinked: (householdSin: string) => void; onExpired: () => void; onBack?: () => void; onLogout?: () => void;
 }) {
   const [scan, setScan] = useState<ReadScan | null>(null);
   const [typedCan, setTypedCan] = useState("");
@@ -82,7 +82,10 @@ export function ScanBill({ token, onLinked, onExpired, onBack }: {
   if (!scan) {
     return <section className="screen" aria-labelledby="scan-title">
       {fileInputs}
-      {onBack && <BackButton onClick={onBack} />}
+      {(onBack || onLogout) && <div className="screen-head-actions" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        {onBack ? <BackButton onClick={onBack} /> : <span />}
+        {onLogout && <button type="button" className="ghost" onClick={onLogout}>Log out</button>}
+      </div>}
       <div className="screen-intro">
         <h1 id="scan-title">Scan your latest Meralco bill</h1>
         <p className="lead">We read the Customer Account Number (CAN) on your bill to link your account and load 12 months of history. Make sure the CAN is visible.</p>

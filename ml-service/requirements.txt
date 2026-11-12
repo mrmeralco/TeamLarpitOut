@@ -1,0 +1,12 @@
+# Service
+fastapi==0.162.5
+uvicorn==0.54.0
+python-multipart==0.0.33
+pydantic==2.14.3
+# Local OCR: PaddleOCR models on ONNX Runtime (CPU, offline; models ship in the package)
+rapidocr==3.10.0
+onnxruntime==1.31.1
+pillow==13.0.0
+# Tests
+pytest==9.2.0
+httpx==0.28.1
