@@ -94,7 +94,10 @@ export class MissionPlanService {
     const byId = new Map(candidates.map((c) => [c.id, c]));
     const missions = stored.missions.map((m) => byId.get(m.id)).filter((c): c is Candidate => Boolean(c));
     const covered = planCoverage(missions);
-    const smart = await this.usagePlan.isSmartMeter(sin);
+    const [smart, pointsData] = await Promise.all([
+      this.usagePlan.isSmartMeter(sin),
+      this.usagePlan.getPoints(sin),
+    ]);
     // Points if every Mission is done, by the same rules as the bill (noise band, goal cap, climate);
     // each Mission shows its share of them.
     const climate = climateFor(period);
@@ -128,9 +131,11 @@ export class MissionPlanService {
       })),
       /** Points the whole plan is worth if every Mission is done. */
       rewardPoints: planPoints,
+      /** Total Points collected by this Household so far (balance in the Points ledger). */
+      pointsBalance: pointsData.balance,
       /** This period's climate and its Points multiplier (PAGASA ENSO advisories). */
       climate: { phase: climate.phase, label: climate.label, multiplier: climate.multiplier, source: climate.source },
-      ...(smart ? { daily: await this.daily(sin, goal, candidates, stored) } : {}),
+      ...(smart ? { daily: await this.daily(sin, goal, candidates, stored, pointsData.history) } : {}),
       points: smart
         ? `Points are counted every day from your smart meter: 1 point per ₱${PESOS_PER_POINT} saved below your usual use for that day's heat, after the normal ${Math.round(NOISE_BAND * 100)}% change. ${climateFor(manilaDate(this.clock.now()).slice(0, 7)).label}: ×${climateFor(manilaDate(this.clock.now()).slice(0, 7)).multiplier}. A day with a brownout earns none.`
         : `1 point per ₱${PESOS_PER_POINT} saved on your next bill. The first ${Math.round(NOISE_BAND * 100)}% is normal month-to-month change and doesn't count; savings past your ${GOAL_CUT}% goal count half. ${climate.label} this month: ×${climate.multiplier}. A month with a brownout earns no points.`,
@@ -142,7 +147,13 @@ export class MissionPlanService {
    * A smart meter home's Missions change every day (its points are counted daily): today's set with
    * per-day kWh, pesos and points, yesterday's result from the meter, and the streak of days with points.
    */
-  private async daily(sin: string, goal: Awaited<ReturnType<MissionPlanService["candidates"]>>["goal"], candidates: Candidate[], stored: UsagePlan) {
+  private async daily(
+    sin: string,
+    goal: Awaited<ReturnType<MissionPlanService["candidates"]>>["goal"],
+    candidates: Candidate[],
+    stored: UsagePlan,
+    history?: Awaited<ReturnType<UsagePlanService["getPoints"]>>["history"],
+  ) {
     const date = manilaDate(this.clock.now());
     const days = Math.max(1, goal.billingDays);
     const today = dailyMissions(candidates, date);
@@ -151,7 +162,8 @@ export class MissionPlanService {
     const todayPesos = today.reduce((s, m) => s + m.pesoValue / days, 0);
     const todayPoints = earnedPoints({ savedCentavos: todayPesos, baselineCentavos, multiplier: climate.multiplier }).points;
     // getPoints settles any complete days first, so yesterday's result is there.
-    const entries = (await this.usagePlan.getPoints(sin)).history.filter((e) => e.source === "meter_verified" && e.day);
+    const allEntries = history ?? (await this.usagePlan.getPoints(sin)).history;
+    const entries = allEntries.filter((e) => e.source === "meter_verified" && e.day);
     const byDay = new Map(entries.map((e) => [e.day!, e]));
     const yesterday = byDay.get(addDays(date, -1)) ?? null;
     let streak = 0;

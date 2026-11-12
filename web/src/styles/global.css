@@ -763,7 +763,16 @@ button.wide { width: 100%; margin-top: 10px; }
 /* ───────────────────────── Layout: desktop first, responsive down to phones ───────────────────────── */
 
 /* App shell: sidebar navigation on the left, content on the right. */
-.flow-screen { max-width: 480px; margin: 0 auto; padding: 32px 16px; }
+.flow-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
 .shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); grid-template-areas: "nav main"; min-height: 100vh; background: var(--background); transition: grid-template-columns 0.25s ease; }
 .shell.nav-collapsed { grid-template-columns: 84px minmax(0, 1fr); }
 .shell > main { grid-area: main; width: 100%; box-sizing: border-box; }
@@ -896,8 +905,9 @@ button.wide { width: 100%; margin-top: 10px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
-  animation: eelio-flight-x 2.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+  z-index: 4;
+  pointer-events: none;
+  animation: eelio-flight-x 2.4s linear both;
   will-change: transform;
 }
 .auth-mascot-y {
@@ -907,7 +917,7 @@ button.wide { width: 100%; margin-top: 10px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: eelio-flight-y 2.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: eelio-flight-y 2.4s linear both;
   will-change: transform;
 }
 .auth-mascot-float {
@@ -917,7 +927,7 @@ button.wide { width: 100%; margin-top: 10px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: eelio-idle-float 4.2s ease-in-out 2.95s infinite;
+  animation: eelio-idle-float 4.2s ease-in-out 2.4s infinite;
   will-change: transform;
 }
 .auth-mascot-glow {
@@ -929,12 +939,12 @@ button.wide { width: 100%; margin-top: 10px; }
   filter: blur(24px);
   pointer-events: none;
   animation:
-    eelio-glow-pulse 2.95s ease-out 0s 1 both,
-    eelio-idle-glow 4.2s ease-in-out 2.95s infinite;
+    eelio-glow-pulse 2.4s ease-out 0s 1 both,
+    eelio-idle-glow 4.2s ease-in-out 2.4s infinite;
 }
 .auth-mascot-trail {
   position: absolute;
-  left: 45%;
+  left: 52%;
   top: 50%;
   width: 195px;
   height: 64px;
@@ -944,7 +954,7 @@ button.wide { width: 100%; margin-top: 10px; }
   border-radius: 999px;
   pointer-events: none;
   opacity: 0;
-  animation: eelio-dash-trail 2.95s ease-out both;
+  animation: eelio-dash-trail 2.4s linear both;
 }
 .auth-mascot-stage {
   position: absolute;
@@ -967,18 +977,9 @@ button.wide { width: 100%; margin-top: 10px; }
   will-change: opacity;
 }
 
-/* Stage 1: 4-frame Peek sequence over top edge of form card (0% -> 24% of 2.95s) */
-.auth-mascot-stage.stage-peek {
-  animation: eelio-stage-peek 2.95s ease-in-out 0s 1 both;
-}
-.auth-mascot-frame.peek-frame-1 { animation: eelio-peek-f1 2.95s steps(1, end) 0s 1 both; }
-.auth-mascot-frame.peek-frame-2 { animation: eelio-peek-f2 2.95s steps(1, end) 0s 1 both; }
-.auth-mascot-frame.peek-frame-3 { animation: eelio-peek-f3 2.95s steps(1, end) 0s 1 both; }
-.auth-mascot-frame.peek-frame-4 { animation: eelio-peek-f4 2.95s steps(1, end) 0s 1 both; }
-
 /* Stage 2: 6-frame 18fps Undulating Swim Dash along the 3-arrow flight path (21% -> 83% of 2.95s) */
 .auth-mascot-stage.stage-swim {
-  animation: eelio-stage-swim 2.95s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 both;
+  animation: eelio-stage-swim 2.4s linear 0s 1 both;
 }
 .auth-mascot-frame.swim-frame-1 { animation: eelio-cycle-6 0.36s steps(1, end) 0.00s infinite; }
 .auth-mascot-frame.swim-frame-2 { animation: eelio-cycle-6 0.36s steps(1, end) -0.30s infinite; }
@@ -989,7 +990,7 @@ button.wide { width: 100%; margin-top: 10px; }
 
 /* Stage 3: 6-frame Seamless Fin-Waving + Breathing at destination (79% -> 100% + continuous loop) */
 .auth-mascot-stage.stage-wave {
-  animation: eelio-stage-wave 2.95s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 both;
+  animation: eelio-stage-wave 2.4s linear 0s 1 both;
 }
 .auth-mascot-frame.wave-frame-1 { animation: eelio-cycle-6 0.72s steps(1, end) 0.00s infinite; }
 .auth-mascot-frame.wave-frame-2 { animation: eelio-cycle-6 0.72s steps(1, end) -0.60s infinite; }
@@ -1017,7 +1018,7 @@ button.wide { width: 100%; margin-top: 10px; }
   letter-spacing: -0.035em;
   color: var(--foreground);
   line-height: 1.1;
-  animation: eelio-brand-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) 2.58s both;
+  animation: eelio-brand-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) 1.85s both;
 }
 .auth-aside-tagline {
   margin: 0;
@@ -1025,7 +1026,7 @@ button.wide { width: 100%; margin-top: 10px; }
   line-height: 1.55;
   color: var(--muted-foreground);
   max-width: 34ch;
-  animation: eelio-tagline-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) 2.74s both;
+  animation: eelio-tagline-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) 2s both;
 }
 
 @keyframes eelio-brand-reveal {
@@ -1050,127 +1051,86 @@ button.wide { width: 100%; margin-top: 10px; }
   }
 }
 
-/* Decoupled X and Y 3-Arrow Flight Spline (2.95s):
- *   Beat 0 (0% -> 22%): Eelio peeks out from behind the top edge of the form card (4-frame peek)
- *   Arrow 1 (22% -> 44%): Rises from top of form card (45vw, -36px) up-left to apex (28vw, -185px)
- *   Arrow 2 (44% -> 64%): Swoops down-left from apex (28vw, -185px) to center divider (22vw, 10px)
- *   Arrow 3 (64% -> 100%): Swims horizontally left from center divider (22vw, 10px) into (0, 0)
- */
+/* Entrance (2.4s): Eelio swims in from off-screen upper right, over the form card, dives down-left
+ * and glides level into place (0% -> 72%), then turns to face you and waves (72% -> 100%).
+ * X and Y are animated on separate elements with different easing, which bends the straight line into an arc:
+ * Y drops early and levels off while X keeps travelling, so the dive flattens into a glide. */
 @keyframes eelio-flight-x {
-  0%, 21% {
-    transform: translate3d(45vw, 0, 0);
-    animation-timing-function: cubic-bezier(0.32, 0.08, 0.52, 0.92);
+  0% {
+    transform: translate3d(58vw, 0, 0);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1);
   }
-  44% {
-    transform: translate3d(28vw, 0, 0);
-    animation-timing-function: cubic-bezier(0.35, 0.15, 0.55, 0.85);
+  70% {
+    transform: translate3d(-10px, 0, 0);
+    animation-timing-function: ease-in-out;
   }
-  64% {
-    transform: translate3d(22vw, 0, 0);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  88% {
-    transform: translate3d(-4px, 0, 0);
-    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-  100% {
+  82%, 100% {
     transform: translate3d(0, 0, 0);
   }
 }
 
 @keyframes eelio-flight-y {
   0% {
-    transform: translate3d(0, 18px, 0) scale(0.86);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    transform: translate3d(0, -62vh, 0) scale(0.8);
+    animation-timing-function: cubic-bezier(0.25, 0.6, 0.3, 1);
   }
-  7%, 21% {
-    /* Peeking over the top edge of the form card */
-    transform: translate3d(0, -36px, 0) scale(0.92);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  44% {
-    /* Smooth parabolic apex of Arrow 1 */
-    transform: translate3d(0, -185px, 0) scale(0.96);
-    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
-  }
-  64% {
-    /* Smooth valley at center vertical divider (tip of Arrow 2 / start of Arrow 3) */
-    transform: translate3d(0, 10px, 0) scale(0.99);
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  85% {
-    transform: translate3d(0, -3px, 0) scale(1.01);
+  58% {
+    transform: translate3d(0, 10px, 0) scale(1);
     animation-timing-function: ease-in-out;
   }
-  100% {
+  74% {
+    transform: translate3d(0, -4px, 0) scale(1);
+    animation-timing-function: ease-in-out;
+  }
+  86%, 100% {
     transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 /* Stage 1 (Peek): 4 progressive frames rising over the top edge of the form card */
-@keyframes eelio-stage-peek {
-  0% {
-    opacity: 0;
-    transform: translateY(14px) scale(0.94);
-  }
-  3%, 20% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  24%, 100% {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.96);
-  }
-}
 
-@keyframes eelio-peek-f1 { 0% { opacity: 1; } 6%, 100%  { opacity: 0; } }
-@keyframes eelio-peek-f2 { 0%, 6%  { opacity: 0; } 6.01%, 12% { opacity: 1; } 12.01%, 100% { opacity: 0; } }
-@keyframes eelio-peek-f3 { 0%, 12% { opacity: 0; } 12.01%, 17% { opacity: 1; } 17.01%, 100% { opacity: 0; } }
-@keyframes eelio-peek-f4 { 0%, 17% { opacity: 0; } 17.01%, 25% { opacity: 1; } 25.01%, 100% { opacity: 0; } }
+
 
 /* Stage 2 (Swim): Smoothly banks along Arrow 1 (+24deg up-left), Arrow 2 (-34deg down-left), and Arrow 3 (0deg straight left) */
 @keyframes eelio-stage-swim {
-  0%, 19% {
+  /* Eelio faces left, so a negative angle points the head down-left. Banks from a dive to level. */
+  0% {
     opacity: 0;
-    transform: rotate(22deg) scale(0.92);
+    transform: rotate(-34deg) scale(0.9);
   }
-  23%, 39% {
-    /* Climbing up-left along Arrow 1 */
+  5% {
     opacity: 1;
-    transform: rotate(24deg) scale(1);
+    transform: rotate(-34deg) scale(1);
   }
-  45% {
-    /* Smoothly banking at the top apex */
+  30% {
     opacity: 1;
-    transform: rotate(-10deg) scale(1);
+    transform: rotate(-22deg) scale(1.02, 0.98);
   }
-  50%, 60% {
-    /* Diving down-left along Arrow 2 toward the center divider */
+  55% {
     opacity: 1;
-    transform: rotate(-34deg) scale(1.02, 0.98);
+    transform: rotate(-4deg) scale(1.03, 0.97);
   }
-  66%, 77% {
-    /* Swimming straight horizontal-left along Arrow 3 */
+  68% {
     opacity: 1;
-    transform: rotate(0deg) scale(1.03, 0.97);
+    transform: rotate(3deg) scale(1);
   }
-  82%, 100% {
+  76%, 100% {
     opacity: 0;
-    transform: rotate(6deg) scale(0.94);
+    transform: rotate(0deg) scale(0.92);
   }
 }
 
 /* Stage 3 (Wave): Smooth arrival settle into continuous 6-frame waving & breathing */
 @keyframes eelio-stage-wave {
-  0%, 78% {
+  0%, 70% {
     opacity: 0;
-    transform: scale(0.94) translateY(4px);
+    transform: scale(0.9) translateY(6px);
   }
-  84% {
+  78% {
     opacity: 1;
-    transform: scale(1.02) translateY(-2px);
+    transform: scale(1.04) translateY(-3px);
   }
-  90%, 100% {
+  88%, 100% {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
@@ -1197,15 +1157,15 @@ button.wide { width: 100%; margin-top: 10px; }
 }
 
 @keyframes eelio-dash-trail {
-  0%, 58% {
+  0%, 4% {
     opacity: 0;
     transform: translateY(-50%) scaleX(0.3);
   }
-  63%, 76% {
+  12%, 55% {
     opacity: 0.9;
     transform: translateY(-50%) scaleX(1.15);
   }
-  82%, 100% {
+  70%, 100% {
     opacity: 0;
     transform: translateY(-50%) scaleX(0.2);
   }
@@ -1238,7 +1198,6 @@ button.wide { width: 100%; margin-top: 10px; }
   .auth-aside-tagline {
     animation: none !important;
   }
-  .auth-mascot-stage.stage-peek,
   .auth-mascot-stage.stage-swim,
   .auth-mascot-frame.wave-frame-2,
   .auth-mascot-frame.wave-frame-3,
@@ -1466,7 +1425,284 @@ button.wide { width: 100%; margin-top: 10px; }
 
 /* ───────────────────────── Home: gamified dashboard with Eelio ───────────────────────── */
 .dash { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
-.dash.loading { display: flex; min-height: 320px; align-items: center; justify-content: center; }
+.dash.loading,
+.shell .dash.loading,
+.shell.nav-collapsed .dash.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(100dvh - 96px);
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* ───────────────────────── Eelio Module Loader ───────────────────────── */
+.eelio-loader {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  justify-self: center;
+  text-align: center;
+  width: 100%;
+  max-width: 440px;
+  margin: auto;
+  padding: 32px 28px 30px;
+  border-radius: 26px;
+  background: linear-gradient(155deg, #FFFDF9 0%, #FDEEE3 100%);
+  border: 1px solid rgba(194, 80, 12, 0.16);
+  box-shadow: 0 18px 40px rgba(31, 27, 22, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  animation: eelio-loader-enter 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.eelio-loader.compact {
+  max-width: 420px;
+  margin: 20px auto;
+  padding: 22px 20px 20px;
+  border-radius: 20px;
+}
+.eelio-loader-stage {
+  position: relative;
+  width: 170px;
+  height: 145px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.eelio-loader.compact .eelio-loader-stage {
+  width: 136px;
+  height: 114px;
+  margin-bottom: 4px;
+}
+.eelio-loader-glow {
+  position: absolute;
+  width: 165px;
+  height: 165px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.38) 0%, rgba(194, 80, 12, 0.14) 50%, transparent 72%);
+  filter: blur(18px);
+  pointer-events: none;
+  animation: eelio-idle-glow 2.4s ease-in-out infinite;
+}
+.eelio-loader-orbit {
+  position: absolute;
+  width: 156px;
+  height: 156px;
+  pointer-events: none;
+  animation: eelio-orbit-spin 8s linear infinite;
+}
+.eelio-loader.compact .eelio-loader-orbit {
+  width: 124px;
+  height: 124px;
+}
+.eelio-orbit-ring {
+  stroke: rgba(245, 158, 11, 0.38);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-dasharray: 28 42 14 36;
+}
+.eelio-orbit-ring.inner {
+  stroke: rgba(15, 110, 104, 0.28);
+  stroke-width: 1.5;
+  stroke-dasharray: 18 34 10 28;
+  transform-origin: 90px 90px;
+  animation: eelio-orbit-spin-rev 5.5s linear infinite;
+}
+.eelio-loader-trail {
+  position: absolute;
+  left: 42%;
+  top: 52%;
+  width: 120px;
+  height: 44px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.5) 0%, rgba(194, 80, 12, 0.16) 55%, transparent 100%);
+  filter: blur(10px);
+  border-radius: 999px;
+  pointer-events: none;
+  animation: eelio-loader-trail-pulse 1.2s ease-in-out infinite;
+}
+.eelio-loader-bob {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  animation: eelio-loader-swim-bob 1.5s ease-in-out infinite;
+  will-change: transform;
+}
+.eelio-loader-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 18px rgba(194, 80, 12, 0.24));
+  pointer-events: none;
+  user-select: none;
+  will-change: opacity;
+}
+.eelio-loader-frame.swim-frame-1 { animation: eelio-cycle-6 0.36s steps(1, end) 0.00s infinite; }
+.eelio-loader-frame.swim-frame-2 { animation: eelio-cycle-6 0.36s steps(1, end) -0.30s infinite; }
+.eelio-loader-frame.swim-frame-3 { animation: eelio-cycle-6 0.36s steps(1, end) -0.24s infinite; }
+.eelio-loader-frame.swim-frame-4 { animation: eelio-cycle-6 0.36s steps(1, end) -0.18s infinite; }
+.eelio-loader-frame.swim-frame-5 { animation: eelio-cycle-6 0.36s steps(1, end) -0.12s infinite; }
+.eelio-loader-frame.swim-frame-6 { animation: eelio-cycle-6 0.36s steps(1, end) -0.06s infinite; }
+
+.eelio-loader-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+.eelio-loader-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(194, 80, 12, 0.12);
+  border: 1px solid rgba(194, 80, 12, 0.22);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.eelio-loader-icon {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+.eelio-loader-title {
+  margin: 2px 0 0;
+  font-size: 1.12rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+.eelio-loader.compact .eelio-loader-title {
+  font-size: 1rem;
+}
+.eelio-loader-sub {
+  margin: 0;
+  min-height: 2.6em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+  max-width: 34ch;
+  animation: eelio-step-fade 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.eelio-loader-progress {
+  width: 100%;
+  max-width: 240px;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.eelio-loader-meter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.eelio-loader-step-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.eelio-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(194, 80, 12, 0.24);
+  transition: width 0.25s ease, background-color 0.25s ease;
+}
+.eelio-step-dot.on {
+  width: 18px;
+  background: var(--primary);
+}
+.eelio-loader-pct {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+.eelio-loader-meter {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(194, 80, 12, 0.14);
+  overflow: hidden;
+}
+.eelio-loader-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #F59E0B 0%, #FCD34D 50%, #C2500C 100%);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.65);
+  transition: width 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes eelio-loader-enter {
+  0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes eelio-step-fade {
+  0% { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes eelio-orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes eelio-orbit-spin-rev {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+@keyframes eelio-loader-swim-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+@keyframes eelio-loader-trail-pulse {
+  0%, 100% { opacity: 0.55; transform: translateY(-50%) scaleX(0.85); }
+  50% { opacity: 0.95; transform: translateY(-50%) scaleX(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eelio-loader,
+  .eelio-loader-glow,
+  .eelio-loader-orbit,
+  .eelio-orbit-ring.inner,
+  .eelio-loader-trail,
+  .eelio-loader-bob,
+  .eelio-loader-frame,
+  .eelio-loader-sub,
+  .eelio-loader-fill {
+    animation: none !important;
+    transition: none !important;
+  }
+  .eelio-loader-frame.swim-frame-2,
+  .eelio-loader-frame.swim-frame-3,
+  .eelio-loader-frame.swim-frame-4,
+  .eelio-loader-frame.swim-frame-5,
+  .eelio-loader-frame.swim-frame-6 {
+    opacity: 0 !important;
+  }
+  .eelio-loader-frame.swim-frame-1 {
+    opacity: 1 !important;
+  }
+}
 .dash-main, .dash-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .dash-side { position: sticky; top: 24px; }
 .dash-side h3, .usage-head h3 { margin: 0; font-size: 1.1rem; letter-spacing: -0.01em; }
@@ -1768,6 +2004,13 @@ button.wide { width: 100%; margin-top: 10px; }
 /* Phones and narrow tablets: one column; the bill's charges come right after the skills. */
 @media (max-width: 900px) {
   .dash { display: flex; flex-direction: column; align-items: stretch; gap: 18px; }
+  .dash.loading,
+  .shell .dash.loading,
+  .shell.nav-collapsed .dash.loading {
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100dvh - 128px);
+  }
   .dash-main, .dash-side, .dash-wide, .home-dash .dash-wide { display: contents; }
   .home-dash .dash-side { margin-top: 0; }
   .dash .hero { order: 1; }
@@ -2160,9 +2403,11 @@ button.wide { width: 100%; margin-top: 10px; }
 .mission-dash .dash-side { position: static; }
 .mission-dash .dash-wide { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 @media (min-width: 901px) {
-  .shell .dash.mission-dash { grid-template-columns: minmax(400px, 470px) minmax(0, 1fr); }
-  .mission-dash .hero { margin-top: 0; min-height: 0; padding: 20px 22px; overflow: hidden; }
-  .mission-dash .hero-copy { max-width: 64%; gap: 8px; }
+  .shell .dash.mission-dash,
+  .shell.nav-collapsed .dash.mission-dash { grid-template-columns: minmax(400px, 470px) minmax(0, 1fr); }
+  .mission-dash .hero { margin-top: 0; min-height: 0; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding: 20px 22px; overflow: hidden; }
+  .mission-dash .hero-copy { flex: 1; max-width: 64%; gap: 8px; }
+  .mission-dash .hero-play { margin-top: auto; }
   .mission-dash .hero h2 { font-size: 1.15rem; }
   .mission-dash .hero-amount { font-size: 1.9rem; }
   .mission-dash .hero-title { min-width: 0; padding: 8px 10px; }

@@ -4,6 +4,7 @@ import {
   type ApplianceBreakdown, type HomeChargeLine, type Household, type HomeSummary, type MissionPlan, type SetupStatus, type UsageMonth,
 } from "../api/client";
 import { peso } from "../lib/format";
+import { EelioLoader } from "./EelioLoader";
 import { greeting, HomeWrapped, month, plainPeso } from "./HomeWrapped";
 import { SmartMeterUsage } from "./SmartMeterUsage";
 
@@ -269,7 +270,20 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   }, [token, household.sin, appliancesReady]);
 
   if (error) return <section className="card home"><p className="error" role="alert">{error}</p></section>;
-  if (!data) return <section className="dash loading" aria-busy="true"><p className="muted">Eelio is reading your bill…</p></section>;
+  if (!data) {
+    const loadedCount = (usage ? 1 : 0) + (plan ? 1 : 0) + (appliances ? 1 : 0);
+    return (
+      <section className="dash loading" aria-busy="true">
+        <EelioLoader
+          variant="bill"
+          badge="Know Your Bill"
+          title="Eelio is reading your bill…"
+          progress={32 + loadedCount * 22}
+          activeStep={Math.min(2, loadedCount)}
+        />
+      </section>
+    );
+  }
 
   const change = data.bakitGanito;
   const mood = moodFor(data, setup ?? null);
