@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
-import type { BillImage, RawBillReading, VisionProvider } from "./vision.js";
-import { VisionUnavailableError } from "./vision.js";
+import type { BillImage, RawBillReading, VisionProvider } from "./vision-provider.interface.js";
+import { VisionUnavailableError } from "./vision-provider.interface.js";
 
 const PROMPT = `You are reading a photo of a Meralco (Philippines) electricity bill.
 Extract only what is printed. Never guess or compute a value that is not printed; use null instead.

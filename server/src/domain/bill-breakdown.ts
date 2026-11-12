@@ -1,5 +1,5 @@
 import type { ChargeLine } from "./bill.js";
-import { classifyLine, type LineKind, type Payee } from "./chargeCatalog.js";
+import { classifyLine, type LineKind, type Payee } from "./charge-catalog.js";
 
 /** "Ano'ng laman ng bill ko?": the household's own Bill lines, redrawn and explained. */
 
@@ -13,7 +13,7 @@ export interface LineChange {
   previous: number | null;
 }
 
-export interface LamanRow {
+export interface BillBreakdownRow {
   label: string;
   amount: number;
   known: boolean;
@@ -24,11 +24,11 @@ export interface LamanRow {
   change: LineChange;
 }
 
-export interface LamanGroup {
+export interface BillBreakdownGroup {
   key: GroupKey;
   title: string;
   total: number;
-  rows: LamanRow[];
+  rows: BillBreakdownRow[];
 }
 
 const GROUPS: { key: GroupKey; title: string }[] = [
@@ -48,14 +48,14 @@ function identity(label: string): string {
   return c.known ? `${c.code}:${c.kind ?? "?"}` : `label:${norm(label)}`;
 }
 
-export function laman(now: ChargeLine[], before: ChargeLine[] = []) {
+export function buildBillBreakdown(now: ChargeLine[], before: ChargeLine[] = []) {
   const previous = new Map<string, number>();
   for (const l of before) {
     const id = identity(l.label);
     previous.set(id, (previous.get(id) ?? 0) + toCentavos(l.amount));
   }
 
-  const rows: LamanRow[] = now.map((line) => {
+  const rows: BillBreakdownRow[] = now.map((line) => {
     const c = classifyLine(line.label);
     const amount = toCentavos(line.amount);
     const prev = previous.get(identity(line.label));
@@ -68,8 +68,8 @@ export function laman(now: ChargeLine[], before: ChargeLine[] = []) {
     return { label: line.label, amount, ...c, change };
   });
 
-  const groupOf = (r: LamanRow): GroupKey => (!r.known ? "unknown" : (r.kind ?? "unclear"));
-  const groups: LamanGroup[] = GROUPS.map((g) => {
+  const groupOf = (r: BillBreakdownRow): GroupKey => (!r.known ? "unknown" : (r.kind ?? "unclear"));
+  const groups: BillBreakdownGroup[] = GROUPS.map((g) => {
     const inGroup = rows.filter((r) => groupOf(r) === g.key);
     return { ...g, total: inGroup.reduce((s, r) => s + r.amount, 0), rows: inGroup };
   }).filter((g) => g.rows.length > 0);

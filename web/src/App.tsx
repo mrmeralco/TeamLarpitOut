@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { api, lamanApi, scanBill, type BakitGanito, type BillInput, type ChargeLine, type DraftBill, type ExtraLineItem, type Laman as LamanData, type ScanOutcome } from "./api";
-import { peso } from "./format";
-import { Laman } from "./Laman";
+import {
+  api,
+  fetchBillBreakdown,
+  scanBill,
+  type BakitGanito,
+  type BillBreakdown as BillBreakdownData,
+  type BillInput,
+  type ChargeLine,
+  type DraftBill,
+  type ExtraLineItem,
+  type ScanOutcome,
+} from "./api/client";
+import { peso } from "./lib/format";
+import { BillBreakdown } from "./components/BillBreakdown";
 
 const monthLabel = (period: string) =>
   /^\d{4}-\d{2}$/.test(period)
@@ -316,7 +327,7 @@ export function App() {
   const [scan, setScan] = useState<ScanState>(noScan);
   const [scanning, setScanning] = useState<Slot | null>(null);
   const [result, setResult] = useState<BakitGanito | null>(null);
-  const [laman, setLaman] = useState<LamanData | null>(null);
+  const [breakdown, setBreakdown] = useState<BillBreakdownData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -377,13 +388,13 @@ export function App() {
     try {
       const [r, l] = await Promise.all([
         api.bakitGanito(b, n),
-        n.chargeLines.length ? lamanApi(n, b) : Promise.resolve(null),
+        n.chargeLines.length ? fetchBillBreakdown(n, b) : Promise.resolve(null),
       ]);
       setResult(r);
-      setLaman(l);
+      setBreakdown(l);
     } catch (err) {
       setResult(null);
-      setLaman(null);
+      setBreakdown(null);
       setError((err as Error).message);
     } finally {
       setBusy(false);
@@ -465,7 +476,7 @@ export function App() {
       </form>
       {error && <p className="error">{error}</p>}
       {result && <Result r={result} />}
-      {result && <Laman data={laman} missingLines={!n?.chargeLines.length} />}
+      {result && <BillBreakdown data={breakdown} missingLines={!n?.chargeLines.length} />}
     </main>
   );
 }

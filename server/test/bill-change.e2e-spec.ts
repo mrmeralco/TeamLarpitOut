@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import table from "../src/data/rate-schedules.json" with { type: "json" };
-import type { RateSchedule } from "../src/domain/rateSchedule.js";
-import { bill, harness, schedule } from "./harness.js";
+import type { RateSchedule } from "../src/domain/rate-schedule.js";
+import { bill, harness, schedule } from "./utils/test-harness.js";
 
 const sum = (effects: { amount: number }[]) => effects.reduce((s, e) => s + e.amount, 0);
 const amount = (body: any, key: string) => body.effects.find((e: any) => e.key === key).amount;

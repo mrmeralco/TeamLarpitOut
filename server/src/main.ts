@@ -1,7 +1,8 @@
 import "reflect-metadata";
 import { existsSync } from "node:fs";
 import { NestFactory } from "@nestjs/core";
-import { AppModule, configureApp } from "./app.module.js";
+import { AppModule } from "./app.module.js";
+import { configureApp } from "./app.setup.js";
 
 // GEMINI_API_KEY etc. from server/.env (see .env.example). Providers read env at startup.
 if (existsSync(".env")) process.loadEnvFile(".env");
