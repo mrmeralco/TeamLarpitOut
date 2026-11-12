@@ -376,6 +376,23 @@ export interface AirconProposalResult {
   fallback?: "routine";
 }
 
+export type AirconPatternInput = Pick<ApplianceInput, "quantity" | "answers" | "energyLabel">;
+interface AirconPatternEvidence {
+  timeZone: "Asia/Manila";
+  range: ReadingRange | null;
+  expectedKw: number;
+  ratingSource: "label" | "answers" | "default";
+  coverage: { completeNights: number; matchingNights: number; heatMatchedNights: number };
+  provenance: {
+    readings: { kind: "synthetic"; note: string };
+    weather: { kind: "synthetic" | "observed"; note: string } | null;
+  };
+}
+export type AirconPatternResult = AirconPatternEvidence & ({
+  status: "proposal"; canPropose: true; routine: TimeRange; hours: number; stepKw: number; prompt: string;
+  heat: { temperatureSpanC: number; kwPerDegreeC: number; correlation: number };
+} | { status: "fallback"; canPropose: false; fallback: "routine"; reason: string });
+
 /** Create a standard daily time range yielding the given hours (starting at 22:00). */
 export function rangeFromHours(hours: number): TimeRange {
   const clamped = Math.max(1, Math.min(23, Math.round(hours)));
@@ -394,6 +411,12 @@ const authed = (token: string, signal?: AbortSignal): RequestInit => ({
 const householdPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/appliances`;
 
 export const appliancesApi = {
+  airconPattern: (token: string, sin: string, input: AirconPatternInput, signal?: AbortSignal) =>
+    fetch(`${householdPath(sin)}/aircon-pattern-proposal`, {
+      ...authed(token, signal), method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(input),
+    }).then((r) => json<AirconPatternResult>(r)),
   scanLabel: (token: string, sin: string, type: "aircon" | "refrigerator", photo: File, signal?: AbortSignal) => {
     const body = new FormData();
     body.append("type", type);
@@ -695,7 +718,14 @@ export interface SetupStatus {
   household: { size: number } | null;
   routine: { home: HomePattern; aircon: AirconPattern | null } | null;
   hasAircon: boolean;
+  grid?: Record<string, number> | null;
+  gridCatalog?: GridTile[];
   welcomePoints: { points: number; granted: boolean; locked: boolean };
+}
+export interface GridTile { type: string; label: string; kwh: number; unit: string; tag: "Typical value" | "Estimated from photo" }
+export interface AirconCheck {
+  source: "bills" | "smartMeter"; available: boolean; chosenHours: number;
+  estimatedHours?: number; agrees?: boolean; message?: string; reason?: string;
 }
 
 const setupPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/setup`;
@@ -706,8 +736,58 @@ export const setupApi = {
     fetch(`${setupPath(sin)}/household`, {
       method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ size }),
     }).then((r) => json<SetupStatus>(r)),
+  grid: (token: string, sin: string, counts: Record<string, number>) =>
+    fetch(`${setupPath(sin)}/appliances`, {
+      method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ counts }),
+    }).then((r) => json<SetupStatus>(r)),
+  airconPhoto: (token: string, sin: string, photo: File) => {
+    const form = new FormData();
+    form.append("photo", photo);
+    return fetch(`${setupPath(sin)}/aircon-photo`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form })
+      .then((r) => json<{ answers: Record<string, string>; kwhPerHour: number; tag: "Estimated from photo" }>(r));
+  },
+  airconCheck: (token: string, sin: string, aircon: AirconPattern, signal?: AbortSignal) =>
+    fetch(`${setupPath(sin)}/aircon-check?aircon=${aircon}`, authed(token, signal)).then((r) => json<AirconCheck>(r)),
   routine: (token: string, sin: string, home: HomePattern, aircon: AirconPattern | null) =>
     fetch(`${setupPath(sin)}/routine`, {
       method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ home, aircon }),
     }).then((r) => json<SetupStatus>(r)),
+};
+
+export interface PlanMission {
+  id: string;
+  title: string;
+  why: string;
+  how: string[];
+  appliance: string;
+  kwhSaved: number;
+  /** Centavos. */
+  pesoValue: number;
+  /** Percent of the Baseline (the goal is 5). */
+  percent: number;
+  /** Share of the 5% goal. */
+  share: number;
+  effort: "Easy" | "Medium";
+  basis: "physics" | "assumption";
+  assumptions: { key: string; label: string; value: number }[];
+}
+export interface MissionPlan {
+  period: string;
+  goal: { cut: number; kwh: number; pesos: number; baselineKwh: number; targetKwh: number; targetPesos: number };
+  covered: number;
+  coveredPercent: number;
+  source: "ai" | "fallback";
+  missions: PlanMission[];
+  points: string;
+  changed?: boolean;
+  swapped?: { out: string; in: string };
+}
+
+const missionPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/missions`;
+export const missionPlanApi = {
+  get: (token: string, sin: string, signal?: AbortSignal) => fetch(`${missionPath(sin)}/plan`, authed(token, signal)).then((r) => json<MissionPlan>(r)),
+  shuffle: (token: string, sin: string) =>
+    fetch(`${missionPath(sin)}/plan/shuffle`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then((r) => json<MissionPlan>(r)),
+  swap: (token: string, sin: string, id: string) =>
+    fetch(`${missionPath(sin)}/${encodeURIComponent(id)}/swap`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then((r) => json<MissionPlan>(r)),
 };

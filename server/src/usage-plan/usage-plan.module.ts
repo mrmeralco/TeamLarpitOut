@@ -12,12 +12,14 @@ import { InMemoryMidMonthReadingRepository } from "./in-memory-mid-month-reading
 import { InMemoryUsagePlanRepository } from "./in-memory-usage-plan.repository.js";
 import { UsagePlanController } from "./usage-plan.controller.js";
 import { UsagePlanService } from "./usage-plan.service.js";
+import { MissionPlanService } from "./mission-plan.service.js";
 
 @Module({
   imports: [HouseholdsModule, BillsModule, RateSchedulesModule, WeatherModule, AppliancesModule, CoachModule, PointsModule, SetupModule],
   controllers: [UsagePlanController],
   providers: [
     UsagePlanService,
+    MissionPlanService,
     { provide: USAGE_PLAN_REPOSITORY, useFactory: () => new InMemoryUsagePlanRepository() },
     { provide: MID_MONTH_READING_REPOSITORY, useFactory: () => new InMemoryMidMonthReadingRepository() },
   ],

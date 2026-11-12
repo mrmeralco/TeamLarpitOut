@@ -16,7 +16,9 @@ export type ApplianceType =
   | "lights"
   | "washing_machine"
   | "flat_iron"
-  | "rice_cooker";
+  | "rice_cooker"
+  | "computer"
+  | "other";
 
 /** How hours of use are asked: never as hours, always as a routine. */
 export type RoutineKind = "alwaysOn" | "timeRanges" | "usesPerWeek";
@@ -183,6 +185,24 @@ export const APPLIANCE_CATALOG: ApplianceDefinition[] = [
     questions: [],
     rating: () => null,
     defaultRating: 0.35,
+  },
+  {
+    type: "computer",
+    label: "Computer",
+    routine: "timeRanges",
+    questions: [
+      { key: "kind", label: "Anong klase?", options: [{ value: "laptop", label: "Laptop" }, { value: "desktop", label: "Desktop" }] },
+    ],
+    rating: ({ kind }) => pick(kind!, { laptop: 0.05, desktop: 0.15 }),
+    defaultRating: 0.1,
+  },
+  {
+    type: "other",
+    label: "Iba pa",
+    routine: "timeRanges",
+    questions: [],
+    rating: () => null,
+    defaultRating: 0.05,
   },
 ];
 

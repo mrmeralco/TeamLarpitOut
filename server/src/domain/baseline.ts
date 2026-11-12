@@ -4,10 +4,12 @@
  * Baseline: the kWh the household would be expected to use next billing
  * period, from the latest Bill's kWh per day adjusted for weather (Heat
  * Sensitivity × change in cooling degree days) and billing days.
- * Target: the Baseline reduced by a cut the household chooses.
+ * Target: the Baseline reduced by 5% (ADR-0007).
  */
 
-export const TARGET_CUTS = [5, 10, 15] as const;
+/** The goal is fixed: use 5% less than the Baseline (ADR-0007). 10 / 15% can return later as a setting. */
+export const TARGET_CUTS = [5] as const;
+export const GOAL_CUT = 5;
 export type TargetCut = (typeof TARGET_CUTS)[number];
 
 export interface BaselineInput {
