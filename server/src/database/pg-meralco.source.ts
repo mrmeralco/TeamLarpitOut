@@ -4,7 +4,11 @@ import { toBill, type MeralcoBillRecord, type MeralcoChargeLine, type MeralcoPay
 import type { Bill } from "../domain/bill.js";
 import type { Sql } from "./database.module.js";
 
-type AccountRow = { can: string; sin: string; area: string; meter_type: MeralcoAccount["meter_type"] };
+type AccountRow = { can: string; sin: string; area: string; meter_type: MeralcoAccount["meter_type"]; demo: boolean };
+
+const toAccount = (row: AccountRow): MeralcoAccount => ({
+  can: row.can, sin: row.sin, area: row.area, meter_type: row.meter_type, ...(row.demo ? { demo: true as const } : {}),
+});
 
 /**
  * The mock Meralco system in Supabase's `meralco` schema: CAN lookup and each Household's Bills.
@@ -21,13 +25,34 @@ export class PgMeralcoSource implements BillSource, MeralcoAccountSource {
   constructor(private readonly sql: Sql, private readonly ttlMs = 5 * 60_000, private readonly now = () => Date.now()) {}
 
   async findByCan(can: string): Promise<MeralcoAccount | null> {
-    const [row] = await this.sql<AccountRow[]>`select can, sin, area, meter_type from meralco.accounts where can = ${can}`;
-    return row ? { can: row.can, sin: row.sin, area: row.area, meter_type: row.meter_type } : null;
+    const [row] = await this.sql<AccountRow[]>`select can, sin, area, meter_type, demo from meralco.accounts where can = ${can}`;
+    return row ? toAccount(row) : null;
   }
 
   async household(sin: string): Promise<MeralcoAccount | null> {
-    const [row] = await this.sql<AccountRow[]>`select can, sin, area, meter_type from meralco.accounts where sin = ${sin}`;
-    return row ? { can: row.can, sin: row.sin, area: row.area, meter_type: row.meter_type } : null;
+    const [row] = await this.sql<AccountRow[]>`select can, sin, area, meter_type, demo from meralco.accounts where sin = ${sin}`;
+    return row ? toAccount(row) : null;
+  }
+
+  /**
+   * Demo mode only: the Household made for a scanned Bill whose CAN is not in the mock data.
+   * An existing account with this CAN or SIN is kept, as in the in-memory mock.
+   */
+  async addDemo(account: MeralcoAccount): Promise<void> {
+    await this.sql`
+      insert into meralco.accounts (can, sin, holder_name, area, meter_type, demo)
+      values (${account.can}, ${account.sin}, 'Demo Household (scanned Bill)', ${account.area}, ${account.meter_type}, true)
+      on conflict do nothing`;
+  }
+
+  /** Demo mode only: stores a demo Household's Bill History (re-confirming a newer scan replaces it). */
+  async setBills(sin: string, bills: Bill[]): Promise<void> {
+    await this.sql`
+      insert into meralco.demo_histories (sin, bills, updated_at)
+      select ${sin}, ${this.sql.json(bills as never)}, now()
+      where exists (select 1 from meralco.accounts where sin = ${sin} and demo)
+      on conflict (sin) do update set bills = excluded.bills, updated_at = excluded.updated_at`;
+    this.cache.delete(sin);
   }
 
   bills(sin: string): Promise<Bill[]> {
@@ -40,7 +65,7 @@ export class PgMeralcoSource implements BillSource, MeralcoAccountSource {
   }
 
   private async load(sin: string): Promise<Bill[]> {
-    const [accounts, rows, paymentRows] = await Promise.all([
+    const [accounts, rows, paymentRows, demoRows] = await Promise.all([
       this.sql<{ lifeline_eligible: boolean }[]>`select lifeline_eligible from meralco.accounts where sin = ${sin}`,
       this.sql`
       select b.period, b.period_start::text, b.period_end::text, b.billing_days, b.bill_date::text, b.due_date::text,
@@ -56,9 +81,12 @@ export class PgMeralcoSource implements BillSource, MeralcoAccountSource {
       from meralco.bills b where b.sin = ${sin} order by b.period`,
       this.sql<{ for_period: string; posted_on: string; channel: string | null; amount: string }[]>`
       select for_period, posted_on::text, channel, amount_centavos::text as amount from meralco.payments where sin = ${sin} order by posted_on`,
+      this.sql<{ bills: Bill[] }[]>`select bills from meralco.demo_histories where sin = ${sin}`,
     ]);
     const account = accounts[0];
     if (!account) return [];
+    const demo = demoRows[0];
+    if (demo) return [...demo.bills].sort((a, b) => a.period.localeCompare(b.period));
     const payments = paymentRows.map((p): MeralcoPayment => ({ forPeriod: p.for_period, postedOn: p.posted_on, channel: p.channel, amount: Number(p.amount) }));
     return rows.map((r) => toBill(toRecord(r), payments, account.lifeline_eligible));
   }
