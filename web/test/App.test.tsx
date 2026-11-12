@@ -111,6 +111,92 @@ beforeEach(() => {
         summary: "All of Meralco's figures checked match.",
       });
     }
+    if (input === "/api/bills/guest/simulate") {
+      return response({
+        status: "read",
+        now: {
+          period: "2026-10",
+          kwh: 240,
+          billingDays: 31,
+          dueDate: "2026-11-20",
+          chargeLines: [
+            { label: "Generation Charge", amount: 1618.32 },
+            { label: "Distribution Charge", amount: 328.99 },
+          ],
+        },
+        before: null,
+        estimated: [],
+        missing: [],
+        serviceIdMasked: "••••••7890",
+        canMasked: "39•• ••• 482",
+        needsConfirmation: true,
+      });
+    }
+    if (input === "/api/bills/guest/explain") {
+      return response({
+        currency: "PHP-centavos",
+        bill: { period: "2026-10", kwh: 240, billingDays: 31, dueDate: "2026-11-20", amountDue: 194731 },
+        chargeLines: {
+          featured: [
+            {
+              id: "generation",
+              label: "Generation",
+              amount: 161832,
+              previous: null,
+              change: null,
+              kind: "perKwh",
+              payee: { type: "passThrough", name: "Power plants (generation companies)" },
+              goesTo: "Pass-through",
+              printed: ["Generation Charge"],
+              what: "The price of the electricity itself, bought by Meralco from power plants. The biggest part of the bill.",
+            },
+            {
+              id: "distribution",
+              label: "Distribution",
+              amount: 32899,
+              previous: null,
+              change: null,
+              kind: "perKwh",
+              payee: { type: "meralco", name: "Meralco (this is the part Meralco keeps)" },
+              goesTo: "Meralco",
+              printed: ["Distribution Charge"],
+              what: "Paid to Meralco for running and maintaining the lines and poles to your home.",
+            },
+          ],
+          all: [
+            {
+              id: "generation",
+              label: "Generation",
+              amount: 161832,
+              previous: null,
+              change: null,
+              kind: "perKwh",
+              payee: { type: "passThrough", name: "Power plants (generation companies)" },
+              goesTo: "Pass-through",
+              printed: ["Generation Charge"],
+              what: "The price of the electricity itself, bought by Meralco from power plants. The biggest part of the bill.",
+            },
+            {
+              id: "distribution",
+              label: "Distribution",
+              amount: 32899,
+              previous: null,
+              change: null,
+              kind: "perKwh",
+              payee: { type: "meralco", name: "Meralco (this is the part Meralco keeps)" },
+              goesTo: "Meralco",
+              printed: ["Distribution Charge"],
+              what: "Paid to Meralco for running and maintaining the lines and poles to your home.",
+            },
+          ],
+        },
+        breakdown: {
+          groups: [],
+          total: 194731,
+          split: { passThrough: 161832, meralco: 32899 },
+        },
+      });
+    }
     throw new Error(`Unexpected request: ${input} ${init?.method ?? "GET"}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -274,15 +360,36 @@ describe("My Meralco PWA", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("signed-out users start on Sign up; a login with no linked Household lands on the bill scan (no CAN screen)", async () => {
+  it("signed-out users start on the landing page (Sign up, Sign in, Guest); a login with no linked Household lands on the bill scan", async () => {
     loginHouseholds = [];
     render(<App />);
-    expect(screen.getByRole("heading", { name: "Create your account" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Understand your Meralco bill in seconds" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign up" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Continue as guest" })).toBeTruthy();
     expect(document.querySelector('input[type="file"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
+    expect(screen.getByRole("heading", { name: "Create your account" })).toBeTruthy();
     await signIn();
     await screen.findByRole("heading", { name: "Scan your latest Meralco bill" });
     expect(screen.queryByLabelText("Customer Account Number")).toBeNull();
     expect(screen.queryByLabelText("Choose a Household")).toBeNull();
+  });
+
+  it("guest mode scans or simulates a bill and immediately explains only its charges without any other steps", async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Continue as guest" }));
+    expect(await screen.findByRole("heading", { name: "Scan your Meralco bill" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Simulate bill data/i }));
+    expect(await screen.findByRole("heading", { name: "Your October bill" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "What's on your bill" })).toBeTruthy();
+    expect(screen.getByText(/The price of the electricity itself/)).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Does this look right?" })).toBeNull();
+    expect(screen.queryByText(/Customer Account Number/)).toBeNull();
+    expect(screen.queryByText(/vs\. September/i)).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Your appliances" })).toBeNull();
+    fireEvent.click(screen.getAllByRole("button", { name: "Scan another bill" })[1]!);
+    expect(await screen.findByRole("heading", { name: "Scan your Meralco bill" })).toBeTruthy();
   });
 
   it("signs in with Gmail address + password and shows a wrong-password error", async () => {

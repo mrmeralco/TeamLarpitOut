@@ -6,6 +6,7 @@ import { AirconAgreement } from "./components/AirconAgreement";
 import { ChargeChat } from "./components/ChargeChat";
 import { AuthFlow, CreatePassword } from "./components/auth/AuthScreens";
 import { AuthLayout } from "./components/auth/AuthLayout";
+import { GuestBillFlow } from "./components/GuestBillFlow";
 import { ScanBill } from "./components/ScanBill";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
@@ -127,11 +128,21 @@ export function App() {
   };
 
   if (!session) {
+    if (rawHash === "#/guest") {
+      return (
+        <GuestBillFlow
+          onBack={() => { window.location.hash = "/"; }}
+          onSignIn={() => { window.location.hash = "/signin"; }}
+          onSignUp={() => { window.location.hash = "/signup"; }}
+        />
+      );
+    }
     const createPassword = /^#\/create-password\/([A-Za-z0-9_-]{43})$/.exec(rawHash);
+    const initial = rawHash === "#/signin" || sessionNotice ? "signin" : rawHash === "#/signup" ? "signup" : "landing";
     return <main className="auth-main"><AuthLayout>
       {createPassword
         ? <CreatePassword token={createPassword[1]!} onDone={signedIn} onBack={() => { window.location.hash = "/signup"; }} />
-        : <AuthFlow initial={rawHash === "#/signin" || sessionNotice ? "signin" : "signup"} notice={sessionNotice} onSignedIn={signedIn} />}
+        : <AuthFlow initial={initial} notice={sessionNotice} onSignedIn={signedIn} onGuest={() => { window.location.hash = "/guest"; }} />}
     </AuthLayout></main>;
   }
 

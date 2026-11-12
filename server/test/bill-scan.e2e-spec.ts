@@ -190,4 +190,33 @@ describe("POST /api/bills/scan", () => {
     expect(status).toBe(502);
     expect(body.error).toMatch(/quota limit reached/i);
   });
+
+  it("guest endpoints scan, simulate, and explain a single bill without authentication, comparison, or account linking", async () => {
+    const api = await harness({ vision: october });
+    const scanned = await api.upload("/api/bills/guest/scan");
+    expect(scanned.status).toBe(200);
+    expect(scanned.body.status).toBe("read");
+    expect(scanned.body.before).toBeNull();
+    expect(scanned.body.scanToken).toBeUndefined();
+    expect(scanned.body.account).toBeUndefined();
+
+    const sim = await api.post("/api/bills/guest/simulate", {});
+    expect(sim.status).toBe(200);
+    expect(sim.body.before).toBeNull();
+    expect(sim.body.scanToken).toBeUndefined();
+
+    const explained = await api.post("/api/bills/guest/explain", { now: sim.body.now });
+    expect(explained.status).toBe(200);
+    expect(explained.body.bill).toMatchObject({
+      period: "2026-10",
+      kwh: 240,
+      billingDays: 31,
+    });
+    expect(explained.body.chargeLines.all.length).toBeGreaterThan(0);
+    for (const line of explained.body.chargeLines.all) {
+      expect(line.previous).toBeNull();
+      expect(line.change).toBeNull();
+      expect(typeof line.what).toBe("string");
+    }
+  });
 });
