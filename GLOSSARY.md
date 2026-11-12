@@ -1,6 +1,6 @@
-# KuryenteKo
+# Eelio
 
-Helps a household understand its Meralco bill, see why it changed, check that the bill is consistent with Meralco's own records, and act to lower the next one, using the monthly bill everyone already has. KilosWatt is the name of its usage-management part (Target, Missions, Savings).
+Helps a household understand its Meralco bill, see why it changed, check that the bill is consistent with Meralco's own records, and act to lower the next one, using the monthly bill everyone already has.
 
 ## The bill
 
@@ -29,8 +29,8 @@ Meralco's identifier for one Household's service, printed on every Bill and used
 _Avoid_: Account number, CAN, reference number
 
 **My Meralco Login**:
-A person's existing My Meralco credentials. KuryenteKo signs in with it and receives the Households already linked to it; one owner per Household.
-_Avoid_: KuryenteKo account, user account, profile
+A person's existing My Meralco credentials. Eelio signs in with it and receives the Households already linked to it; one owner per Household.
+_Avoid_: Eelio account, user account, profile
 
 **Meter Type**:
 Whether a Household has a traditional meter (read monthly, known only through Bills) or a smart meter (interval readings: hourly, daily, weekly). Comes from Meralco's record, never from the household.
