@@ -170,9 +170,9 @@ describe("My Meralco PWA", () => {
     expect(await screen.findByRole("button", { name: /Your plan: use 5% less electricity/ })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan")).toBe(false);
     await goTab("Missions");
-    // Smart meter Households get the same 5% plan (ADR-0007), without the typed-reading Forecast.
+    // Smart meter Households get the same 5% plan (ADR-0007); no Household shows a Forecast.
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
-    expect(fetchMock.mock.calls.some(([url]) => url === `/api/households/${households[1]!.sin}/forecast`)).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/forecast"))).toBe(false);
     await select(households[0]!.sin);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
     await historyFetched(households[0]!.sin);

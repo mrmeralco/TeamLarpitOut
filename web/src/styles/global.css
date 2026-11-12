@@ -790,7 +790,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .plan-summary, .plan-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 
 /* Cards in the content area keep a readable width when alone. */
-.shell main > section.card, .shell main > .appliances, .shell main > .forecast { max-width: 880px; }
+.shell main > section.card, .shell main > .appliances { max-width: 880px; }
 
 /* Charge chat: a centred dialog on desktop. */
 .sheet-backdrop { align-items: center; padding: 24px; }
