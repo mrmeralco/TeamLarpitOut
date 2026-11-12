@@ -63,6 +63,11 @@ pnpm typecheck
 - `GET  /api/households/:sin/check` → same Bill Checks for a Household's latest Bill in the Bill source
 - `POST /api/bills/scan` (Bearer token, multipart, field `photo`) → editable draft: `now`, `before` (from printed history), `missing`, `estimated`, masked Service ID Number and CAN, and `link` (Account Linking). `401` signed out, `422` unreadable, `503` no vision key. There is no anonymous scan: sign-in comes first (ADR-0005).
 - `POST /api/households/:sin/appliances/scan-label` (authenticated multipart, fields `photo` and `type`: `aircon` or `refrigerator`) → editable energy-label draft; see below.
+- `GET  /api/households/:sin/home` → the Home tab: amount due, badge, masked CAN, the four effects with `addsUp`, and `chargeLines` (`featured`: Generation, Distribution, System loss, Transmission, Taxes; `all`: every printed line with a stable `id`, amount, change vs. last month and `goesTo`).
+- `POST /api/households/:sin/charges/:lineId/ask` `{ question }` → `{ lineId, kind: answer | askMeralco | redirect, source: ai | template, answer, summary? }`. Stateless charge chat: code builds that one line's facts (amounts, kWh, per-kWh rate, usage vs rate split, payee, Bill Check result); the coach provider sees only those facts and the question. Any ₱ or kWh figure not in the facts falls back to the template answer; complaint questions get "Itanong kay Meralco" and the copyable summary; off-topic questions are redirected.
+- `GET  /api/households/:sin/setup` → Household Setup checklist (`household`, `appliances`, `routine`), `complete`, `welcomePoints { points, granted, locked }`. `PUT .../setup/household` `{ size }` and `PUT .../setup/routine` `{ home, aircon }` (aircon only when the home has one). Finishing grants 100 Welcome Points once per Household; they show in the balance as `lockedPoints` until the first Verified Savings, and `PUT .../usage-plan` returns `409` until setup is complete.
+- Household Setup by tap grid and one routine (ADR-0006): `PUT .../setup/appliances` `{ counts: { aircon: 1, electric_fan: 2, … } }` writes typical-value appliances (plus lights) from the grid; `PUT .../setup/routine` maps "someone home" and "aircon on" presets to hours per appliance (`domain/routine-presets.ts`); calibration to the Bill's kWh is unchanged. `POST .../setup/aircon-photo` (multipart `photo`) estimates the aircon's size, tagged "Estimated from photo". `GET .../setup/aircon-check?aircon=sleeping` compares the pick with the 12-bill estimate (traditional) or the smart meter pattern. Detailed appliance editing and the DOE label scan stay under Account → Appliances and are never overwritten by a later routine change.
+- 5% Mission Plan (ADR-0007): `GET .../missions/plan` (after Household Setup, else `409`) → `{ goal: { cut: 5, kwh, pesos }, covered, coveredPercent, source: ai | fallback, missions: [{ id, title, why, how, percent, share, kwhSaved, pesoValue, effort, basis, assumptions }] }`. Code computes every candidate (`domain/mission-plan.ts`); the coach provider gets only the candidates and may return up to five ids plus wording. Unknown ids, repeated habits, invented figures or a plan short of 5% (when reachable) fall back to a greedy, appliance-mixed pick. `POST .../missions/plan/shuffle` asks for another combination; `POST .../missions/:id/swap` replaces one and keeps the others. `GET .../target` now offers only the 5% option; Points stay on the whole Bill.
 - `GET  /api/households/:sin/bakit-ganito` → same, from the Household's two latest Bills in the Bill source
 
 `Bill = { period: "YYYY-MM", kwh, billingDays, chargeLines?: [{ label, amount }] }`
@@ -153,6 +158,34 @@ The **Hour / Day / Week** buttons show the latest 24 hours / 30 days / 12 weeks 
 Switching intervals cancels the previous load and clears its chart. Switching Household, clearing selection, logout, and session expiry clear protected usage immediately. Reading errors have their own retry and leave Bills usable; a protected `401` returns the app to login. Retry keeps the selected interval; choosing a different Household resets to Day.
 
 Run `pnpm test`, `pnpm typecheck`, and `pnpm build` for workspace checks. UI tests cover automatic smart-only loading, accessible values, interval switching, retry, and delayed-response isolation; API tests exercise injected reading sources.
+
+### Smart-meter aircon pattern proposals (issue #14)
+
+`POST /api/households/:sin/appliances/aircon-pattern-proposal` accepts the current aircon draft:
+
+```json
+{
+  "quantity": 1,
+  "answers": { "mount": "split", "inverter": "no", "room": "medium" },
+  "energyLabel": { "consumptionKwh": 270, "period": "monthly", "referenceDays": 30, "referenceHoursPerDay": 9, "confirmed": true }
+}
+```
+
+All three fields are optional. The server recomputes the expected kW using confirmed label → visual answers → default, then multiplies by quantity (units sharing the same routine). Client-derived kW and unconfirmed labels are not used. Requesting a proposal never writes appliances.
+
+The route uses the existing bearer session and current Household membership checks: `401` for missing, expired, or revoked login; the same `404` for unknown and unlinked Households; `422` for a traditional meter; `400` for invalid appliance details; `502` for failed or malformed reading-source data. Successful responses use `Cache-Control: no-store`.
+
+- A `200` proposal has `status: "proposal"`, `canPropose: true`, the actual `routine: { start, end, days: "everyday" }`, `hours`, estimated excess `stepKw`, tentative `prompt`, heat evidence, and coverage counts.
+- A valid insufficient-evidence response is `200` with `status: "fallback"`, `canPropose: false`, `fallback: "routine"`, and a machine-readable `reason`. Missing, failed, malformed, or incompatible daily weather also falls back to routine questions.
+- Both responses include `timeZone: "Asia/Manila"`, the analyzed `range` (null if no readings are available), `expectedKw`, `ratingSource`, and separate reading/weather provenance. Coverage reports complete nights, matching nights, and nights paired with weather; the weather provenance is null when unavailable.
+
+The bounded analysis ends at the reading source's advertised end and looks back at most 30 days, including the fixed simulation's dates. A complete 10 AM–10 AM frame supplies the median 10 AM–6 PM background and the following 6 PM–10 AM search window. Missing hours exclude that frame rather than becoming zero consumption. A proposed step must have at least four contiguous hours, a median magnitude within ±30% of the entered aircon's aggregate kW, and hourly excess within ±30% of its own median. The step must begin and end inside the search window; multiple sustained steps or unstable overlapping loads are excluded.
+
+At least seven nights must share the same window, covering at least 70% of complete frames. Daily temperatures are joined by Manila date across midnight and averaged over the proposed hours. At least seven paired nights, at least 1°C of heat variation, a slope of at least 0.02 kW/°C, and correlation of at least 0.5 are required. These are project heuristics for a tentative question, not validated appliance identification. Daily heat is independently injectable through `DAILY_WEATHER_SOURCE`; its default mock uses the same invented climate as the simulated readings. Synthetic readings are never paired with observed weather.
+
+In the smart Household's appliance survey, add one aircon to see **“Aircon ba ito?”** when evidence supports a proposal. **Oo** fills the returned window into the local routine editor. **Hindi** opens manual routine questions without adopting the proposal. Use the existing **I-save** action to persist. Previously entered or saved routines stay intact; **Tingnan ang pattern sa smart meter** explicitly requests a new suggestion. Multiple aircon cards use individual manual routines because attribution would be ambiguous. Missing evidence and reading failures leave manual entry usable. The current readings and temperatures are labeled as simulated.
+
+Changing the rating answers, quantity, or confirmed label cancels an outstanding suggestion. Card removal, Household/session changes, logout, and manual entry also cancel it; delayed results are ignored. The traditional-meter Bill History proposal, Bill calibration, Missions, and Points keep their existing behavior. Tests use independent reading and daily-weather fakes and exercise confirmation/save/reopen, rejection/manual entry, errors, expiry, and delayed-response isolation. No database migration or new network service is required.
 
 ### Account Linking
 

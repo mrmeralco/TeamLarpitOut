@@ -2,25 +2,27 @@ import { useCallback, useEffect, useState } from "react";
 
 export const TABS = ["home", "missions", "rewards", "account"] as const;
 export type Tab = (typeof TABS)[number];
+export interface Route { tab: Tab; sub: string[] }
 
-const parse = (hash: string): Tab => {
-  const name = hash.replace(/^#\/?/, "").split("/")[0] as Tab;
-  return TABS.includes(name) ? name : "home";
+const parse = (hash: string): Route => {
+  const [name, ...sub] = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
+  return TABS.includes(name as Tab) ? { tab: name as Tab, sub } : { tab: "home", sub: [] };
 };
 
-/** The current tab from `#/home`, `#/missions`, … (no router library). Reload keeps it. */
-export function useHashTab(): [Tab, (tab: Tab) => void] {
-  const [tab, setTab] = useState<Tab>(() => parse(window.location.hash));
+/** The current route from `#/home`, `#/missions/save`, … (no router library). Reload keeps it. */
+export function useHashRoute(): [Route, (tab: Tab, ...sub: string[]) => void] {
+  const [route, setRoute] = useState<Route>(() => parse(window.location.hash));
   useEffect(() => {
-    const onChange = () => setTab(parse(window.location.hash));
+    const onChange = () => setRoute(parse(window.location.hash));
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
   }, []);
-  const go = useCallback((next: Tab) => {
-    if (window.location.hash !== `#/${next}`) window.location.hash = `/${next}`;
-    setTab(next);
+  const go = useCallback((tab: Tab, ...sub: string[]) => {
+    const hash = `#/${[tab, ...sub].join("/")}`;
+    if (window.location.hash !== hash) window.location.hash = hash.slice(1);
+    setRoute({ tab, sub });
   }, []);
-  return [tab, go];
+  return [route, go];
 }
 
 /** Per-tab session storage: survives a reload, gone when the tab closes. Never required to work. */

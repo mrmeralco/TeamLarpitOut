@@ -66,6 +66,12 @@ export class HouseholdsService {
     return (await this.links.forOwner(ownerId)).find((l) => l.status === "pending") ?? null;
   }
 
+  /** The masked CAN this login linked the Household with. */
+  async canMasked(ownerId: string, sin: string): Promise<string | null> {
+    const link = (await this.links.forOwner(ownerId)).find((l) => l.sin === sin);
+    return link ? maskCan(link.can) : null;
+  }
+
   async pendingAccount(ownerId: string) {
     const link = await this.pendingLink(ownerId);
     return link ? this.meralco.household(link.sin) : null;

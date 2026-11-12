@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { DAY_MS, HOUR_MS, type HourlyReading, type ReadingRange } from "../src/domain/meter-reading.js";
@@ -230,6 +231,9 @@ describe("default mock smart meter source", () => {
     expect(metadata.available).toEqual({ from: "2025-12-01T00:00:00+08:00", to: "2026-12-01T00:00:00+08:00" });
     const rows = await source.readings(SMART, metadata.available!);
     expect(rows).toHaveLength(365 * 24);
+    // Golden checksum recorded before extracting the shared daily climate (issue #14).
+    expect(createHash("sha256").update(JSON.stringify(rows)).digest("hex"))
+      .toBe("140ce55b78a78e11aa81e94e2a4b189806095fa137b31ac60055fa25c644c4ef");
     expect(rows.every((row) => Number.isSafeInteger(row.wh) && row.wh >= 0)).toBe(true);
     const subset: ReadingRange = { from: FROM, to: TO };
     expect(await source.readings(SMART, subset)).toEqual(rows.filter((row) =>

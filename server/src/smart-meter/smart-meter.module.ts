@@ -9,5 +9,6 @@ import { SmartMeterService } from "./smart-meter.service.js";
   imports: [HouseholdsModule],
   controllers: [SmartMeterController],
   providers: [SmartMeterService, { provide: READING_SOURCE, useFactory: () => new MockReadingSource() }],
+  exports: [READING_SOURCE],
 })
 export class SmartMeterModule {}
