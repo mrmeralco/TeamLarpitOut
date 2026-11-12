@@ -169,10 +169,11 @@ export function App() {
           setup={setup} onSetup={(s) => { setSetup(s); setApplianceVersion((v) => v + 1); }} onExpired={onExpired}
           appliancesStep={(done, back) => setup && <SetupAppliances token={session.token} sin={selected.sin} status={setup} onSaved={done} onBack={back} onExpired={onExpired} />}
           routineAgreement={(aircon) => <AirconAgreement token={session.token} sin={selected.sin} aircon={aircon} />}>
-          <MissionPlan key={`plan:${key}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired}
-            missionId={route.sub[0] === "m" ? route.sub[1] : undefined} onOpen={(id) => go("missions", "m", id)} onBack={() => go("missions")} />
+          <MissionPlan key={`plan:${key}:${applianceVersion}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired}
+            missionId={route.sub[0] === "m" ? route.sub[1] : undefined} onOpen={(id) => go("missions", "m", id)} onBack={() => go("missions")}
+            onRewards={() => go("rewards")} />
         </MissionsTab>}
-        {tab === "rewards" && <Rewards key={`rewards:${key}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => setRewardsVersion((v) => v + 1)} />}
+        {tab === "rewards" && <Rewards key={`rewards:${key}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => { clearPlanCache(); setRewardsVersion((v) => v + 1); }} />}
         {tab === "account" && <>
           <HouseholdPicker households={session.households} selected={selected.sin} onSelect={select} onLogout={logout} />
           <button type="button" className="ghost wide" onClick={() => setLinking(true)}>+ Link another Household</button>
