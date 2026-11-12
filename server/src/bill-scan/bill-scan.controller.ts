@@ -43,10 +43,12 @@ export class BillScanController {
     if (!can && body?.meterType === "smart") {
       can = "3901567213";
     } else if (!can) {
+      // The traditional sample first; once this login can't link it (already linked here, or held
+      // by another login), the smart meter sample when it is still free.
       const previewTraditional = await this.linking.preview(request.auth.ownerId, "3901234482");
-      if (previewTraditional.status === "alreadyLinked") {
+      if (previewTraditional.status !== "found") {
         const previewSmart = await this.linking.preview(request.auth.ownerId, "3901567213");
-        if (previewSmart.status !== "alreadyLinked") {
+        if (previewSmart.status === "found") {
           can = "3901567213";
         }
       }

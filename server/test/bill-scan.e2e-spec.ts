@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { VisionUnavailableError, type RawBillReading } from "../src/vision/vision-provider.interface.js";
 import { bill, fakeVision, harness } from "./utils/test-harness.js";
+import { DEMO_ACCOUNTS } from "../src/bills/meralco-accounts.js";
 
 /** What a good photo of an October 2026 Bill reads as. */
 const october: RawBillReading = {
@@ -158,6 +159,22 @@ describe("POST /api/bills/scan", () => {
     });
     expect(body.canMasked).toBe("39•• ••• 482");
     expect(body.account).toBeDefined();
+  });
+
+  it("POST /api/bills/simulate offers the smart meter sample when another login holds the traditional one", async () => {
+    const api = await harness({
+      accounts: DEMO_ACCOUNTS,
+      links: { "owner-a@example.test": [], "owner-b@example.test": ["1234567890"] },
+    });
+    const { status, body } = await api.userPost("/api/bills/simulate", {});
+    expect(status).toBe(200);
+    expect(body.account).toMatchObject({ status: "found", meterType: "smart", canMasked: "39•• ••• 213" });
+  });
+
+  it("POST /api/bills/simulate offers the smart meter sample once the traditional one is linked here", async () => {
+    const api = await harness({ accounts: DEMO_ACCOUNTS, links: { "owner-a@example.test": ["1234567890"] } });
+    const { body } = await api.userPost("/api/bills/simulate", {});
+    expect(body.account).toMatchObject({ status: "found", meterType: "smart" });
   });
 
   it("POST /api/bills/scan?simulate=true allows simulation without photo upload", async () => {
