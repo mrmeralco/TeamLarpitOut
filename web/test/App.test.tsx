@@ -69,6 +69,7 @@ beforeEach(() => {
     if (readingsMatch) return readingsRequest(readingsMatch[1]!);
     if (input === "/api/appliances/catalog") return response({ appliances: [] });
     if (/^\/api\/households\/[^/]+\/appliances$/.test(input)) return response({ saved: false, updatedAt: null, appliances: [] });
+    if (/^\/api\/households\/[^/]+\/bills$/.test(input)) return response([]);
     const homeMatch = /^\/api\/households\/([^/]+)\/home$/.exec(input);
     if (homeMatch) return homeRequest(homeMatch[1]!);
     if (/^\/api\/households\/[^/]+\/target$/.test(input)) return response({
@@ -112,8 +113,6 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 /** Home's Wrapped story is showing this Household's bill (the area is on the first slide). */
 const homeShows = (area: "Caloocan City" | "Quezon City") => screen.findByText(new RegExp(`· ${area} home`));
-/** Jumps the Wrapped story to its last slide. */
-const lastSlide = async () => fireEvent.click(await screen.findByRole("tab", { name: /Your next move/ }));
 
 /** Returning user: Sign up screen → "Sign in" → Gmail address + password. */
 async function signIn(password = "rosa2026x") {
@@ -163,7 +162,6 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[1]!.sin);
     await screen.findByText("12.345 kWh");
     await homeShows("Quezon City");
-    await lastSlide();
     expect(await screen.findByRole("button", { name: /Your plan: use 5% less electricity/ })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan")).toBe(false);
     await goTab("Missions");
@@ -330,13 +328,12 @@ describe("My Meralco PWA", () => {
 
   it("'Want to save?' opens rewards onboarding; 'Maybe later' returns to Home", async () => {
     setup = setupStatus([false, false, false]);
-    render(<App />); await login(); await lastSlide();
+    render(<App />); await login();
     fireEvent.click(await screen.findByRole("button", { name: /Want to save on your next bill/ }));
     expect(await screen.findByRole("heading", { name: "Use less power. Get rewarded for it." })).toBeTruthy();
     expect(window.location.hash).toBe("#/missions/save");
     expect(screen.getByText(/unlock after your first verified savings/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Maybe later" }));
-    await lastSlide();
     await screen.findByRole("button", { name: /Want to save on your next bill/ });
     expect(window.location.hash).toBe("#/home");
   });
