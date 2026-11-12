@@ -102,6 +102,10 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
     out.push({
       key: "intro", tone: "tone-brand", label: `Your ${billMonth} bill`,
       body: <>
+        <div className="wr-story-badge" aria-hidden="true">
+          <span className="wr-badge-spark">⚡</span>
+          <span>Story 1 of 5 · Bill Recap</span>
+        </div>
         <p className="wr-eyebrow">{greeting()} · {d.area} home</p>
         <h2 className="wr-title">Your {billMonth} bill, wrapped</h2>
         <p className="wr-big" aria-label={amount === null ? "Amount not available" : `Amount due ${peso(amount)}`}>
@@ -109,6 +113,7 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
         </p>
         <p className="wr-sub">{d.bill.dueDate ? `Due ${shortDate(d.bill.dueDate)}` : "Amount due"}{d.canMasked ? ` · CAN ${d.canMasked}` : ""}</p>
         <p className="wr-hint" aria-hidden="true">Tap to see what happened →</p>
+        <img src="/mascot/eelio-hero.png" alt="" className="wr-mascot-float" aria-hidden="true" />
       </>,
     });
 
@@ -117,6 +122,10 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
       out.push({
         key: "change", tone: less ? "tone-teal" : "tone-ink", label: `Compared with ${month(change.previousPeriod)}`,
         body: <>
+          <div className="wr-story-badge" aria-hidden="true">
+            <span className="wr-badge-spark">{less ? "✨" : "📈"}</span>
+            <span>Story 2 of 5 · Monthly Shift</span>
+          </div>
           <p className="wr-eyebrow">Compared with {month(change.previousPeriod)}</p>
           <p className="wr-big" aria-label={`${peso(change.total, true)} vs. ${month(change.previousPeriod)}`}>
             {change.total === 0 ? "₱0" : <CountUp centavos={change.total} signed />}
@@ -127,6 +136,7 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
               : `You paid ${plainPeso(change.total)} more than in ${month(change.previousPeriod)}.`}
           </h2>
           {change.addsUp && <p className="wr-sub">Every peso of the change is explained next.</p>}
+          <img src={less ? "/mascot/eelio-hero.png" : "/mascot/eelio-detective.png"} alt="" className="wr-mascot-float" aria-hidden="true" />
         </>,
       });
 
@@ -136,6 +146,10 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
       if (top) out.push({
         key: "reasons", tone: "tone-cream", label: "What moved your bill",
         body: <>
+          <div className="wr-story-badge" aria-hidden="true">
+            <span className="wr-badge-spark">🔍</span>
+            <span>Story 3 of 5 · Impact Breakdown</span>
+          </div>
           <p className="wr-eyebrow">What moved your bill</p>
           <h2 className="wr-title">#1: <span className="wr-accent">{effectLabel(top)}</span> {top.amount > 0 ? "added" : "saved you"} {plainPeso(top.amount)}.</h2>
           <p className="wr-sub">{EFFECT_NOTE[top.key] ?? ""}</p>
@@ -165,6 +179,10 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
       out.push({
         key: "charges", tone: "tone-plum", label: "Where your money went",
         body: <>
+          <div className="wr-story-badge" aria-hidden="true">
+            <span className="wr-badge-spark">💳</span>
+            <span>Story 4 of 5 · Top Charges</span>
+          </div>
           <p className="wr-eyebrow">Where your money went</p>
           <h2 className="wr-title">Your top charges</h2>
           <p className="wr-sub">Tap any charge to ask about it.</p>
@@ -183,6 +201,10 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
     out.push({
       key: "next", tone: "tone-brand", label: "Your next move",
       body: <>
+        <div className="wr-story-badge" aria-hidden="true">
+          <span className="wr-badge-spark">🎯</span>
+          <span>Story 5 of 5 · Savings Quest</span>
+        </div>
         <p className="wr-eyebrow">Your next move</p>
         <h2 className="wr-title">{change && change.habit > 0
           ? `${wholePeso(change.habit, false)} came from how you used power. Win it back next month.`
@@ -196,6 +218,7 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
           </button>
         )}
         <button type="button" className="wr-link" onClick={() => go(0)}>Replay</button>
+        <img src="/mascot/eelio-hero.png" alt="" className="wr-mascot-float" aria-hidden="true" />
       </>,
     });
     return out;
