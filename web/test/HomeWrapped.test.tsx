@@ -44,22 +44,22 @@ describe("Your bill, wrapped (opened from Home)", () => {
   it("opens on the amount due, then the change vs. last month", async () => {
     render(<HomeWrapped data={data} />);
     expect(await screen.findByRole("heading", { name: "Your October bill, wrapped" })).toBeTruthy();
-    expect(screen.getByLabelText("Amount due ₱6,817.00").textContent).toBe("₱6,817");
+    expect(screen.getByLabelText("Amount due ₱6,817.00").textContent).toBe("₱6,817.00");
     expect(slide().textContent).toContain("Due Nov 24 · CAN 39•• ••• 482");
     expect(screen.getByText("1 / 5")).toBeTruthy();
     expect((screen.getByRole("button", { name: "Previous slide" }) as HTMLButtonElement).disabled).toBe(true);
     next();
-    expect(screen.getByRole("heading", { name: "You paid ₱937 more than in September." })).toBeTruthy();
-    expect(screen.getByLabelText("+₱937.00 vs. September").textContent).toBe("+₱937");
+    expect(screen.getByRole("heading", { name: "You paid ₱937.00 more than in September." })).toBeTruthy();
+    expect(screen.getByLabelText("+₱937.00 vs. September").textContent).toBe("+₱937.00");
   });
 
   it("ranks what moved the bill, biggest first, and says it adds up", async () => {
     render(<HomeWrapped data={data} />);
     await screen.findByRole("heading", { name: /wrapped/ });
     next(); next();
-    expect(screen.getByRole("heading", { name: "#1: Household usage added ₱577." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "#1: Household usage added ₱577.00." })).toBeTruthy();
     const ranked = within(screen.getByRole("list")).getAllByRole("listitem").map((li) => li.textContent);
-    expect(ranked).toEqual(["1Household usage+₱577", "2Rate+₱148", "3Hotter weather+₱112", "4Billing days+₱100"]);
+    expect(ranked).toEqual(["1Household usage+₱577.00", "2Rate+₱148.00", "3Hotter weather+₱112.00", "4Billing days+₱100.00"]);
     expect(screen.getByText("✓ Adds up to +₱937.00")).toBeTruthy();
   });
 
@@ -88,8 +88,8 @@ describe("Your bill, wrapped (opened from Home)", () => {
     fireEvent.keyDown(screen.getByRole("region", { name: "Your bill, wrapped" }), { key: "ArrowRight" });
     expect(screen.getByText("2 / 5")).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Slide 5: Your next move" }));
-    expect(screen.getByRole("heading", { name: "₱577 came from how you used power. Win it back next month." })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Want to save on your next bill\?.*₱577 came from usage/ }));
+    expect(screen.getByRole("heading", { name: "₱577.00 came from how you used power. Win it back next month." })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Want to save on your next bill\?.*₱577\.00 came from usage/ }));
     expect(onSave).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Replay" }));
     expect(screen.getByText("1 / 5")).toBeTruthy();
@@ -118,9 +118,9 @@ describe("Your bill, wrapped (opened from Home)", () => {
     render(<HomeWrapped data={data} />);
     await screen.findByRole("heading", { name: /wrapped/ });
     next();
-    expect(screen.getByRole("heading", { name: "You paid ₱595 less than in September." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "You paid ₱595.00 less than in September." })).toBeTruthy();
     next();
-    expect(screen.getByRole("heading", { name: "#1: Household usage saved you ₱606." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "#1: Household usage saved you ₱606.00." })).toBeTruthy();
   });
 
   it("without last month to compare, says so and skips the reasons", async () => {

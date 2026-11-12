@@ -12,7 +12,7 @@ const lines = [
   line("distribution", "Distribution", 121000, -16000, "Meralco"),
   line("taxes", "Taxes", 78000, null, "Government"),
   line("transmission", "Transmission", 59000, 6200, "Pass-through"),
-  line("senior", "Senior citizen", 30, null, "Subsidy"), // ₱0.30 shows as ₱0, so it is folded away
+  line("senior", "Senior citizen", 0, null, "Subsidy"), // ₱0.00 shows as ₱0, so it is folded away
 ];
 const summary = (over: Partial<HomeSummary> = {}): HomeSummary => ({
   meterType: "traditional", canMasked: "39•• ••• 482", area: "Caloocan City",
@@ -79,8 +79,8 @@ describe("Home: gamified with Eelio", () => {
   it("the hero shows the bill, the change and Eelio's title and charge", async () => {
     render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([true, true, true])} />);
     expect(await screen.findByRole("heading", { name: "Your October bill" })).toBeTruthy();
-    expect(screen.getByText("₱6,817")).toBeTruthy();
-    expect(screen.getByText(/▲ ₱937 vs\. September/)).toBeTruthy();
+    expect(screen.getByText("₱6,817.00")).toBeTruthy();
+    expect(screen.getByText(/▲ ₱937\.00 vs\. September/)).toBeTruthy();
     // Usage went up and setup is done: Eelio is the Bill Detective.
     expect(screen.getByRole("img", { name: "Eelio, Bill Detective" })).toBeTruthy();
     expect(screen.getByText("Bill Detective")).toBeTruthy();
@@ -135,7 +135,7 @@ describe("Home: gamified with Eelio", () => {
     const onSave = vi.fn();
     render(<Home token="t" household={household} onExpired={() => {}} onSave={onSave} setup={setupStatus([true, false, false])} />);
     await screen.findByRole("heading", { name: "Your October bill" });
-    fireEvent.click(screen.getByRole("button", { name: /Want to save on your next bill\?.*₱577 came from usage/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Want to save on your next bill\?.*₱577\.00 came from usage/ }));
     expect(onSave).toHaveBeenCalled();
     expect(screen.queryByRole("heading", { name: "Your appliances" })).toBeNull();
     expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/appliances/breakdown") || url.endsWith("/missions/plan"))).toBe(false);
@@ -148,7 +148,7 @@ describe("Home: gamified with Eelio", () => {
     const names = [...document.querySelectorAll(".appliance-name strong")].map((el) => el.textContent);
     expect(names).toEqual(["Aircon", "Refrigerator", "Electric fan ×2"]);
     expect(screen.getByText("74%")).toBeTruthy();
-    expect(screen.getByText("450 kWh · ₱5,200")).toBeTruthy();
+    expect(screen.getByText("450 kWh · ₱5,200.00")).toBeTruthy();
     expect(screen.getByText("Your plan: use 5% less electricity")).toBeTruthy();
   });
 
