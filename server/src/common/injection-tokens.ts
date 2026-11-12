@@ -18,3 +18,7 @@ export const USAGE_PLAN_REPOSITORY = Symbol("USAGE_PLAN_REPOSITORY");
 export const MID_MONTH_READING_REPOSITORY = Symbol("MID_MONTH_READING_REPOSITORY");
 /** Words computed Missions for the household; never supplies a number. */
 export const COACH_PROVIDER = Symbol("COACH_PROVIDER");
+/** Per-Household points ledger and verified savings history. */
+export const POINTS_REPOSITORY = Symbol("POINTS_REPOSITORY");
+/** Outage records from Meralco (used to exclude brownouts from Points). */
+export const OUTAGE_SOURCE = Symbol("OUTAGE_SOURCE");

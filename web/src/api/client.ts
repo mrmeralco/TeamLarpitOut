@@ -474,6 +474,27 @@ export interface ForecastResult {
   };
 }
 
+export interface PointsHistoryEntry {
+  id: string;
+  period: string;
+  points: number;
+  savedPesos: number;
+  savedKwh: number;
+  baselineKwh: number;
+  actualKwh: number;
+  source: string;
+  hasOutage: boolean;
+  excludedReason?: string | null;
+  description: string;
+  createdAt: string;
+}
+
+export interface PointsResult {
+  currency: string;
+  balance: number;
+  history: PointsHistoryEntry[];
+}
+
 const planPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}`;
 
 export const usagePlanApi = {
@@ -504,6 +525,14 @@ export const usagePlanApi = {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     }).then((r) => json<ForecastResult>(r)),
+  points: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`${planPath(sin)}/points`, authed(token, signal)).then((r) => json<PointsResult>(r)),
+  selfReport: (token: string, sin: string, body?: { missionId?: string; status?: string }) =>
+    fetch(`${planPath(sin)}/usage-plan/self-report`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(body ?? {}),
+    }).then((r) => json<{ awardedPoints: number; balance: number; message: string }>(r)),
 };
 
 export type HomeBadge = "green" | "yellow" | "red";
