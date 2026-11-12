@@ -6,7 +6,7 @@ import type { BillSource } from "../bills/bill-source.js";
 import { BillsModule } from "../bills/bills.module.js";
 import type { CoachProvider } from "../coach/coach-provider.interface.js";
 import { CoachModule } from "../coach/coach.module.js";
-import { BILL_SOURCE, COACH_PROVIDER, KNOWLEDGE_SOURCE } from "../common/injection-tokens.js";
+import { BILL_SOURCE, CHAT_COACH_PROVIDER, KNOWLEDGE_SOURCE } from "../common/injection-tokens.js";
 import { chargeFactsFor, classifyQuestion, figuresComeFromFacts, templateChargeAnswer } from "../domain/charge-chat.js";
 import { HouseholdAccessGuard } from "../households/household-access.guard.js";
 import { HouseholdsModule } from "../households/households.module.js";
@@ -19,7 +19,7 @@ import { AskChargeDto } from "./dto/ask-charge.dto.js";
 export class ChargeChatService {
   constructor(
     @Inject(BILL_SOURCE) private readonly bills: BillSource,
-    @Inject(COACH_PROVIDER) private readonly coach: CoachProvider,
+    @Inject(CHAT_COACH_PROVIDER) private readonly coach: CoachProvider,
     @Inject(KNOWLEDGE_SOURCE) private readonly knowledge: KnowledgeSource,
     private readonly billChecks: BillChecksService,
   ) {}

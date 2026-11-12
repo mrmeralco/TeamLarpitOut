@@ -14,7 +14,7 @@ import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
 import { inMemoryOutageSource, type OutageRecord, type OutageSource } from "../../src/bills/outage-source.js";
-import { ACCOUNT_REPOSITORY, AUTH_CLOCK, BILL_SOURCE, CLOCK, COACH_PROVIDER, DAILY_WEATHER_SOURCE, DATABASE, HOUSEHOLD_LINKS, KNOWLEDGE_SOURCE, NOTIFIER, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
+import { ACCOUNT_REPOSITORY, AUTH_CLOCK, BILL_SOURCE, CHAT_COACH_PROVIDER, CLOCK, COACH_PROVIDER, DAILY_WEATHER_SOURCE, DATABASE, HOUSEHOLD_LINKS, KNOWLEDGE_SOURCE, NOTIFIER, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
 import { inMemoryReadingSource, type ReadingSource } from "../../src/smart-meter/reading-source.interface.js";
 import type { HourlyReading } from "../../src/domain/meter-reading.js";
 import type { CoachProvider } from "../../src/coach/coach-provider.interface.js";
@@ -206,6 +206,9 @@ export async function harness(opts: HarnessOptions = {}) {
     .overrideProvider(KNOWLEDGE_SOURCE)
     .useValue(opts.knowledge ?? noKnowledge)
     .overrideProvider(COACH_PROVIDER)
+    .useValue(opts.coach ?? new TemplateCoachProvider())
+    // The charge chat's own coach (GEMINI_CHAT_API_KEY): the same fake, so no test reaches Gemini.
+    .overrideProvider(CHAT_COACH_PROVIDER)
     .useValue(opts.coach ?? new TemplateCoachProvider())
     .overrideProvider(OUTAGE_SOURCE)
     .useValue(
