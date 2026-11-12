@@ -32,7 +32,7 @@ const ICON = {
   sun: "M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z",
   target: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
   play: "M8 5v14l11-7z",
-  shuffle: "M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5",
+  rewards: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
 };
 
 /** One icon per appliance a Mission is about. */
@@ -56,17 +56,17 @@ const Svg = ({ d }: { d: string }) => (
 );
 
 /**
- * Missions tab, laid out like Home: a compact Eelio card with Shuffle and a gamified goal meter on
- * top (each Mission's share of the 5% goal up to the finish flag, and the plan's points), then the
- * Missions as quest cards, each with the points it is worth.
+ * Missions tab, laid out like Home: a compact Eelio card showing collected Points and a "Check rewards"
+ * button alongside a gamified goal meter on top, then the Missions as quest cards below.
  */
-export function MissionPlan({ token, household, missionId, onOpen, onBack, onExpired }: {
+export function MissionPlan({ token, household, missionId, onOpen, onBack, onRewards, onExpired }: {
   token: string;
   household: Household;
   /** The open Mission detail, from `#/missions/m/<id>`. */
   missionId?: string;
   onOpen: (id: string) => void;
   onBack: () => void;
+  onRewards?: () => void;
   onExpired: () => void;
 }) {
   const [plan, setPlanState] = useState<Plan | null>(() => planCache.get(planKey(token, household.sin)) ?? null);
@@ -93,15 +93,6 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, household.sin]);
-
-  async function shuffle() {
-    setBusy(true); setError(null); setNote(null);
-    try {
-      const next = await missionPlanApi.shuffle(token, household.sin);
-      setPlan(next);
-      if (next.changed === false) setNote("This is the only plan that fits your home right now.");
-    } catch (err) { fail(err, "Couldn't shuffle right now."); } finally { setBusy(false); }
-  }
 
   async function swap(id: string) {
     setBusy(true); setError(null);
@@ -143,6 +134,7 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
 
   const areaLabel = household.masked_address || "Your home";
   const totalPoints = plan.rewardPoints ?? plan.missions.reduce((s, m) => s + (m.rewardPoints ?? 0), 0);
+  const collectedPoints = plan.pointsBalance ?? 0;
   // The goal meter follows what's shown: today's Missions against today's goal for smart meter homes.
   const shareOf = (m: PlanMission) => (daily ? (daily.goal.pesos > 0 ? (m.pesoValue / daily.goal.pesos) * 100 : 0) : (m.percent / plan.goal.cut) * 100);
   const meterMissions = daily ? daily.missions : plan.missions;
@@ -161,22 +153,18 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
           <div className="hero-copy">
             <p className="hero-hello">{greeting()} · {areaLabel}</p>
             <h2 id="mission-plan-title">{daily ? `Today: use ${plan.goal.cut}% less` : `Use ${plan.goal.cut}% less electricity`}</h2>
-            {daily ? (
-              <p className="hero-amount">
-                ~{pesoAmount(daily.goal.pesos)}
-                <span className="hero-change down">About {daily.goal.kwh.toFixed(1)} kWh today · new missions every day</span>
-              </p>
-            ) : (
-              <p className="hero-amount">
-                ~{pesoAmount(plan.goal.pesos)}
-                <span className="hero-change down">About {Math.round(plan.goal.kwh)} kWh, or ~{pesoAmount(plan.goal.pesos)} off your bill</span>
-              </p>
-            )}
-            {!daily && (
-              <button type="button" className="hero-play" disabled={busy} onClick={() => void shuffle()}>
-                <Svg d={ICON.shuffle} /> Shuffle
-              </button>
-            )}
+            <p className="hero-amount">
+              {collectedPoints.toLocaleString("en-PH")} pts
+              <span className="hero-change down">Points collected</span>
+            </p>
+            <p className="hero-line">
+              {daily
+                ? `About ${daily.goal.kwh.toFixed(1)} kWh today · new missions every day`
+                : `About ${Math.round(plan.goal.kwh)} kWh, or ~${pesoAmount(plan.goal.pesos)} off your bill`}
+            </p>
+            <button type="button" className="hero-play" onClick={() => { if (onRewards) onRewards(); else window.location.hash = "/rewards"; }}>
+              <Svg d={ICON.rewards} /> Check rewards
+            </button>
           </div>
           <img className="hero-mascot" src={MOOD[mood].img} alt={`Eelio, ${MOOD[mood].title}`} />
         </div>
