@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { harness } from "./harness.js";
+import { harness } from "./utils/test-harness.js";
 
 /** Lines as a real Meralco bill prints them (labels in the bill's own words). */
 const october = [

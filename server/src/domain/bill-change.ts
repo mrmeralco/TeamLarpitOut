@@ -1,5 +1,5 @@
 import type { Bill } from "./bill.js";
-import { baseCost, lifelineDiscount, type Centavos, type RateSchedule } from "./rateSchedule.js";
+import { baseCost, lifelineDiscount, type Centavos, type RateSchedule } from "./rate-schedule.js";
 
 export interface WeatherInput {
   /** Heat Sensitivity: extra kWh per day per cooling degree day. */

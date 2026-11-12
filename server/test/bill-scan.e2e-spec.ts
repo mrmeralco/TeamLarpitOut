@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { VisionUnavailableError, type RawBillReading } from "../src/vision/vision.js";
-import { bill, fakeVision, harness } from "./harness.js";
+import { VisionUnavailableError, type RawBillReading } from "../src/vision/vision-provider.interface.js";
+import { bill, fakeVision, harness } from "./utils/test-harness.js";
 
 /** What a good photo of an October 2026 Bill reads as. */
 const october: RawBillReading = {

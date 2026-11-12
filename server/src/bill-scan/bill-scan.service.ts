@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Bill, ChargeLine } from "../domain/bill.js";
-import { VISION_PROVIDER } from "../tokens.js";
-import type { BillImage, RawBillReading, VisionProvider } from "./vision.js";
+import { VISION_PROVIDER } from "../common/injection-tokens.js";
+import type { BillImage, RawBillReading, VisionProvider } from "../vision/vision-provider.interface.js";
 
 export type DraftBill = Partial<Bill>;
 

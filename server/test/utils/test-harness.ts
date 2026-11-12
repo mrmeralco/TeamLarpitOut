@@ -8,12 +8,13 @@ import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
 import { afterEach } from "vitest";
-import { AppModule, configureApp } from "../src/app.module.js";
-import type { Bill } from "../src/domain/bill.js";
-import { rateScheduleTable, type RateSchedule } from "../src/domain/rateSchedule.js";
-import { inMemoryBillSource, type BillSource } from "../src/sources/billSource.js";
-import { BILL_SOURCE, RATE_SCHEDULES, VISION_PROVIDER } from "../src/tokens.js";
-import type { RawBillReading, VisionProvider } from "../src/vision/vision.js";
+import { AppModule } from "../../src/app.module.js";
+import { configureApp } from "../../src/app.setup.js";
+import type { Bill } from "../../src/domain/bill.js";
+import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
+import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
+import { BILL_SOURCE, RATE_SCHEDULES, VISION_PROVIDER } from "../../src/common/injection-tokens.js";
+import type { RawBillReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
 
 /** A small, round-number schedule so expected pesos are easy to check by hand. */
 export function schedule(period: string, perKwh: number, fixed = 50): RateSchedule {

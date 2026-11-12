@@ -5,14 +5,13 @@ import {
   IsInt,
   IsNotEmpty,
   IsNumber,
-  IsObject,
   IsOptional,
   IsString,
   Matches,
   Min,
   ValidateNested,
 } from "class-validator";
-import type { Bill, ChargeLine } from "../domain/bill.js";
+import type { Bill, ChargeLine } from "../../domain/bill.js";
 
 export class ChargeLineDto implements ChargeLine {
   @IsString()
@@ -62,16 +61,4 @@ export class BillDto implements Bill {
   @IsOptional()
   @IsBoolean()
   lifelineEligible?: boolean;
-}
-
-export class BakitGanitoDto {
-  @IsObject()
-  @ValidateNested()
-  @Type(() => BillDto)
-  before: BillDto;
-
-  @IsObject()
-  @ValidateNested()
-  @Type(() => BillDto)
-  now: BillDto;
 }

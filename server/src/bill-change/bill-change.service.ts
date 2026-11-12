@@ -1,27 +1,27 @@
 import { Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import type { Bill } from "../domain/bill.js";
-import { splitBillChange } from "../domain/billChange.js";
-import { splitExtras } from "../domain/extras.js";
-import { costLines, type RateSchedule, type RateScheduleTable } from "../domain/rateSchedule.js";
-import type { BillSource } from "../sources/billSource.js";
-import { BILL_SOURCE, RATE_SCHEDULES } from "../tokens.js";
+import { splitBillChange } from "../domain/bill-change.js";
+import { splitExtras } from "../domain/bill-extras.js";
+import { costLines, type RateSchedule, type RateScheduleTable } from "../domain/rate-schedule.js";
+import type { BillSource } from "../bills/bill-source.js";
+import { BILL_SOURCE, RATE_SCHEDULES } from "../common/injection-tokens.js";
 
 /** "Bakit ganito?": the Bill Change split into four effects (ADR-0001). All amounts in centavos. */
 @Injectable()
-export class BakitGanitoService {
+export class BillChangeService {
   constructor(
     @Inject(RATE_SCHEDULES) private readonly rates: RateScheduleTable,
     @Inject(BILL_SOURCE) private readonly bills: BillSource,
   ) {}
 
-  async forHousehold(sin: string) {
+  async explainForHousehold(sin: string) {
     const bills = await this.bills.bills(sin);
     if (bills.length < 2) throw new NotFoundException({ error: "Kailangan ng dalawang Bill" });
     const [before, now] = bills.slice(-2) as [Bill, Bill];
-    return this.decode(before, now);
+    return this.explain(before, now);
   }
 
-  decode(before: Bill, now: Bill) {
+  explain(before: Bill, now: Bill) {
     const schedBefore = this.schedule(before.period);
     const schedNow = this.schedule(now.period);
     const split = splitBillChange(before, now, schedBefore, schedNow);

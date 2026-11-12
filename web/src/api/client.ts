@@ -109,7 +109,7 @@ export async function scanBill(photo: File): Promise<ScanOutcome> {
   return { kind: "unavailable", error: body.error ?? `Hindi nabasa ang litrato (HTTP ${res.status}).` };
 }
 
-export interface LamanRow {
+export interface BillBreakdownRow {
   label: string;
   amount: number;
   known: boolean;
@@ -121,15 +121,15 @@ export interface LamanRow {
 }
 
 /** All amounts are integer centavos. */
-export interface Laman {
-  groups: { key: string; title: string; total: number; rows: LamanRow[] }[];
+export interface BillBreakdown {
+  groups: { key: string; title: string; total: number; rows: BillBreakdownRow[] }[];
   total: number;
   split: { passThrough: number; meralco: number };
 }
 
-export const lamanApi = (now: BillInput, before: BillInput) =>
+export const fetchBillBreakdown = (now: BillInput, before: BillInput) =>
   fetch("/api/bills/laman", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ now, before }),
-  }).then((r) => json<Laman>(r));
+  }).then((r) => json<BillBreakdown>(r));

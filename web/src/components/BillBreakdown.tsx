@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Laman as LamanData, LamanRow } from "./api";
-import { peso } from "./format";
+import type { BillBreakdown as BillBreakdownData, BillBreakdownRow } from "../api/client";
+import { peso } from "../lib/format";
 
 const PAYEE_TAG: Record<string, string> = {
   passThrough: "Pass-through",
@@ -9,7 +9,7 @@ const PAYEE_TAG: Record<string, string> = {
   subsidy: "Subsidy",
 };
 
-function change(row: LamanRow) {
+function change(row: BillBreakdownRow) {
   const c = row.change;
   if (c.status === "noPrevious") return "Walang naka-print na linya ang nakaraang Bill, kaya hindi maikumpara.";
   if (c.status === "new") return "Wala ito sa nakaraang Bill.";
@@ -17,7 +17,7 @@ function change(row: LamanRow) {
   return `${peso(c.amount!, true)} kumpara sa nakaraang buwan (${peso(c.previous!)} noon).`;
 }
 
-function Row({ row }: { row: LamanRow }) {
+function Row({ row }: { row: BillBreakdownRow }) {
   const [open, setOpen] = useState(false);
   const tag = row.payee ? PAYEE_TAG[row.payee.type] : null;
   return (
@@ -48,7 +48,8 @@ function Row({ row }: { row: LamanRow }) {
   );
 }
 
-export function Laman({ data, missingLines }: { data: LamanData | null; missingLines: boolean }) {
+/** "Ano'ng laman ng bill ko?" */
+export function BillBreakdown({ data, missingLines }: { data: BillBreakdownData | null; missingLines: boolean }) {
   if (missingLines) {
     return (
       <section className="card">
