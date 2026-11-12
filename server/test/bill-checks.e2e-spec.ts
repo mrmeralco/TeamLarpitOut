@@ -21,7 +21,7 @@ describe("POST /api/bills/check", () => {
         ],
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now });
+      const { status, body } = await api.userPost("/api/bills/check", { now });
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "lineSum");
       expect(check.status).toBe("pass");
@@ -41,7 +41,7 @@ describe("POST /api/bills/check", () => {
         ],
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now, tolerancePesos: 2.0 });
+      const { status, body } = await api.userPost("/api/bills/check", { now, tolerancePesos: 2.0 });
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "lineSum");
       expect(check.status).toBe("pass");
@@ -61,7 +61,7 @@ describe("POST /api/bills/check", () => {
         ],
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now });
+      const { status, body } = await api.userPost("/api/bills/check", { now });
       expect(status).toBe(200);
       expect(body.overall).toBe("red");
       const check = body.checks.find((c: any) => c.key === "lineSum");
@@ -94,7 +94,7 @@ describe("POST /api/bills/check", () => {
         presentReading: 1250,
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now, before });
+      const { status, body } = await api.userPost("/api/bills/check", { now, before });
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "readingContinuity");
       expect(check.status).toBe("pass");
@@ -117,7 +117,7 @@ describe("POST /api/bills/check", () => {
         presentReading: 1300,
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now, before });
+      const { status, body } = await api.userPost("/api/bills/check", { now, before });
       expect(status).toBe(200);
       expect(body.overall).toBe("red");
       const check = body.checks.find((c: any) => c.key === "readingContinuity");
@@ -146,7 +146,7 @@ describe("POST /api/bills/check", () => {
         presentReading: 200,
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now, before });
+      const { status, body } = await api.userPost("/api/bills/check", { now, before });
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "readingContinuity");
       expect(check.status).toBe("skipped");
@@ -169,7 +169,7 @@ describe("POST /api/bills/check", () => {
         presentReading: 1450,
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now, before });
+      const { status, body } = await api.userPost("/api/bills/check", { now, before });
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "readingContinuity");
       expect(check.status).toBe("skipped");
@@ -190,7 +190,7 @@ describe("POST /api/bills/check", () => {
         ],
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now });
+      const { status, body } = await api.userPost("/api/bills/check", { now });
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "rateSchedule");
       expect(check.status).toBe("pass");
@@ -208,7 +208,7 @@ describe("POST /api/bills/check", () => {
         ],
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now });
+      const { status, body } = await api.userPost("/api/bills/check", { now });
       expect(status).toBe(200);
       expect(body.overall).toBe("red");
       const check = body.checks.find((c: any) => c.key === "rateSchedule");
@@ -232,7 +232,7 @@ describe("POST /api/bills/check", () => {
         payments: [{ date: "2026-01-10", amount: 2000 }],
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now });
+      const { status, body } = await api.userPost("/api/bills/check", { now });
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "paymentReflection");
       expect(check.status).toBe("pass");
@@ -250,7 +250,7 @@ describe("POST /api/bills/check", () => {
         payments: [{ date: "2026-01-18", amount: 2000 }], // Paid 3 days AFTER bill was issued
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now });
+      const { status, body } = await api.userPost("/api/bills/check", { now });
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "paymentReflection");
       expect(check.status).toBe("pass");
@@ -268,7 +268,7 @@ describe("POST /api/bills/check", () => {
         payments: [{ date: "2026-01-05", amount: 2500 }],
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now });
+      const { status, body } = await api.userPost("/api/bills/check", { now });
       expect(status).toBe(200);
       expect(body.overall).toBe("red");
       const check = body.checks.find((c: any) => c.key === "paymentReflection");
@@ -309,7 +309,7 @@ describe("POST /api/bills/check", () => {
         ],
       };
 
-      const { status, body } = await api.post("/api/bills/check", { now, before });
+      const { status, body } = await api.userPost("/api/bills/check", { now, before });
       expect(status).toBe(200);
       expect(body.overall).toBe("green");
       expect(body.failedChecks).toHaveLength(0);
@@ -342,7 +342,7 @@ describe("POST /api/bills/check", () => {
         ],
       };
 
-      const { status, body } = await api.post("/api/bills/check", {
+      const { status, body } = await api.userPost("/api/bills/check", {
         now,
         before,
         predictedDailyKwh: 4.0,
@@ -380,7 +380,7 @@ describe("POST /api/bills/check", () => {
         ],
       };
 
-      const { status, body } = await api.post("/api/bills/check", {
+      const { status, body } = await api.userPost("/api/bills/check", {
         now,
         before,
         predictedDailyKwh: 4.0,
@@ -416,7 +416,7 @@ describe("POST /api/bills/check", () => {
         ],
       };
 
-      const { status, body } = await api.post("/api/bills/check", {
+      const { status, body } = await api.userPost("/api/bills/check", {
         now,
         before,
         predictedDailyKwh: 4.0,
@@ -462,11 +462,7 @@ describe("GET /api/households/:sin/check", () => {
       bills: { [sin]: bills },
     });
 
-    const loginRes = await api.post("/api/auth/login", {
-      email: testLogins[0].email,
-      password: testLogins[0].password,
-    });
-    const token = loginRes.body.token;
+    const token = await api.login();
 
     const { status, body } = await api.get(`/api/households/${sin}/check`, token);
     expect(status).toBe(200);
@@ -527,11 +523,7 @@ describe("GET /api/households/:sin/check", () => {
       weather,
     });
 
-    const loginRes = await api.post("/api/auth/login", {
-      email: testLogins[0].email,
-      password: testLogins[0].password,
-    });
-    const token = loginRes.body.token;
+    const token = await api.login();
 
     // 1. Initial check: yellow badge because of usage outlier
     const res1 = await api.get(`/api/households/${sin}/check`, token);

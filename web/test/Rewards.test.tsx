@@ -180,3 +180,12 @@ describe("Rewards component", () => {
     });
   });
 });
+
+describe("locked Welcome Points", () => {
+  it("shows Welcome Points in the balance marked locked", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...mockCatalog, balance: 100, lockedPoints: 100, spendable: 0 }), { status: 200 })));
+    render(<Rewards token="t" household={household} onExpired={() => {}} />);
+    expect(await screen.findByText(/100 Points/)).toBeTruthy();
+    expect(screen.getByTestId("locked-points").textContent).toMatch(/100 Welcome Points ay naka-lock hanggang sa unang Verified Savings/);
+  });
+});

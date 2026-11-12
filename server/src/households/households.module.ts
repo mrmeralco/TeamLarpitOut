@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Header, HttpCode, Module, Param, Post, Req, UseGuards } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module.js";
 import { SessionGuard, type AuthenticatedRequest } from "../auth/session.guard.js";
-import { MyMeralcoModule } from "../bills/my-meralco.module.js";
+import { MeralcoAccountsModule } from "../bills/meralco-accounts.module.js";
+import { HOUSEHOLD_LINKS } from "../common/injection-tokens.js";
+import { InMemoryHouseholdLinkRepository } from "./household-link.repository.js";
 import { HouseholdAccessGuard } from "./household-access.guard.js";
 import { HouseholdsService } from "./households.service.js";
 import { RecordHouseholdChangeDto } from "./dto/record-change.dto.js";
@@ -42,9 +44,13 @@ export class HouseholdsController {
 }
 
 @Module({
-  imports: [AuthModule, MyMeralcoModule],
+  imports: [AuthModule, MeralcoAccountsModule],
   controllers: [HouseholdsController],
-  providers: [HouseholdsService, HouseholdAccessGuard],
-  exports: [AuthModule, HouseholdsService, HouseholdAccessGuard],
+  providers: [
+    HouseholdsService,
+    HouseholdAccessGuard,
+    { provide: HOUSEHOLD_LINKS, useFactory: () => new InMemoryHouseholdLinkRepository() },
+  ],
+  exports: [AuthModule, MeralcoAccountsModule, HouseholdsService, HouseholdAccessGuard, HOUSEHOLD_LINKS],
 })
 export class HouseholdsModule {}

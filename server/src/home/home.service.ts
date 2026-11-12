@@ -5,6 +5,7 @@ import type { BillSource } from "../bills/bill-source.js";
 import { BILL_SOURCE } from "../common/injection-tokens.js";
 import type { Bill } from "../domain/bill.js";
 import { BADGE_LABEL, bakitGanitoSentence, homeAction, homeBadge } from "../domain/home-summary.js";
+import { homeChargeLines } from "../domain/charge-lines.js";
 import { HouseholdsService } from "../households/households.service.js";
 
 const MONTHS = ["Enero", "Pebrero", "Marso", "Abril", "Mayo", "Hunyo", "Hulyo", "Agosto", "Setyembre", "Oktubre", "Nobyembre", "Disyembre"];
@@ -36,16 +37,33 @@ export class HomeService {
     const checks = await this.billChecks.checkForHousehold(sin);
     const badge = homeBadge({ checksOverall: checks.overall });
 
-    let bakitGanito: { sentence: string; total: number; screen: "bakit-ganito" } | null = null;
+    let bakitGanito: {
+      sentence: string;
+      total: number;
+      screen: "bakit-ganito";
+      previousPeriod: string;
+      /** Rate, Billing Days, Weather, Habit: they and `lines` add up to `total` exactly (ADR-0001). */
+      effects: { key: string; label: string; amount: number }[];
+      lines: { key: string; label: string; amount: number }[];
+      addsUp: boolean;
+      habit: number;
+    } | null = null;
     let bakitGanitoUnavailable: string | null = history.length < 2 ? "Kailangan ng dalawang Bill para maikumpara." : null;
     if (history.length >= 2) {
       try {
         const change = await this.billChange.explainForHousehold(sin);
         const parts = [...change.effects, ...change.lines].map((p) => ({ key: p.key, amount: p.amount }));
+        const effects = change.effects.map((e) => ({ key: e.key, label: e.label, amount: e.amount }));
+        const lines = change.lines.map((l) => ({ key: l.key, label: l.label, amount: l.amount }));
         bakitGanito = {
           sentence: bakitGanitoSentence(change.total, parts, monthName(history.at(-2)!.period)),
           total: change.total,
           screen: "bakit-ganito",
+          previousPeriod: history.at(-2)!.period,
+          effects,
+          lines,
+          addsUp: [...effects, ...lines].reduce((s, p) => s + p.amount, 0) === change.total,
+          habit: effects.find((e) => e.key === "habit")?.amount ?? 0,
         };
       } catch (err) {
         if (!(err instanceof HttpException)) throw err;
@@ -53,9 +71,16 @@ export class HomeService {
       }
     }
 
+    const previous = history.at(-2);
+    const charges = homeChargeLines(latest.chargeLines ?? [], previous?.chargeLines ?? []);
+
     return {
       currency: "PHP-centavos",
       meterType: household.meter_type,
+      canMasked: await this.households.canMasked(ownerId, sin),
+      area: household.masked_address.replace(/^•+\s*/, ""),
+      /** Every printed line with a stable id, amount, change and who gets the money. */
+      chargeLines: { featured: charges.featured, all: charges.all },
       bill: {
         period: latest.period,
         amountDue: amountDue(latest),

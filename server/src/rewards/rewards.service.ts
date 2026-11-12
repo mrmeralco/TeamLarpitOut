@@ -14,9 +14,10 @@ export class RewardsService {
   async getCatalog(sin: string) {
     const pointsData = await this.usagePlan.getPoints(sin);
     const balance = pointsData.balance;
+    const spendable = pointsData.spendable;
 
     const catalog = SAMPLE_REWARDS_CATALOG.map((item) => {
-      const affordable = balance >= item.pointsCost;
+      const affordable = spendable >= item.pointsCost;
       const progressPercent = Math.min(100, Math.floor((balance / item.pointsCost) * 100));
       const pointsNeeded = Math.max(0, item.pointsCost - balance);
 
@@ -40,6 +41,8 @@ export class RewardsService {
     return {
       sin,
       balance,
+      lockedPoints: pointsData.lockedPoints,
+      spendable,
       tag: "sample rewards" as const,
       disclaimer: "Partner-funded sample rewards. Hindi ito bawas o diskwento sa Meralco bill.",
       catalog,
@@ -54,6 +57,15 @@ export class RewardsService {
     }
 
     const pointsData = await this.usagePlan.getPoints(sin);
+    if (pointsData.balance >= reward.pointsCost && pointsData.spendable < reward.pointsCost) {
+      throw new BadRequestException({
+        error: `Naka-lock pa ang ${pointsData.lockedPoints} Welcome Points hanggang sa unang Verified Savings sa susunod na Bill.`,
+        reason: "welcomePointsLocked",
+        balance: pointsData.balance,
+        lockedPoints: pointsData.lockedPoints,
+        pointsCost: reward.pointsCost,
+      });
+    }
     if (pointsData.balance < reward.pointsCost) {
       throw new BadRequestException({
         error: `Hindi sapat ang iyong Points balance (${pointsData.balance} pts) para sa reward na ${reward.name} (${reward.pointsCost} pts).`,

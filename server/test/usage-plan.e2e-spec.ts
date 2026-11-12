@@ -30,13 +30,14 @@ async function setup(opts: Parameters<typeof harness>[0] = {}) {
   const api = await harness({ bills: { [SIN]: history() }, weather, ...opts });
   const token = await api.login();
   await api.put(`/api/households/${SIN}/appliances`, survey, token);
+  await api.completeSetup(SIN, token);
   return { api, token };
 }
 
 const find = (missions: any[], id: string) => missions.find((m) => m.id === id);
 
 describe("GET /api/households/:sin/target", () => {
-  it("adjusts the Baseline for next month's weather and offers 5/10/15% Targets in pesos", async () => {
+  it("adjusts the Baseline for next month's weather and sets the fixed 5% Target in pesos", async () => {
     const { api, token } = await setup();
     const { status, body } = await api.get(`/api/households/${SIN}/target`, token);
 
@@ -46,11 +47,7 @@ describe("GET /api/households/:sin/target", () => {
     // 8 kWh/day + 1.0 kWh/CDD (no history yet: Cooling Appliance estimate) × 2 CDD = 10 kWh/day × 30 days.
     expect(body.baseline).toMatchObject({ kwh: 300, kwhPerDay: 10, weatherAdjusted: true, weatherKwhPerDay: 2, pesos: 335_000 });
     expect(body.baseline.heatSensitivity.source).toBe("cooling_appliance_estimate");
-    expect(body.options).toEqual([
-      { cut: 5, kwh: 285, pesos: 318_500, savings: 16_500 },
-      { cut: 10, kwh: 270, pesos: 302_000, savings: 33_000 },
-      { cut: 15, kwh: 255, pesos: 285_500, savings: 49_500 },
-    ]);
+    expect(body.options).toEqual([{ cut: 5, kwh: 285, pesos: 318_500, savings: 16_500 }]);
   });
 
   it("falls back to the latest kWh per day when next month's weather is unknown", async () => {
@@ -181,11 +178,11 @@ describe("Gemini Coach", () => {
 describe("Household usage plan (Target + Missions for one billing period)", () => {
   it("saves the chosen cut and 1–3 Missions with their computed values", async () => {
     const { api, token } = await setup();
-    const saved = await api.put(`/api/households/${SIN}/usage-plan`, { cut: 10, missionIds: ["aircon-timer-2h", "ref-medium"] }, token);
+    const saved = await api.put(`/api/households/${SIN}/usage-plan`, { cut: 5, missionIds: ["aircon-timer-2h", "ref-medium"] }, token);
 
     expect(saved.status).toBe(200);
     expect(saved.body.active).toBe(true);
-    expect(saved.body.plan).toMatchObject({ period: "2026-11", cut: 10, targetKwh: 270, targetPesos: 302_000, airconSetting: null });
+    expect(saved.body.plan).toMatchObject({ period: "2026-11", cut: 5, targetKwh: 285, targetPesos: 318_500, airconSetting: null });
     expect(saved.body.plan.missions.map((m: any) => m.id)).toEqual(["aircon-timer-2h", "ref-medium"]);
 
     const { body } = await api.get(`/api/households/${SIN}/usage-plan`, token);
@@ -197,6 +194,7 @@ describe("Household usage plan (Target + Missions for one billing period)", () =
     const api = await harness({ billSource: { bills: async () => bills }, weather });
     const token = await api.login();
     await api.put(`/api/households/${SIN}/appliances`, survey, token);
+    await api.completeSetup(SIN, token);
     await api.put(`/api/households/${SIN}/usage-plan`, { cut: 5, missionIds: ["ref-medium"] }, token);
 
     bills.push(bill("2026-11", 250, 30));
@@ -205,15 +203,17 @@ describe("Household usage plan (Target + Missions for one billing period)", () =
     expect(body.plan.period).toBe("2026-11");
   });
 
-  it("rejects cuts other than 5/10/15, more than 3 Missions, and Missions that don't apply", async () => {
+  it("rejects cuts other than 5, more than 3 Missions, and Missions that don't apply", async () => {
     const { api, token } = await setup();
     const put = (body: unknown) => api.put(`/api/households/${SIN}/usage-plan`, body, token);
 
     expect((await put({ cut: 7, missionIds: ["ref-medium"] })).status).toBe(400);
-    expect((await put({ cut: 10, missionIds: [] })).status).toBe(400);
-    expect((await put({ cut: 10, missionIds: ["ref-medium", "aircon-25c", "aircon-timer-2h", "lights-off"] })).status).toBe(400);
-    expect((await put({ cut: 10, missionIds: ["ref-medium", "ref-medium"] })).status).toBe(400);
-    const notHere = await put({ cut: 10, missionIds: ["iron-batch"] });
+    expect((await put({ cut: 10, missionIds: ["ref-medium"] })).status).toBe(400);
+    expect((await put({ cut: 15, missionIds: ["ref-medium"] })).status).toBe(400);
+    expect((await put({ cut: 5, missionIds: [] })).status).toBe(400);
+    expect((await put({ cut: 5, missionIds: ["ref-medium", "aircon-25c", "aircon-timer-2h", "lights-off"] })).status).toBe(400);
+    expect((await put({ cut: 5, missionIds: ["ref-medium", "ref-medium"] })).status).toBe(400);
+    const notHere = await put({ cut: 5, missionIds: ["iron-batch"] });
     expect(notHere.status).toBe(400);
     expect(notHere.body.issues).toEqual(["iron-batch"]);
 
@@ -222,9 +222,9 @@ describe("Household usage plan (Target + Missions for one billing period)", () =
 
   it("is only for the Household's owner", async () => {
     const { api, token } = await setup();
-    await api.put(`/api/households/${SIN}/usage-plan`, { cut: 10, missionIds: ["ref-medium"] }, token);
-    const tokenB = await api.login(testLogins[1]!.email, testLogins[1]!.password);
+    await api.put(`/api/households/${SIN}/usage-plan`, { cut: 5, missionIds: ["ref-medium"] }, token);
+    const tokenB = await api.login(testLogins[1]!.email);
     expect((await api.get(`/api/households/${SIN}/usage-plan`, tokenB)).status).toBe(404);
-    expect((await api.put(`/api/households/${FOREIGN_SIN}/usage-plan`, { cut: 10, missionIds: ["ref-medium"] }, token)).status).toBe(404);
+    expect((await api.put(`/api/households/${FOREIGN_SIN}/usage-plan`, { cut: 5, missionIds: ["ref-medium"] }, token)).status).toBe(404);
   });
 });

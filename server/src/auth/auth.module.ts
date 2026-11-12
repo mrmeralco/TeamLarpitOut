@@ -1,19 +1,29 @@
 import { Body, Controller, Header, HttpCode, Module, Post, Req, UseGuards } from "@nestjs/common";
-import { MyMeralcoModule } from "../bills/my-meralco.module.js";
-import { AUTH_CLOCK } from "../common/injection-tokens.js";
+import { AUTH_CLOCK, EMAIL_SENDER, SIGN_IN_CODE_GENERATOR } from "../common/injection-tokens.js";
 import { AuthService } from "./auth.service.js";
-import { LoginDto } from "./login.dto.js";
+import { StartEmailSignInDto, VerifyEmailSignInDto } from "./dto/email-sign-in.dto.js";
+import { CODE_TTL_MS, EmailCodeService, randomSignInCode } from "./email-code.service.js";
+import { LogEmailSender } from "./email-sender.interface.js";
 import { SessionGuard, type AuthenticatedRequest } from "./session.guard.js";
 
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(private readonly auth: AuthService, private readonly codes: EmailCodeService) {}
 
-  @Post("login")
+  /** Always the same answer, so it never reveals whether an email has used the app before. */
+  @Post("email/start")
+  @HttpCode(202)
+  @Header("Cache-Control", "no-store")
+  async start(@Body() body: StartEmailSignInDto) {
+    await this.codes.start(body.email);
+    return { sent: true, expiresInSeconds: CODE_TTL_MS / 1000 };
+  }
+
+  @Post("email/verify")
   @HttpCode(200)
   @Header("Cache-Control", "no-store")
-  login(@Body() body: LoginDto) {
-    return this.auth.login(body.email, body.password);
+  verify(@Body() body: VerifyEmailSignInDto) {
+    return this.auth.createSession(this.codes.verify(body.email, body.code));
   }
 
   @Post("logout")
@@ -25,10 +35,21 @@ export class AuthController {
   }
 }
 
+const fixedCode = () => {
+  const fixed = process.env.AUTH_FIXED_CODE;
+  return fixed && /^\d{6}$/.test(fixed) ? () => fixed : randomSignInCode;
+};
+
 @Module({
-  imports: [MyMeralcoModule],
   controllers: [AuthController],
-  providers: [AuthService, SessionGuard, { provide: AUTH_CLOCK, useValue: { now: () => Date.now() } }],
+  providers: [
+    AuthService,
+    EmailCodeService,
+    SessionGuard,
+    { provide: AUTH_CLOCK, useValue: { now: () => Date.now() } },
+    { provide: EMAIL_SENDER, useFactory: () => new LogEmailSender() },
+    { provide: SIGN_IN_CODE_GENERATOR, useFactory: fixedCode },
+  ],
   exports: [AuthService, SessionGuard, AUTH_CLOCK],
 })
 export class AuthModule {}
