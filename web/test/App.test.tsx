@@ -201,7 +201,7 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[1]!.sin);
     await waitFor(() => expect(resolve).toBeTypeOf("function"));
     const signal = fetchMock.mock.calls.find(([url]) => url.includes("/readings"))![1]!.signal!;
-    if (action === "logout") { await goTab("Account"); fireEvent.click(screen.getByRole("button", { name: "Log out" })); }
+    if (action === "logout") { await goTab("Account"); fireEvent.click(screen.getAllByRole("button", { name: "Log out" })[0]!); }
     else await select(households[0]!.sin);
     expect(signal.aborted).toBe(true);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
@@ -240,10 +240,18 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[0]!.sin);
     await waitFor(() => expect(resolveHistory).toBeTypeOf("function"));
     await goTab("Account");
-    fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Log out" })[0]!);
     await act(async () => resolveHistory(response(history(230))));
     await screen.findByRole("heading", { name: "Welcome back" });
     expect(screen.queryByRole("table")).toBeNull();
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/auth/logout")).toBe(true));
+  });
+
+  it("logs out directly from the sidebar TabBar without visiting Account tab", async () => {
+    render(<App />); await login(); await select(households[0]!.sin);
+    await screen.findByRole("heading", { name: /Good/ });
+    fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+    await screen.findByRole("heading", { name: "Welcome back" });
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/auth/logout")).toBe(true));
   });
 

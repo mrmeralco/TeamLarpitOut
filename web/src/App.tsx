@@ -52,6 +52,18 @@ export function App() {
   }, []);
   const onExpired = useCallback(() => end(EXPIRED), [end]);
 
+  const logout = useCallback(() => {
+    if (!session) return;
+    const token = session.token;
+    end(null);
+    window.location.hash = "/signin";
+    void api.logout(token).catch((err) => {
+      if (!(err instanceof ApiError && err.status === 401)) {
+        setSessionNotice("We couldn't confirm the logout with the server. The session is cleared on this device; the token expires within an hour.");
+      }
+    });
+  }, [session, end]);
+
   // A reload keeps the session (and the tab, via the hash) until the token expires.
   useEffect(() => {
     const token = stored.get("token");
@@ -113,6 +125,7 @@ export function App() {
     return <main className="auth-main"><AuthLayout>
       <ScanBill key={`link:${session.token}`} token={session.token} onExpired={onExpired}
         onBack={selected ? () => setLinking(false) : undefined}
+        onLogout={logout}
         onLinked={(sin) => {
           void api.households(session.token).then((households) => {
             begin({ ...session, households }, sin); setLinking(false); go("home");
@@ -147,19 +160,12 @@ export function App() {
         </MissionsTab>}
         {tab === "rewards" && <Rewards key={`rewards:${key}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => setRewardsVersion((v) => v + 1)} />}
         {tab === "account" && <>
-          <HouseholdPicker households={session.households} selected={selected.sin} onSelect={select} onLogout={() => {
-            const token = session.token;
-            end(null);
-            window.location.hash = "/signin";
-            void api.logout(token).catch((err) => {
-              if (!(err instanceof ApiError && err.status === 401)) setSessionNotice("We couldn't confirm the logout with the server. The session is cleared on this device; the token expires within an hour.");
-            });
-          }} />
+          <HouseholdPicker households={session.households} selected={selected.sin} onSelect={select} onLogout={logout} />
           <button type="button" className="ghost wide" onClick={() => setLinking(true)}>+ Link another Household</button>
           <Appliances key={`appliances:${key}`} token={session.token} household={selected} onExpired={onExpired} onSaved={() => { setApplianceVersion((v) => v + 1); refreshSetup(); }} />
         </>}
       </main>
-      <TabBar tab={tab} />
+      <TabBar tab={tab} onLogout={logout} />
     </div>
   );
 }
