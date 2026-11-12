@@ -80,6 +80,38 @@ Scanning and `POST /api/bakit-ganito` remain public. A scan grants no access to 
 - Regenerate deterministically with `pnpm --filter @kuryenteko/server build` followed by `node server/scripts/generate-bill-history.mjs`. The script reuses the actual `costLines()` implementation, preserves supplied recent Bill fields and rejects missing schedules or nonconsecutive periods.
 - `HouseholdStore` holds isolated snapshots under each Service ID Number. Restarting recreates the demo fixture; there is no database migration. Future appliance, Mission, typed-reading and Points records must use the same Household boundary, with ownership checked before access. Their feature behavior is outside this ticket.
 
+### Mock smart meter readings (issue #10, Slice 1)
+
+`GET /api/households/:sin/readings?from=<ISO timestamp>&to=<ISO timestamp>&interval=hour|day|week`
+
+This endpoint requires the same bearer token and current Household ownership checks as Bill History. Meter Type comes from the server's My Meralco record. Linked traditional Households return `422` without consulting the reading source; missing/expired/revoked sessions return `401`, and unknown/unlinked Service ID Numbers return the same `404`. Source failures or malformed source readings return `502`. Successful responses use `Cache-Control: no-store`.
+
+The response contains:
+
+```json
+{
+  "sin": "9876543210",
+  "interval": "day",
+  "timeZone": "Asia/Manila",
+  "range": { "from": "2026-11-01T16:00:00.000Z", "to": "2026-11-02T16:00:00.000Z" },
+  "available": { "from": "2025-12-01T00:00:00+08:00", "to": "2026-12-01T00:00:00+08:00" },
+  "provenance": { "kind": "synthetic", "note": "Fixed simulation; not real Meralco readings." },
+  "readings": [{ "from": "2026-11-01T16:00:00.000Z", "to": "2026-11-02T16:00:00.000Z", "kwh": 12.345, "partial": false }]
+}
+```
+
+The sample above illustrates the response shape; the kWh value and shortened note are illustrative. Readings represent **consumption per interval**, not cumulative meter values.
+
+- Ranges are half-open `[from, to)`. Supply both bounds or neither. Explicit bounds must be valid ISO timestamps with seconds, a timezone (`Z` or offset), and hour alignment; encode `+` as `%2B` in query strings. Reversed/equal bounds, unsupported intervals, repeated parameters, and ranges exceeding 366 days return `400`.
+- `interval` defaults to `day`. With both bounds omitted, the API uses the latest 24 hours / 30 days / 12 weeks for hour / day / week, clipped to the source's advertised available window. This lets a client discover simulation dates without hardcoding them. With no available data, the default `range` and `available` are `null` and `readings` is empty.
+- Daily buckets start at Manila midnight; weekly buckets start Monday at Manila midnight. Response bucket timestamps are UTC ISO strings. Boundary buckets are clipped to the requested range. `partial: true` means the full calendar bucket is not covered, including missing source hours. Missing hours are not invented as zeroes; valid ranges without readings return an empty array. Consumers must not treat partial buckets as full-period totals.
+- The demo smart Household (`9876543210`) has a fixed **December 2025–November 2026 simulation**, including simulated future hours relative to the development date. It is not live telemetry. Invented seasonal temperatures drive a sustained 10 PM–6 AM aircon load, alongside base load and evening activity. The mock calculates deterministic integer Wh and aggregates before converting to kWh. It does not claim reconciliation with the separately generated Bills or supply evidence for Bill Checks.
+- `READING_SOURCE` is a separately injectable `ReadingSource` with metadata and hourly readings keyed by Service ID Number. The test harness accepts `readings` fixtures or a `readingSource` fake independently of Bills and weather. The default mock is in-process and needs no API key, network, database, or migration.
+
+For a logged-in demo session, `GET /api/households/9876543210/readings` returns the default daily window. `GET /api/households/9876543210/readings?interval=hour` returns hourly usage. Explicit example: `GET /api/households/9876543210/readings?from=2026-11-02T00:00:00%2B08:00&to=2026-11-03T00:00:00%2B08:00&interval=day`.
+
+Run `pnpm --filter @kuryenteko/server test` and `pnpm --filter @kuryenteko/server typecheck` to verify the API. The frontend chart and Meter Type rendering are later slices and are not implemented by Slice 1.
+
 ### Scan linkage
 
 A successful public `POST /api/bills/scan` now includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized Service ID Number is retained server-side, with a maximum of 1,000 active references; no photo or scanned Bill is saved. Complete ten-digit identifiers are required for matching; whitespace and hyphens are accepted. Missing or partial identifiers cannot identify a Household.

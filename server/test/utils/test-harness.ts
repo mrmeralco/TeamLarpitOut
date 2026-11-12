@@ -13,7 +13,9 @@ import { configureApp } from "../../src/app.setup.js";
 import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
-import { AUTH_CLOCK, BILL_SOURCE, MY_MERALCO_SOURCE, RATE_SCHEDULES, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
+import { AUTH_CLOCK, BILL_SOURCE, MY_MERALCO_SOURCE, RATE_SCHEDULES, READING_SOURCE, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
+import { inMemoryReadingSource, type ReadingSource } from "../../src/smart-meter/reading-source.interface.js";
+import type { HourlyReading } from "../../src/domain/meter-reading.js";
 import type { AuthClock } from "../../src/auth/auth.service.js";
 import { mockMyMeralcoSource, type MockMeralcoLogin, type MyMeralcoSource } from "../../src/bills/myMeralcoSource.js";
 import type { RawBillReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
@@ -68,6 +70,9 @@ export interface HarnessOptions {
   bills?: Record<string, Bill[]>;
   /** Or a fully custom Bill source. */
   billSource?: BillSource;
+  /** Hourly consumption per SIN, or a custom source independent of Bill/weather fakes. */
+  readings?: Record<string, HourlyReading[]>;
+  readingSource?: ReadingSource;
   /** What the fake vision model "reads" from any photo, or a custom provider. */
   vision?: RawBillReading | VisionProvider;
   /** Fake weather observations or a custom weather provider. */
@@ -99,6 +104,8 @@ export async function harness(opts: HarnessOptions = {}) {
     .useValue(rateScheduleTable(opts.schedules ?? [schedule("2026-09", 10), schedule("2026-10", 11)]))
     .overrideProvider(BILL_SOURCE)
     .useValue(opts.billSource ?? inMemoryBillSource(opts.bills ?? {}))
+    .overrideProvider(READING_SOURCE)
+    .useValue(opts.readingSource ?? inMemoryReadingSource(opts.readings ?? {}))
     .overrideProvider(MY_MERALCO_SOURCE)
     .useValue(opts.myMeralco ?? mockMyMeralcoSource(testLogins))
     .overrideProvider(AUTH_CLOCK)
