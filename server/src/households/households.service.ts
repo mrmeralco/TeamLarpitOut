@@ -1,11 +1,10 @@
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { toHousehold, type MeralcoAccountSource } from "../bills/meralco-accounts.js";
 import { HOUSEHOLD_LINKS, MERALCO_ACCOUNTS } from "../common/injection-tokens.js";
 import type { Household, HouseholdChange } from "../domain/household.js";
-import type { HouseholdLink, HouseholdLinkRepository } from "./household-link.repository.js";
+import type { HouseholdLinkRepository } from "./household-link.repository.js";
 
 export const OWNED_BY_ANOTHER = "This account is already linked to another login. Please contact the account owner.";
-export const SCAN_TO_CONFIRM = "Scan your latest Bill with the same CAN first to open this Household.";
 
 /** Shows a CAN like "39•• ••• 482": enough to recognise, not enough to reuse. */
 export function maskCan(can: string): string {
@@ -14,12 +13,6 @@ export function maskCan(can: string): string {
   return `${d.slice(0, 2)}•• ••• ${d.slice(-3)}`;
 }
 
-/** What the scan did to this login's pending link. */
-export type LinkActivation =
-  | { status: "active"; householdSin: string; canMasked: string }
-  | { status: "pending"; reason: "differentAccount" | "canUnread"; canMasked: string }
-  | { status: "refused"; reason: "ownedByAnother"; message: string }
-  | { status: "none" };
 
 @Injectable()
 export class HouseholdsService {
@@ -61,10 +54,6 @@ export class HouseholdsService {
     return item;
   }
 
-  /** The login's pending link (at most one), if any. */
-  async pendingLink(ownerId: string): Promise<HouseholdLink | null> {
-    return (await this.links.forOwner(ownerId)).find((l) => l.status === "pending") ?? null;
-  }
 
   /** The masked CAN this login linked the Household with. */
   async canMasked(ownerId: string, sin: string): Promise<string | null> {
@@ -72,46 +61,12 @@ export class HouseholdsService {
     return link ? maskCan(link.can) : null;
   }
 
-  async pendingAccount(ownerId: string) {
-    const link = await this.pendingLink(ownerId);
-    return link ? this.meralco.household(link.sin) : null;
-  }
 
-  /**
-   * Typing a CAN starts a pending link (replacing any earlier pending one).
-   * Refused when another login already holds the active link.
-   */
-  async startLink(ownerId: string, can: string) {
-    const account = await this.meralco.findByCan(can);
-    if (!account) throw new NotFoundException({ error: "No Meralco account has this CAN. Please check your Bill again." });
-    const owner = await this.links.activeOwner(account.sin);
-    if (owner !== null && owner !== ownerId) throw new ConflictException({ error: OWNED_BY_ANOTHER, reason: "ownedByAnother" });
-    if (owner === ownerId) return { account, status: "active" as const };
-    const previous = await this.pendingLink(ownerId);
-    if (previous && previous.sin !== account.sin) await this.links.remove(ownerId, previous.sin);
-    await this.links.save({ ownerId, sin: account.sin, can: account.can, status: "pending" });
-    return { account, status: "pending" as const };
-  }
 
-  /** A scanned (or typed-from-the-Bill) CAN activates the pending link only when it is the same CAN. */
-  async activateFromScan(ownerId: string, scannedCan: string | null): Promise<LinkActivation> {
-    const pending = await this.pendingLink(ownerId);
-    if (!pending) return { status: "none" };
-    const canMasked = maskCan(pending.can);
-    if (scannedCan === null) return { status: "pending", reason: "canUnread", canMasked };
-    if (scannedCan !== pending.can) return { status: "pending", reason: "differentAccount", canMasked };
-    const owner = await this.links.activeOwner(pending.sin);
-    if (owner !== null && owner !== ownerId) return { status: "refused", reason: "ownedByAnother", message: OWNED_BY_ANOTHER };
-    await this.links.save({ ...pending, status: "active" });
-    return { status: "active", householdSin: pending.sin, canMasked };
-  }
 
   async requireAccess(ownerId: string, sin: string): Promise<Household> {
     const household = (await this.list(ownerId)).find((entry) => entry.sin === sin);
     if (!household) {
-      if ((await this.pendingLink(ownerId))?.sin === sin) {
-        throw new ForbiddenException({ error: SCAN_TO_CONFIRM, reason: "pendingScan" });
-      }
       // Unknown and foreign services have the same response to avoid disclosing ownership.
       throw new NotFoundException({ error: "Household not found." });
     }

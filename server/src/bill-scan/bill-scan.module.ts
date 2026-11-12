@@ -1,3 +1,4 @@
+import { AccountLinkingModule } from "../account-linking/account-linking.module.js";
 import { HouseholdsModule } from "../households/households.module.js";
 import { ScanContextModule } from "../vision/scan-context.module.js";
 import { Module } from "@nestjs/common";
@@ -6,7 +7,7 @@ import { BillScanController } from "./bill-scan.controller.js";
 import { BillScanService } from "./bill-scan.service.js";
 
 @Module({
-  imports: [VisionModule, HouseholdsModule, ScanContextModule],
+  imports: [VisionModule, HouseholdsModule, ScanContextModule, AccountLinkingModule],
   controllers: [BillScanController],
   providers: [BillScanService],
 })

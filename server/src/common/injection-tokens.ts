@@ -9,9 +9,11 @@ export const VISION_PROVIDER = Symbol("VISION_PROVIDER");
 export const MERALCO_ACCOUNTS = Symbol("MERALCO_ACCOUNTS");
 /** Which login each Household is linked to (pending or active). */
 export const HOUSEHOLD_LINKS = Symbol("HOUSEHOLD_LINKS");
-/** Delivers email sign-in codes (demo: logs the code). */
-export const EMAIL_SENDER = Symbol("EMAIL_SENDER");
-/** Makes 6-digit sign-in codes (fixed in test mode). */
+/** Delivers sign-up codes (SMS or email) and the email verification link (demo: logs them). */
+export const NOTIFIER = Symbol("NOTIFIER");
+/** Logins: email, verified mobile number, password hash (in-memory now; database later). */
+export const ACCOUNT_REPOSITORY = Symbol("ACCOUNT_REPOSITORY");
+/** Makes 6-digit one-time codes (fixed in test mode). */
 export const SIGN_IN_CODE_GENERATOR = Symbol("SIGN_IN_CODE_GENERATOR");
 export const WEATHER_PROVIDER = Symbol("WEATHER_PROVIDER");
 /** Daily heat keyed by Household, independent of monthly CDD and forecasts. */

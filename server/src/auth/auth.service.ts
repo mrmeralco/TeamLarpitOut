@@ -1,7 +1,9 @@
 import { createHash, randomBytes } from "node:crypto";
 import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
-import { AUTH_CLOCK } from "../common/injection-tokens.js";
-import { normalizeEmail } from "./email-code.service.js";
+import { ACCOUNT_REPOSITORY, AUTH_CLOCK } from "../common/injection-tokens.js";
+import type { AccountRepository } from "./account.repository.js";
+import { verifyPassword } from "./password.js";
+import { normalizeEmail } from "./signup.service.js";
 
 export interface AuthClock { now(): number }
 export const SESSION_TTL_MS = 60 * 60 * 1000;
@@ -17,7 +19,19 @@ export function ownerIdForEmail(email: string): string {
 export class AuthService {
   private readonly sessions = new Map<string, Session>();
 
-  constructor(@Inject(AUTH_CLOCK) private readonly clock: AuthClock) {}
+  constructor(
+    @Inject(AUTH_CLOCK) private readonly clock: AuthClock,
+    @Inject(ACCOUNT_REPOSITORY) private readonly accounts: AccountRepository,
+  ) {}
+
+  /** Email + password. One answer for an unknown email, an unfinished sign-up and a wrong password. */
+  async signIn(rawEmail: string, password: string): Promise<{ token: string }> {
+    const email = normalizeEmail(rawEmail);
+    const account = await this.accounts.find(email);
+    const ok = account?.passwordHash ? await verifyPassword(password, account.passwordHash) : false;
+    if (!ok) throw new UnauthorizedException({ error: "The email or password is incorrect." });
+    return this.createSession(email);
+  }
 
   createSession(email: string): { token: string } {
     const now = this.clock.now();

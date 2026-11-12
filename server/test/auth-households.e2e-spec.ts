@@ -1,106 +1,143 @@
 import { describe, expect, it, vi } from "vitest";
 import { ownerIdForEmail } from "../src/auth/auth.service.js";
-import { LogEmailSender } from "../src/auth/email-sender.interface.js";
-import { bill, harness, TEST_CODE, testLogins } from "./utils/test-harness.js";
+import { LogNotifier } from "../src/auth/notifier.interface.js";
+import { bill, harness, TEST_CODE, TEST_PASSWORD, TEST_PHONE, testLogins } from "./utils/test-harness.js";
 
 const householdPath = (sin: string) => `/api/households/${sin}/bakit-ganito`;
 const pair = [bill("2026-09", 100, 30), bill("2026-10", 100, 30)];
 const MINUTE = 60 * 1000;
+const NEW = "rosa@example.test";
 
-describe("email code sign-in", () => {
-  it("start → verify with the right code returns only a token; the code went to that email", async () => {
+type Api = Awaited<ReturnType<typeof harness>>;
+/** Sign-up steps 1–2: email + mobile, then the SMS code; returns the emailed link token. */
+async function toLink(api: Api, email = NEW) {
+  expect((await api.post("/api/auth/signup", { email, phone: TEST_PHONE })).status).toBe(202);
+  expect((await api.post("/api/auth/signup/verify", { email, code: api.notifier.codes.at(-1)!.code })).status).toBe(200);
+  return api.notifier.links.at(-1)!.token;
+}
+
+describe("sign up (like My Meralco): email + mobile → SMS code → email link → create password", () => {
+  it("sends the code by SMS to the mobile number, then a verification link to the email", async () => {
     const api = await harness();
-    const start = await api.post("/api/auth/email/start", { email: "Someone@Example.test" });
-    expect(start).toEqual({ status: 202, body: { sent: true, expiresInSeconds: 600 } });
-    expect(api.email.sent).toEqual([{ email: "someone@example.test", code: TEST_CODE }]);
-    const { status, body } = await api.post("/api/auth/email/verify", { email: "someone@example.test", code: TEST_CODE });
-    expect(status).toBe(200);
-    expect(Object.keys(body)).toEqual(["token"]);
-    expect(body.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const start = await api.post("/api/auth/signup", { email: "Rosa@Example.test", phone: TEST_PHONE });
+    expect(start).toEqual({ status: 202, body: { channel: "sms", sentTo: "+63 917 ••• 4567", expiresInSeconds: 600 } });
+    expect(api.notifier.codes).toEqual([{ channel: "sms", to: TEST_PHONE, code: TEST_CODE }]);
+    const verify = await api.post("/api/auth/signup/verify", { email: NEW, code: TEST_CODE });
+    expect(verify).toEqual({ status: 200, body: { sentTo: NEW, expiresInHours: 24 } });
+    expect(api.notifier.links).toHaveLength(1);
+    expect(api.notifier.links[0]!.link).toMatch(/\/#\/create-password\/[A-Za-z0-9_-]{43}$/);
   });
 
-  it("a new login has an empty Household list", async () => {
+  it("can send the code by email instead", async () => {
     const api = await harness();
-    const token = await api.login("new-person@example.test");
-    expect(await api.get("/api/households", token)).toEqual({ status: 200, body: [] });
-    expect((await api.get(householdPath("1234567890"), token)).status).toBe(404);
+    await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE });
+    const resend = await api.post("/api/auth/signup/resend", { email: NEW, channel: "email" });
+    expect(resend).toEqual({ status: 202, body: { channel: "email", sentTo: "r••a@example.test", expiresInSeconds: 600 } });
+    expect(api.notifier.codes.at(-1)).toEqual({ channel: "email", to: NEW, code: TEST_CODE });
   });
 
-  it("returns 401 for a wrong code, an unknown email and an expired (10 min) code", async () => {
+  it("the link shows its email, then creating a password signs the person in; the link works once", async () => {
+    const api = await harness();
+    const token = await toLink(api);
+    expect(await api.post("/api/auth/signup/link", { token })).toEqual({ status: 200, body: { email: NEW } });
+    const done = await api.post("/api/auth/signup/password", { token, password: "rosa2026x" });
+    expect(done.status).toBe(200);
+    expect(Object.keys(done.body)).toEqual(["token"]);
+    expect(await api.get("/api/households", done.body.token)).toEqual({ status: 200, body: [] });
+    expect((await api.post("/api/auth/signup/password", { token, password: "another2026" })).status).toBe(410);
+    expect((await api.post("/api/auth/signup/link", { token })).status).toBe(410);
+  });
+
+  it("rejects a weak password with the checklist rule", async () => {
+    const api = await harness();
+    const token = await toLink(api);
+    for (const password of ["short1", "onlyletters", "12345678"]) {
+      const res = await api.post("/api/auth/signup/password", { token, password });
+      expect([password, res.status]).toEqual([password, 400]);
+    }
+    expect((await api.post("/api/auth/signup/password", { token, password: "letters123" })).status).toBe(200);
+  });
+
+  it("the verification link expires after 24 hours", async () => {
     let now = 0;
     const api = await harness({ clock: { now: () => now } });
-    await api.post("/api/auth/email/start", { email: "a@example.test" });
-    const wrong = await api.post("/api/auth/email/verify", { email: "a@example.test", code: "000000" });
-    const unknown = await api.post("/api/auth/email/verify", { email: "b@example.test", code: TEST_CODE });
-    expect(wrong.status).toBe(401);
-    expect(unknown).toEqual(wrong);
-    expect(wrong.body.token).toBeUndefined();
+    const token = await toLink(api);
+    now = 24 * 60 * MINUTE;
+    expect((await api.post("/api/auth/signup/password", { token, password: "rosa2026x" })).body.reason).toBe("expiredLink");
+  });
+
+  it("returns 401 for a wrong or expired (10 min) code, and locks it after 5 wrong tries", async () => {
+    let now = 0;
+    let next = 0;
+    const api = await harness({ clock: { now: () => now }, codes: () => ["111111", "222222", "333333"][next++]! });
+    await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE });
+    for (let i = 0; i < 5; i++) expect((await api.post("/api/auth/signup/verify", { email: NEW, code: "999999" })).status).toBe(401);
+    expect((await api.post("/api/auth/signup/verify", { email: NEW, code: "111111" })).status).toBe(401);
+    await api.post("/api/auth/signup/resend", { email: NEW, channel: "sms" });
     now = 10 * MINUTE;
-    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: TEST_CODE })).status).toBe(401);
-    now = 20 * MINUTE;
-    await api.post("/api/auth/email/start", { email: "a@example.test" });
-    now = 30 * MINUTE - 1;
-    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: TEST_CODE })).status).toBe(200);
+    expect((await api.post("/api/auth/signup/verify", { email: NEW, code: "222222" })).status).toBe(401);
+    await api.post("/api/auth/signup/resend", { email: NEW, channel: "sms" });
+    expect((await api.post("/api/auth/signup/verify", { email: NEW, code: "333333" })).status).toBe(200);
+    expect(api.notifier.links).toHaveLength(1);
   });
 
-  it("codes are single-use", async () => {
+  it("tells an existing account to sign in instead", async () => {
     const api = await harness();
-    await api.post("/api/auth/email/start", { email: "a@example.test" });
-    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: TEST_CODE })).status).toBe(200);
-    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: TEST_CODE })).status).toBe(401);
-  });
-
-  it("locks the code after 5 wrong tries for one email; a new start issues a new one", async () => {
-    let next = 0;
-    const codes = ["111111", "222222"];
-    const api = await harness({ codes: () => codes[next++]! });
-    await api.post("/api/auth/email/start", { email: "a@example.test" });
-    for (let i = 0; i < 5; i++) {
-      expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "999999" })).status).toBe(401);
-    }
-    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "111111" })).status).toBe(401);
-    await api.post("/api/auth/email/start", { email: "a@example.test" });
-    expect(api.email.sent.map((m) => m.code)).toEqual(["111111", "222222"]);
-    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "111111" })).status).toBe(401);
-    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "222222" })).status).toBe(200);
-  });
-
-  it("a new start replaces the previous code", async () => {
-    let next = 0;
-    const api = await harness({ codes: () => ["111111", "222222"][next++]! });
-    await api.post("/api/auth/email/start", { email: "a@example.test" });
-    await api.post("/api/auth/email/start", { email: "a@example.test" });
-    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "111111" })).status).toBe(401);
-    expect((await api.post("/api/auth/email/verify", { email: "a@example.test", code: "222222" })).status).toBe(200);
-  });
-
-  it("the same email always maps to the same login, ignoring case and spaces", async () => {
-    expect(ownerIdForEmail(" Owner-A@Example.TEST")).toBe(ownerIdForEmail("owner-a@example.test"));
-    const api = await harness();
-    const token = await api.login("OWNER-A@example.test");
-    expect((await api.get("/api/households", token)).body).toEqual(testLogins[0]!.households);
+    await api.login(NEW);
+    const again = await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE });
+    expect(again.status).toBe(409);
+    expect(again.body.reason).toBe("accountExists");
   });
 
   it.each([
-    ["/api/auth/email/start", {}], ["/api/auth/email/start", { email: "invalid" }], ["/api/auth/email/start", { email: `${"x".repeat(250)}@a.test` }],
-    ["/api/auth/email/verify", { email: "a@example.test" }], ["/api/auth/email/verify", { email: "a@example.test", code: "12345" }],
-    ["/api/auth/email/verify", { email: "a@example.test", code: "abcdef" }], ["/api/auth/email/verify", { email: "a@example.test", code: 123456 }],
+    ["/api/auth/signup", { email: NEW }], ["/api/auth/signup", { email: NEW, phone: "09171234567" }], ["/api/auth/signup", { email: "invalid", phone: TEST_PHONE }],
+    ["/api/auth/signup/verify", { email: NEW, code: "12345" }], ["/api/auth/signup/resend", { email: NEW, channel: "fax" }],
+    ["/api/auth/signup/password", { token: "short", password: "rosa2026x" }], ["/api/auth/signin", { email: NEW }],
   ])("rejects malformed input to %s: %j", async (path, body) => {
     const api = await harness();
     expect((await api.post(path, body)).status).toBe(400);
   });
 
-  it("the old password login endpoint is gone", async () => {
-    const api = await harness();
-    expect((await api.post("/api/auth/login", { email: testLogins[0]!.email, password: "anything" })).status).toBe(404);
-  });
-
-  it("the demo sender logs the code and nothing about the person", async () => {
+  it("the demo notifier logs the code and link and nothing about the person", async () => {
     const log = vi.fn();
-    await new LogEmailSender(log).sendSignInCode("rosa.delacruz@example.test", "482017");
+    const notifier = new LogNotifier(log);
+    await notifier.sendOtp("sms", "+639171234567", "482017");
+    await notifier.sendVerificationLink("rosa.delacruz@example.test", "http://localhost:5173/#/create-password/abc");
     const written = log.mock.calls.map((c) => String(c[0])).join("\n");
     expect(written).toContain("482017");
-    expect(written).not.toMatch(/rosa|delacruz|example\.test|@/i);
+    expect(written).toContain("/#/create-password/abc");
+    expect(written).not.toMatch(/rosa|delacruz|9171234567|@/i);
+  });
+});
+
+describe("sign in: email + password", () => {
+  it("returns a session for the right password, the same login every time, ignoring case", async () => {
+    const api = await harness();
+    await api.login(testLogins[0]!.email);
+    const res = await api.post("/api/auth/signin", { email: "OWNER-A@example.test", password: TEST_PASSWORD });
+    expect(res.status).toBe(200);
+    expect(res.body.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect((await api.get("/api/households", res.body.token)).body).toEqual(testLogins[0]!.households);
+    expect(ownerIdForEmail(" Owner-A@Example.TEST")).toBe(ownerIdForEmail("owner-a@example.test"));
+  });
+
+  it("gives one answer for a wrong password, an unknown email and an unfinished sign-up", async () => {
+    const api = await harness();
+    await api.login(NEW);
+    await api.post("/api/auth/signup", { email: "half@example.test", phone: TEST_PHONE });
+    const wrong = await api.post("/api/auth/signin", { email: NEW, password: "wrong-pass-9" });
+    const unknown = await api.post("/api/auth/signin", { email: "nobody@example.test", password: TEST_PASSWORD });
+    const unfinished = await api.post("/api/auth/signin", { email: "half@example.test", password: TEST_PASSWORD });
+    expect(wrong.status).toBe(401);
+    expect(unknown).toEqual(wrong);
+    expect(unfinished).toEqual(wrong);
+    expect(wrong.body.error).toBe("The email or password is incorrect.");
+  });
+
+  it("the old email-code endpoints are gone", async () => {
+    const api = await harness();
+    expect((await api.post("/api/auth/email/start", { email: NEW })).status).toBe(404);
+    expect((await api.post("/api/auth/login", { email: NEW, password: "x" })).status).toBe(404);
   });
 });
 

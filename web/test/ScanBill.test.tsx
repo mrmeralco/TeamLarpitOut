@@ -1,0 +1,80 @@
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
+import { ScanBill } from "../src/components/ScanBill";
+
+const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+let fetchMock: Mock<(input: string, init?: RequestInit) => Promise<Response>>;
+let account: unknown;
+let canMasked: string | null;
+
+beforeEach(() => {
+  account = { status: "found", canMasked: "39•• ••• 482", area: "Caloocan City", meterType: "traditional", billsOnRecord: 12, firstPeriod: "2025-11", lastPeriod: "2026-10" };
+  canMasked = "39•• ••• 482";
+  fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
+    if (input === "/api/bills/scan") return response({
+      status: "read", now: { period: "2026-10", kwh: 610, billingDays: 33, dueDate: "2026-11-24", chargeLines: [{ label: "Generation", amount: 6817 }] },
+      before: { period: "2026-09", kwh: 520, billingDays: 33 }, missing: [], estimated: ["before.billingDays"],
+      serviceIdMasked: null, canMasked, account, scanToken: "a".repeat(43),
+    });
+    if (input === "/api/households/link/confirm") return response({ status: "active", householdSin: "1234567890", canMasked: "39•• ••• 482" });
+    throw new Error(`Unexpected ${input} ${init?.method}`);
+  });
+  vi.stubGlobal("fetch", fetchMock);
+});
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+
+async function scan() {
+  render(<ScanBill token="t" onLinked={onLinked} onExpired={() => {}} />);
+  expect(screen.getByRole("heading", { name: "Scan your latest Meralco bill" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Take photo" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Upload from gallery" })).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Take a photo of the bill"), { target: { files: [new File(["x"], "bill.jpg", { type: "image/jpeg" })] } });
+  await screen.findByRole("heading", { name: "Does this look right?" });
+}
+let onLinked = vi.fn();
+beforeEach(() => { onLinked = vi.fn(); });
+
+describe("Scan and confirm (mockup screens 5–6)", () => {
+  it("reads the CAN from the bill, shows both months, and links on 'Yes, explain my bill'", async () => {
+    await scan();
+    expect(screen.getByText("39•• ••• 482")).toBeTruthy();
+    expect(screen.getByText("Read from your bill")).toBeTruthy();
+    expect(screen.getByText("Caloocan City · Traditional meter · 12 bills")).toBeTruthy();
+    expect(screen.getByText("September")).toBeTruthy();
+    expect(screen.getByText("October")).toBeTruthy();
+    expect((screen.getByLabelText("Usage (kWh)") as HTMLInputElement).value).toBe("610");
+    expect((screen.getByLabelText("Total due") as HTMLInputElement).value).toBe("₱6,817");
+    expect(screen.getByText("520")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Yes, explain my bill" }));
+    await waitFor(() => expect(onLinked).toHaveBeenCalledWith("1234567890"));
+    const call = fetchMock.mock.calls.find(([u]) => u === "/api/households/link/confirm")!;
+    expect(JSON.parse(String(call[1]!.body))).toEqual({ scanToken: "a".repeat(43) });
+  });
+
+  it("asks for the CAN printed on the bill when the scan couldn't read it", async () => {
+    account = { status: "canUnread" }; canMasked = null;
+    await scan();
+    expect(screen.getByText("CAN not read")).toBeTruthy();
+    const yes = screen.getByRole("button", { name: "Yes, explain my bill" }) as HTMLButtonElement;
+    expect(yes.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Type the CAN printed on this bill"), { target: { value: "3901 234 482" } });
+    fireEvent.click(yes);
+    await waitFor(() => expect(onLinked).toHaveBeenCalled());
+    const call = fetchMock.mock.calls.find(([u]) => u === "/api/households/link/confirm")!;
+    expect(JSON.parse(String(call[1]!.body))).toEqual({ scanToken: "a".repeat(43), can: "3901 234 482" });
+  });
+
+  it("can't link a bill whose account belongs to another login", async () => {
+    account = { status: "ownedByAnother", canMasked: "39•• ••• 482", message: "This account is already linked to another login. Please contact the account owner." };
+    await scan();
+    expect(screen.getByText("Linked to another login")).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toMatch(/contact the account owner/);
+    expect((screen.getByRole("button", { name: "Yes, explain my bill" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("Back from the review returns to the camera", async () => {
+    await scan();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("heading", { name: "Scan your latest Meralco bill" })).toBeTruthy();
+  });
+});

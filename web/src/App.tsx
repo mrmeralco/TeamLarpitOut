@@ -4,8 +4,8 @@ import { MissionsTab } from "./components/MissionsTab";
 import { SetupAppliances } from "./components/SetupAppliances";
 import { AirconAgreement } from "./components/AirconAgreement";
 import { ChargeChat } from "./components/ChargeChat";
-import { SignIn } from "./components/SignIn";
-import { LinkFlow } from "./components/LinkFlow";
+import { AuthFlow, CreatePassword } from "./components/auth/AuthScreens";
+import { ScanBill } from "./components/ScanBill";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
@@ -16,7 +16,7 @@ import { Home } from "./components/Home";
 import { Rewards } from "./components/Rewards";
 import { BakitGanitoResult } from "./components/BakitGanitoResult";
 import { TabBar } from "./components/TabBar";
-import { stored, useHashRoute } from "./lib/routes";
+import { stored, useHashRoute, useRawHash } from "./lib/routes";
 
 const EXPIRED = "Your session expired. Please sign in again.";
 
@@ -35,6 +35,7 @@ export function App() {
   const [linking, setLinking] = useState(false);
   const [asking, setAsking] = useState<{ line: HomeChargeLine; previousMonth: string | null } | null>(null);
   const [route, go] = useHashRoute();
+  const rawHash = useRawHash();
   const tab = route.tab;
   const [setup, setSetup] = useState<SetupStatus | null>(null);
 
@@ -92,18 +93,26 @@ export function App() {
 
   if (restoring) return <main className="flow-screen"><p className="muted" role="status">Opening…</p></main>;
 
+  /** A new session: load its Households, then Home (or the bill scan when none is linked yet). */
+  const signedIn = (token: string) => {
+    setSessionNotice(null);
+    api.households(token).then((households) => { begin({ token, households }); go("home"); })
+      .catch(() => setSessionNotice("We couldn't load your account. Please try again."));
+  };
+
   if (!session) {
-    return <main className="flow-screen">
-      <header><h1>Eelio</h1><p>Why is my bill like this?</p></header>
-      {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
-      <SignIn onLogin={(next) => { begin(next); setSessionNotice(null); }} />
+    const createPassword = /^#\/create-password\/([A-Za-z0-9_-]{43})$/.exec(rawHash);
+    return <main className="auth-main">
+      {createPassword
+        ? <CreatePassword token={createPassword[1]!} onDone={signedIn} onBack={() => { window.location.hash = "/signup"; }} />
+        : <AuthFlow initial={rawHash === "#/signin" || sessionNotice ? "signin" : "signup"} notice={sessionNotice} onSignedIn={signedIn} />}
     </main>;
   }
 
   if (linking || !selected) {
-    return <main className="flow-screen">
-      <LinkFlow key={`link:${session.token}`} token={session.token} onExpired={onExpired}
-        onCancel={selected ? () => setLinking(false) : undefined}
+    return <main className="auth-main">
+      <ScanBill key={`link:${session.token}`} token={session.token} onExpired={onExpired}
+        onBack={selected ? () => setLinking(false) : undefined}
         onLinked={(sin) => {
           void api.households(session.token).then((households) => {
             begin({ ...session, households }, sin); setLinking(false); go("home");
@@ -143,6 +152,7 @@ export function App() {
           <HouseholdPicker households={session.households} selected={selected.sin} onSelect={select} onLogout={() => {
             const token = session.token;
             end(null);
+            window.location.hash = "/signin";
             void api.logout(token).catch((err) => {
               if (!(err instanceof ApiError && err.status === 401)) setSessionNotice("We couldn't confirm the logout with the server. The session is cleared on this device; the token expires within an hour.");
             });

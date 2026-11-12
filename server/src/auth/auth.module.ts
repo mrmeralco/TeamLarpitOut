@@ -1,29 +1,59 @@
 import { Body, Controller, Header, HttpCode, Module, Post, Req, UseGuards } from "@nestjs/common";
-import { AUTH_CLOCK, EMAIL_SENDER, SIGN_IN_CODE_GENERATOR } from "../common/injection-tokens.js";
+import { ACCOUNT_REPOSITORY, AUTH_CLOCK, NOTIFIER, SIGN_IN_CODE_GENERATOR } from "../common/injection-tokens.js";
+import { InMemoryAccountRepository } from "./account.repository.js";
 import { AuthService } from "./auth.service.js";
-import { StartEmailSignInDto, VerifyEmailSignInDto } from "./dto/email-sign-in.dto.js";
-import { CODE_TTL_MS, EmailCodeService, randomSignInCode } from "./email-code.service.js";
-import { LogEmailSender } from "./email-sender.interface.js";
+import { CreatePasswordDto, ResendOtpDto, SignInDto, StartSignupDto, VerificationLinkDto, VerifyOtpDto } from "./dto/signup.dto.js";
+import { LogNotifier } from "./notifier.interface.js";
 import { SessionGuard, type AuthenticatedRequest } from "./session.guard.js";
+import { randomSignInCode, SignupService } from "./signup.service.js";
 
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly auth: AuthService, private readonly codes: EmailCodeService) {}
+  constructor(private readonly auth: AuthService, private readonly signup: SignupService) {}
 
-  /** Always the same answer, so it never reveals whether an email has used the app before. */
-  @Post("email/start")
+  /** Sign up 1/3: email + mobile number; a one-time code goes to the phone by SMS. */
+  @Post("signup")
   @HttpCode(202)
   @Header("Cache-Control", "no-store")
-  async start(@Body() body: StartEmailSignInDto) {
-    await this.codes.start(body.email);
-    return { sent: true, expiresInSeconds: CODE_TTL_MS / 1000 };
+  start(@Body() body: StartSignupDto) {
+    return this.signup.start(body.email, body.phone);
   }
 
-  @Post("email/verify")
+  @Post("signup/resend")
+  @HttpCode(202)
+  @Header("Cache-Control", "no-store")
+  resend(@Body() body: ResendOtpDto) {
+    return this.signup.resend(body.email, body.channel);
+  }
+
+  /** Sign up 2/3: the code; the email then receives a verification link. */
+  @Post("signup/verify")
   @HttpCode(200)
   @Header("Cache-Control", "no-store")
-  verify(@Body() body: VerifyEmailSignInDto) {
-    return this.auth.createSession(this.codes.verify(body.email, body.code));
+  verify(@Body() body: VerifyOtpDto) {
+    return this.signup.verifyCode(body.email, body.code);
+  }
+
+  @Post("signup/link")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  link(@Body() body: VerificationLinkDto) {
+    return this.signup.checkLink(body.token);
+  }
+
+  /** Sign up 3/3: from the email link, the person creates a password and is signed in. */
+  @Post("signup/password")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  async password(@Body() body: CreatePasswordDto) {
+    return this.auth.createSession(await this.signup.createPassword(body.token, body.password));
+  }
+
+  @Post("signin")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  signIn(@Body() body: SignInDto) {
+    return this.auth.signIn(body.email, body.password);
   }
 
   @Post("logout")
@@ -44,11 +74,12 @@ const fixedCode = () => {
   controllers: [AuthController],
   providers: [
     AuthService,
-    EmailCodeService,
+    SignupService,
     SessionGuard,
     { provide: AUTH_CLOCK, useValue: { now: () => Date.now() } },
-    { provide: EMAIL_SENDER, useFactory: () => new LogEmailSender() },
+    { provide: NOTIFIER, useFactory: () => new LogNotifier() },
     { provide: SIGN_IN_CODE_GENERATOR, useFactory: fixedCode },
+    { provide: ACCOUNT_REPOSITORY, useFactory: () => new InMemoryAccountRepository() },
   ],
   exports: [AuthService, SessionGuard, AUTH_CLOCK],
 })

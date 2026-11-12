@@ -14,13 +14,13 @@ import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
 import { inMemoryOutageSource, type OutageRecord, type OutageSource } from "../../src/bills/outage-source.js";
-import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, DAILY_WEATHER_SOURCE, EMAIL_SENDER, HOUSEHOLD_LINKS, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
+import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, DAILY_WEATHER_SOURCE, HOUSEHOLD_LINKS, NOTIFIER, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
 import { inMemoryReadingSource, type ReadingSource } from "../../src/smart-meter/reading-source.interface.js";
 import type { HourlyReading } from "../../src/domain/meter-reading.js";
 import type { CoachProvider } from "../../src/coach/coach-provider.interface.js";
 import { TemplateCoachProvider } from "../../src/coach/template-coach.provider.js";
 import { ownerIdForEmail, type AuthClock } from "../../src/auth/auth.service.js";
-import type { EmailSender } from "../../src/auth/email-sender.interface.js";
+import type { Notifier, OtpChannel } from "../../src/auth/notifier.interface.js";
 import { mockMeralcoAccounts, type MeralcoAccount, type MeralcoAccountSource } from "../../src/bills/meralco-accounts.js";
 import type { Household } from "../../src/domain/household.js";
 import { InMemoryHouseholdLinkRepository, type HouseholdLink } from "../../src/households/household-link.repository.js";
@@ -85,11 +85,19 @@ export function activeLinks(byEmail: Record<string, string[]>, accounts: Meralco
 
 const defaultLinks = () => Object.fromEntries(testLogins.map((l) => [l.email, l.households.map((h) => h.sin)]));
 
-/** Records every code "sent", so tests can read it like an inbox. */
-export function fakeEmailSender() {
-  const sent: { email: string; code: string }[] = [];
-  const sender: EmailSender = { async sendSignInCode(email, code) { sent.push({ email, code }); } };
-  return Object.assign(sender, { sent });
+/** The password every test login signs up with. */
+export const TEST_PASSWORD = "test-pass-1";
+export const TEST_PHONE = "+639171234567";
+
+/** Records every code and verification link "sent", so tests can read them like an inbox. */
+export function fakeNotifier() {
+  const codes: { channel: OtpChannel; to: string; code: string }[] = [];
+  const links: { email: string; link: string; token: string }[] = [];
+  const notifier: Notifier = {
+    async sendOtp(channel, to, code) { codes.push({ channel, to, code }); },
+    async sendVerificationLink(email, link) { links.push({ email, link, token: link.split("/").at(-1)! }); },
+  };
+  return Object.assign(notifier, { codes, links });
 }
 
 export interface HarnessOptions {
@@ -150,7 +158,7 @@ afterEach(async () => {
 export async function harness(opts: HarnessOptions = {}) {
   const accounts = opts.accounts ?? testAccounts;
   const links = new InMemoryHouseholdLinkRepository(activeLinks(opts.links ?? defaultLinks(), accounts));
-  const email = fakeEmailSender();
+  const notifier = fakeNotifier();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(RATE_SCHEDULES)
     .useValue(rateScheduleTable(opts.schedules ?? [schedule("2026-09", 10), schedule("2026-10", 11)]))
@@ -162,8 +170,8 @@ export async function harness(opts: HarnessOptions = {}) {
     .useValue(opts.meralco ?? mockMeralcoAccounts(accounts))
     .overrideProvider(HOUSEHOLD_LINKS)
     .useValue(links)
-    .overrideProvider(EMAIL_SENDER)
-    .useValue(email)
+    .overrideProvider(NOTIFIER)
+    .useValue(notifier)
     .overrideProvider(SIGN_IN_CODE_GENERATOR)
     .useValue(opts.codes ?? (() => TEST_CODE))
     .overrideProvider(DAILY_WEATHER_SOURCE)
@@ -202,14 +210,18 @@ export async function harness(opts: HarnessOptions = {}) {
   return {
     app,
     links,
-    email,
-    /** Email-code sign-in through the API; returns the session token. */
+    notifier,
+    /** Signs up (first time) or signs in through the API, like the PWA; returns the session token. */
     async login(address = testLogins[0]!.email): Promise<string> {
-      const started = await request(server).post("/api/auth/email/start").send({ email: address });
-      if (started.status !== 202) throw new Error(`Test sign-in start failed: HTTP ${started.status}`);
-      const code = email.sent.at(-1)!.code;
-      const res = await request(server).post("/api/auth/email/verify").send({ email: address, code });
-      if (res.status !== 200) throw new Error(`Test sign-in failed: HTTP ${res.status}`);
+      const signIn = () => request(server).post("/api/auth/signin").send({ email: address, password: TEST_PASSWORD });
+      let res = await signIn();
+      if (res.status === 200) return res.body.token;
+      const started = await request(server).post("/api/auth/signup").send({ email: address, phone: TEST_PHONE });
+      if (started.status !== 202) throw new Error(`Test sign-up failed: HTTP ${started.status}`);
+      const verified = await request(server).post("/api/auth/signup/verify").send({ email: address, code: notifier.codes.at(-1)!.code });
+      if (verified.status !== 200) throw new Error(`Test code check failed: HTTP ${verified.status}`);
+      res = await request(server).post("/api/auth/signup/password").send({ token: notifier.links.at(-1)!.token, password: TEST_PASSWORD });
+      if (res.status !== 200) throw new Error(`Test create password failed: HTTP ${res.status}`);
       return res.body.token;
     },
     async post(path: string, body: unknown, token?: string) {
