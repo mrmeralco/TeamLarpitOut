@@ -163,8 +163,12 @@ export async function seedDatabase(sql: Sql, data: SeedData, { fresh = false }: 
   };
 }
 
-/** Gives a demo Household DEMO_BONUS_POINTS of spendable Points (set, not added, on every re-seed). */
+/** Gives a demo Household DEMO_BONUS_POINTS of spendable Points (or removes any prior demo_bonus when 0). */
 export async function grantDemoBonus(tx: Sql, sin: string, points = DEMO_BONUS_POINTS) {
+  if (points <= 0) {
+    await tx`delete from public.points_entries where id = ${demoBonusId(sin)} or (sin = ${sin} and source = 'demo_bonus')`;
+    return;
+  }
   await tx`
     insert into public.points_entries (id, sin, points, source, description)
     values (${demoBonusId(sin)}, ${sin}, ${points}, 'demo_bonus', ${`Demo Points: ${points.toLocaleString("en-PH")} to try the Rewards shop`})

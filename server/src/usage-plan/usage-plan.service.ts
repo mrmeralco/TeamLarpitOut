@@ -382,6 +382,16 @@ export class UsagePlanService {
     };
   }
 
+  async recalculateDailyPoints(sin: string) {
+    if (!(await this.isSmartMeter(sin))) return;
+    const history = await this.bills.bills(sin);
+    if (!history.length) return;
+    const schedule = this.rates.get(history.at(-1)!.period);
+    if (schedule) {
+      await this.dailyPoints.settle(sin, schedule.perKwh.reduce((s, c) => s + c.rate, 0), { recalculate: true });
+    }
+  }
+
   private async autoSettle(sin: string) {
     const history = await this.bills.bills(sin);
     if (await this.isSmartMeter(sin)) {
@@ -394,7 +404,7 @@ export class UsagePlanService {
     const settled = new Set(existing.filter((e) => e.source === "bill_verified").map((e) => e.period));
     const plan = await this.plans.find(sin);
 
-    if (plan) {
+    if (plan && !plan.source) {
       for (let i = 1; i < history.length; i++) {
         const b = history[i]!;
         if (b.period >= plan.period && !settled.has(b.period)) {
@@ -409,6 +419,16 @@ export class UsagePlanService {
         const prev = history[history.length - 2]!;
         await this.settlePeriod(sin, prev, latest);
         settled.add(latest.period);
+      }
+      if (plan) {
+        for (let i = 1; i < history.length; i++) {
+          const b = history[i]!;
+          if (b.period >= plan.period && !settled.has(b.period)) {
+            const prev = history[i - 1]!;
+            await this.settlePeriod(sin, prev, b);
+            settled.add(b.period);
+          }
+        }
       }
     }
   }

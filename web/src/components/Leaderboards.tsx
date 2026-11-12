@@ -1,5 +1,12 @@
-import { useState } from "react";
-import type { Household, SetupStatus } from "../api/client";
+import { useEffect, useState } from "react";
+import {
+  missionPlanApi,
+  usagePlanApi,
+  type Household,
+  type MissionPlan,
+  type PointsResult,
+  type SetupStatus,
+} from "../api/client";
 import { maskSin } from "../lib/format";
 import { stored } from "../lib/routes";
 
@@ -73,30 +80,70 @@ function loadHolderTag(): { nickname: string; title: string } {
 }
 
 export function Leaderboards({
+  token,
   household,
   setup,
 }: {
+  token?: string;
   household: Household;
   setup: SetupStatus | null;
 }) {
   const [view, setView] = useState<BoardView>("barangay");
+  const [pointsData, setPointsData] = useState<PointsResult | null>(null);
+  const [planData, setPlanData] = useState<MissionPlan | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    // Fetch plan first if setup is complete so smart-meter / bill settlement runs with active plan, then fetch points ledger
+    const run = async () => {
+      if (setup?.complete) {
+        const plan = await missionPlanApi.get(token, household.sin).catch(() => null);
+        if (!cancelled && plan) setPlanData(plan);
+      }
+      const pts = await usagePlanApi.points(token, household.sin).catch(() => null);
+      if (!cancelled && pts) setPointsData(pts);
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, household.sin, setup?.complete]);
+
   const city = cityFromAddress(household.masked_address);
-  const { userBrgy, rows: brgyRows } = barangaySetForCity(city);
-  const myBrgy = brgyRows.find((r) => r.isYours) ?? brgyRows[1]!;
+  const baseBrgy = barangaySetForCity(city);
   const holder = loadHolderTag();
 
   const isSmart = household.meter_type === "smart";
+  const verifiedKwh = pointsData
+    ? Math.round(
+        pointsData.history
+          .filter((e) => e.source === "meter_verified" || e.source === "bill_verified")
+          .reduce((sum, e) => sum + (e.savedKwh ?? 0), 0) * 10,
+      ) / 10
+    : null;
+  const userKwhSaved = verifiedKwh !== null ? verifiedKwh : 0;
+  const userPts = pointsData ? pointsData.balance : planData?.pointsBalance ?? 0;
+  const goalKwh = planData?.goal.kwh ?? 15;
+  const userGoalPct =
+    userKwhSaved > 0 && goalKwh > 0
+      ? Math.min(100, Math.round((userKwhSaved / goalKwh) * 100))
+      : planData
+        ? Math.min(100, Math.round(planData.covered * 100))
+        : 0;
+
+  const userBrgy = baseBrgy.userBrgy;
+  const brgyRows: BarangayRow[] = baseBrgy.rows.map((r) =>
+    r.isYours ? { ...r, kwhSaved: r.kwhSaved + Math.round(userKwhSaved) } : r,
+  );
+  const myBrgy = brgyRows.find((r) => r.isYours) ?? brgyRows[1]!;
   const targetKwh = 5000;
   const shieldPct = Math.min(100, Math.round((myBrgy.kwhSaved / targetKwh) * 100));
-  const userGoalPct = setup?.complete ? (isSmart ? 96 : 94) : 68;
-  const userKwhSaved = setup?.complete ? (isSmart ? 36.8 : 34.2) : 18.5;
-  const userPts = setup?.complete ? (isSmart ? 305 : 280) : 120;
 
-  const kapitbahayRows: KapitbahayRow[] = [
-    { rank: 1, handle: "@NanayRosa_04", title: "Eco Guardian", meter: "Smart", goalPct: 100, kwhSaved: 41.0, pts: 340 },
-    { rank: 2, handle: "@TitoJun_Solar", title: "Peak Dodger", meter: "Smart", goalPct: 97, kwhSaved: 38.4, pts: 310 },
+  const rawKapitbahay: Omit<KapitbahayRow, "rank">[] = [
+    { handle: "@NanayRosa_04", title: "Eco Guardian", meter: "Smart", goalPct: 100, kwhSaved: 24.5, pts: 215 },
+    { handle: "@TitoJun_Solar", title: "Peak Dodger", meter: "Smart", goalPct: 95, kwhSaved: 19.8, pts: 180 },
     {
-      rank: 3,
       handle: `@${holder.nickname.replace(/\s+/g, "")}`,
       title: holder.title,
       meter: household.meter_type === "smart" ? "Smart" : "Traditional",
@@ -105,9 +152,12 @@ export function Leaderboards({
       pts: userPts,
       isYou: true,
     },
-    { rank: 4, handle: "@AteGrace_Home", title: "Cool Master", meter: "Traditional", goalPct: 86, kwhSaved: 29.1, pts: 245 },
-    { rank: 5, handle: "@KuyaBen_88", title: "Watt Watcher", meter: "Smart", goalPct: 79, kwhSaved: 24.8, pts: 210 },
+    { handle: "@AteGrace_Home", title: "Cool Master", meter: "Traditional", goalPct: 86, kwhSaved: 14.2, pts: 155 },
+    { handle: "@KuyaBen_88", title: "Watt Watcher", meter: "Smart", goalPct: 79, kwhSaved: 11.4, pts: 125 },
   ];
+  const kapitbahayRows: KapitbahayRow[] = [...rawKapitbahay]
+    .sort((a, b) => b.pts - a.pts || b.kwhSaved - a.kwhSaved)
+    .map((row, idx) => ({ ...row, rank: idx + 1 }));
 
   const medalFor = (rank: number) => (rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`);
 

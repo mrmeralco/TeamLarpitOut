@@ -178,7 +178,7 @@ export function App() {
             onRewards={() => go("rewards")} />
         </MissionsTab>}
         {tab === "rewards" && <Rewards key={`rewards:${key}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => { clearPlanCache(); setRewardsVersion((v) => v + 1); }} />}
-        {tab === "leaderboards" && <Leaderboards key={`lb:${key}`} household={selected} setup={setup} />}
+        {tab === "leaderboards" && <Leaderboards key={`lb:${key}:${applianceVersion}:${rewardsVersion}`} token={session.token} household={selected} setup={setup} />}
         {tab === "account" && (
           <AccountProfile
             households={session.households}
