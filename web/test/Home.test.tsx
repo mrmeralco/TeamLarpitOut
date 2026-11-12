@@ -1,26 +1,26 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Home } from "../src/components/Home";
-import type { HomeChargeLine, HomeSummary } from "../src/api/client";
+import type { ApplianceBreakdown, HomeChargeLine, HomeSummary, MissionPlan, SetupStatus } from "../src/api/client";
 
 const household = { sin: "1234567890", masked_address: "••• Caloocan City", meter_type: "traditional" as const };
 const line = (id: string, label: string, amount: number, change: number | null, goesTo: string | null): HomeChargeLine => ({
   id, label, amount, previous: change === null ? null : amount - change, change, kind: "perKwh", payee: null, goesTo, printed: [label],
 });
-const featured = [
+const lines = [
   line("generation", "Generation", 342000, 41000, "Pass-through"),
-  line("distribution", "Distribution", 121000, 16000, "Meralco"),
-  line("system_loss", "System loss", 41000, 4500, "Pass-through"),
+  line("distribution", "Distribution", 121000, -16000, "Meralco"),
+  line("taxes", "Taxes", 78000, null, "Government"),
   line("transmission", "Transmission", 59000, 6200, "Pass-through"),
-  line("taxes", "Taxes", 78000, 12000, "Government"),
+  line("senior", "Senior citizen", 30, null, "Subsidy"), // ₱0.30 shows as ₱0, so it is folded away
 ];
 const summary = (over: Partial<HomeSummary> = {}): HomeSummary => ({
   meterType: "traditional", canMasked: "39•• ••• 482", area: "Caloocan City",
-  chargeLines: { featured, all: [...featured, line("supply", "Supply", 1638, 0, "Meralco"), line("other-x", "Mystery", 500, null, null)] },
+  chargeLines: { featured: lines.slice(0, 4), all: lines },
   bill: { period: "2026-10", amountDue: 681700, dueDate: "2026-11-24", billDate: null },
   badge: { status: "green", label: "Bill verified" },
   bakitGanito: {
-    sentence: "Tumaas.", total: 93700, screen: "bakit-ganito", previousPeriod: "2026-09", addsUp: true, habit: 57700, lines: [],
+    sentence: "", total: 93700, screen: "bakit-ganito", previousPeriod: "2026-09", addsUp: true, habit: 57700, lines: [],
     effects: [
       { key: "rate", label: "Rate Effect", amount: 14800 }, { key: "billingDays", label: "Billing Days Effect", amount: 10000 },
       { key: "weather", label: "Weather Effect", amount: 11200 }, { key: "habit", label: "Habit Effect", amount: 57700 },
@@ -32,63 +32,142 @@ const summary = (over: Partial<HomeSummary> = {}): HomeSummary => ({
   smartMeter: null,
   ...over,
 });
-const respond = (body: unknown) => vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body), { status: 200 })));
+const setupStatus = (done: boolean[]): SetupStatus => ({
+  steps: [
+    { key: "household", label: "Household info", done: done[0]! },
+    { key: "appliances", label: "Appliances", done: done[1]! },
+    { key: "routine", label: "Typical day", done: done[2]! },
+  ],
+  doneCount: done.filter(Boolean).length, total: 3, complete: done.every(Boolean),
+  household: null, routine: null, hasAircon: true, welcomePoints: { points: 100, granted: false, locked: true },
+});
+const plan: MissionPlan = {
+  period: "2026-11", goal: { cut: 5, kwh: 31, pesos: 34100, baselineKwh: 620, targetKwh: 589, targetPesos: 600000 }, covered: 1, coveredPercent: 5,
+  source: "fallback", points: "",
+  missions: [
+    { id: "aircon-off-1h", title: "Turn off the aircon 1 hour earlier", why: "", how: [], appliance: "aircon", kwhSaved: 18.6, pesoValue: 20800, percent: 3, share: 0.6, effort: "Easy", basis: "physics", assumptions: [] },
+    { id: "unplug", title: "Unplug chargers at night", why: "", how: [], appliance: "other", kwhSaved: 12.4, pesoValue: 13300, percent: 2, share: 0.4, effort: "Easy", basis: "physics", assumptions: [] },
+  ],
+};
+const usage = [
+  { period: "2026-08", kwh: 560, billingDays: 31, provenance: { kind: "generated", note: "" } },
+  { period: "2026-09", kwh: 590, billingDays: 30, provenance: { kind: "generated", note: "" } },
+  { period: "2026-10", kwh: 610, billingDays: 33, provenance: { kind: "scanned", note: "" } },
+];
+const breakdown: ApplianceBreakdown = {
+  bill: { period: "2026-10", kwh: 610, billingDays: 33 },
+  rows: [
+    { index: 0, type: "refrigerator", label: "Refrigerator", quantity: 1, source: "default", sourceLabel: "Typical value", kwh: 120, pesos: 140000, share: 0.2 },
+    { index: 1, type: "aircon", label: "Aircon", quantity: 1, source: "default", sourceLabel: "Typical value", kwh: 450, pesos: 520000, share: 0.74 },
+    { index: 2, type: "electric_fan", label: "Electric fan", quantity: 2, source: "default", sourceLabel: "Typical value", kwh: 40, pesos: 46000, share: 0.06 },
+  ],
+  totals: { kwh: 610, perKwhCharges: 0, fixedCharges: 0 },
+};
+let home: HomeSummary;
+const fetchMock = vi.fn(async (input: string) => {
+  if (input.endsWith("/home")) return new Response(JSON.stringify(home));
+  if (input.endsWith("/bills")) return new Response(JSON.stringify(usage));
+  if (input.endsWith("/missions/plan")) return new Response(JSON.stringify(plan));
+  if (input.endsWith("/appliances/breakdown")) return new Response(JSON.stringify(breakdown));
+  throw new Error(`Unexpected ${input}`);
+});
 
-beforeEach(() => respond(summary()));
+beforeEach(() => { home = summary(); fetchMock.mockClear(); vi.stubGlobal("fetch", fetchMock); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-describe("Home tab", () => {
-  it("shows the amount due, the change vs. last month and four effects that add up", async () => {
-    render(<Home token="t" household={household} onExpired={() => {}} />);
-    expect(await screen.findByText("₱6,817")).toBeTruthy();
-    expect(screen.getByText("October bill · due Nov 24")).toBeTruthy();
-    expect(screen.getByText("vs. September")).toBeTruthy();
-    expect(screen.getByText("+₱937")).toBeTruthy();
-    const tiles = within(screen.getByRole("list")).getAllByRole("listitem").map((li) => li.textContent);
-    expect(tiles).toEqual(["Rate+₱148", "Billing days+₱100", "Hotter weather+₱112", "Household usage+₱577"]);
-    expect(screen.getByText("✓ Adds up: +₱937.00")).toBeTruthy();
-    expect(screen.getByText(/CAN 39•• ••• 482/)).toBeTruthy();
+describe("Home: gamified with Eelio", () => {
+  it("the hero shows the bill, the change and Eelio's title and charge", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([true, true, true])} />);
+    expect(await screen.findByRole("heading", { name: "Your October bill" })).toBeTruthy();
+    expect(screen.getByText("₱6,817")).toBeTruthy();
+    expect(screen.getByText(/▲ ₱937 vs\. September/)).toBeTruthy();
+    // Usage went up and setup is done: Eelio is the Bill Detective.
+    expect(screen.getByRole("img", { name: "Eelio, Bill Detective" })).toBeTruthy();
+    expect(screen.getByText("Bill Detective")).toBeTruthy();
+    // 3 setup steps × 20 + active plan 20 = 80.
+    expect(await screen.findByRole("meter", { name: "Eelio's charge" })).toBeTruthy();
+    expect((await screen.findByText("80% charged"))).toBeTruthy();
   });
 
-  it("makes every charge line a button for the charge chat, System loss included; View all lists every line", async () => {
+  it("Eelio's mood follows the household: Fully Charged when usage went down, Low Battery while setup is unfinished", async () => {
+    home = summary({ bakitGanito: { ...summary().bakitGanito!, total: -59500, habit: -60600 } });
+    const { unmount } = render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([false, false, false])} />);
+    expect(await screen.findByRole("img", { name: "Eelio, Fully Charged" })).toBeTruthy();
+    expect(screen.getByText("20% charged")).toBeTruthy();
+    unmount();
+    home = summary();
+    render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([true, false, false])} />);
+    expect(await screen.findByRole("img", { name: "Eelio, Low Battery" })).toBeTruthy();
+    expect(screen.getByText("20% charged")).toBeTruthy();
+  });
+
+  it("three star skills come from the bill's effects and setup", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([true, false, false])} />);
+    await screen.findByRole("heading", { name: "Your October bill" });
+    const skills = within(screen.getByRole("list", { name: "Your energy skills" }));
+    // Habit +₱577 of a ₱5,880 bill (~10%) → 2 stars; weather +₱112 (~2%) → 3; 1 setup step → 2.
+    expect(skills.getByRole("img", { name: "Usage control: 2 of 5 stars" })).toBeTruthy();
+    expect(skills.getByRole("img", { name: "Weather-proof: 3 of 5 stars" })).toBeTruthy();
+    expect(skills.getByRole("img", { name: "Mission ready: 2 of 5 stars" })).toBeTruthy();
+  });
+
+  it("shows the last 12 bills' kWh as bars with the average, and says when earlier months are samples", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    expect(await screen.findByRole("img", { name: "kWh per bill, August to October. Latest 610 kWh; 3-month average 587 kWh." })).toBeTruthy();
+    expect(screen.getByText("610 kWh")).toBeTruthy();
+    expect(screen.getByText(/Earlier months are sample values\./)).toBeTruthy();
+  });
+
+  it("the side breaks down Meralco's charges by who gets the money; every charge opens the charge chat", async () => {
     const onAsk = vi.fn();
     render(<Home token="t" household={household} onExpired={() => {}} onAskCharge={onAsk} />);
-    const systemLoss = await screen.findByRole("button", { name: /^System loss: ₱410\.00, \+₱45\.00 vs\. last month, Pass-through/ });
-    fireEvent.click(systemLoss);
-    expect(onAsk.mock.calls[0]![0].id).toBe("system_loss");
-    for (const l of ["Generation", "Distribution", "Transmission", "Taxes"]) {
-      expect(screen.getByRole("button", { name: new RegExp(`^${l}:`) })).toBeTruthy();
-    }
-    fireEvent.click(screen.getByRole("button", { name: /View all 7/ }));
-    const all = screen.getByLabelText("All charges");
-    expect(within(all).getAllByRole("button")).toHaveLength(7);
-    fireEvent.click(within(all).getByRole("button", { name: /^Mystery:/ }));
-    expect(onAsk.mock.calls[1]![0].id).toBe("other-x");
+    await screen.findByRole("heading", { name: "Your October bill" });
+    const side = within(screen.getByRole("complementary", { name: "Your bill's charges" }));
+    expect(side.getByRole("img", { name: "Pass-through 67%, Meralco 20%, Government 13%" })).toBeTruthy();
+    const rows = side.getAllByRole("button", { name: /Ask about this charge/ }).map((b) => b.getAttribute("aria-label")!.split(":")[0]);
+    expect(rows).toEqual(["Generation", "Distribution", "Taxes", "Transmission"]);
+    expect(side.getByText("+1 more charge at ₱0 on this bill.")).toBeTruthy();
+    fireEvent.click(side.getByRole("button", { name: /^Distribution: ₱1,210\.00, −₱160\.00 vs\. last month, Meralco/ }));
+    expect(onAsk.mock.calls[0]![0].id).toBe("distribution");
   });
 
-  it("moves 'Ask Meralco' and the copyable summary to the top on a red badge", async () => {
-    respond(summary({
-      badge: { status: "red", label: "Something doesn't match" },
-      tamaBa: { status: "red", label: "Something doesn't match", failedChecks: 1, summary: "Total ₱3,000 vs lines ₱2,690", screen: "tama-ba" },
-      action: { kind: "askMeralco", label: "Ask Meralco", screen: "tama-ba", summary: "Total ₱3,000 vs lines ₱2,690" },
-    }));
-    render(<Home token="t" household={household} onExpired={() => {}} />);
-    const ask = await screen.findByRole("alert");
-    expect(ask.textContent).toContain("Ask Meralco");
-    expect(ask.textContent).toContain("Total ₱3,000 vs lines ₱2,690");
-    const order = [...document.querySelectorAll(".home-main > *")].map((el) => el.className);
-    expect(order.indexOf("card home-ask")).toBeLessThan(order.indexOf("card home-due"));
-    expect(within(ask).getByRole("button", { name: "Copy summary" })).toBeTruthy();
-  });
-
-  it("the save card opens rewards onboarding with the Habit Effect, or shows the plan summary once set up", async () => {
+  it("before setup: the save card starts onboarding and there is no appliances card", async () => {
     const onSave = vi.fn();
-    const { unmount } = render(<Home token="t" household={household} onExpired={() => {}} onSave={onSave} />);
-    fireEvent.click(await screen.findByRole("button", { name: /Want to save on your next bill\?.*₱577 came from usage/ }));
+    render(<Home token="t" household={household} onExpired={() => {}} onSave={onSave} setup={setupStatus([true, false, false])} />);
+    await screen.findByRole("heading", { name: "Your October bill" });
+    fireEvent.click(screen.getByRole("button", { name: /Want to save on your next bill\?.*₱577 came from usage/ }));
     expect(onSave).toHaveBeenCalled();
-    unmount();
-    render(<Home token="t" household={household} onExpired={() => {}} saveCard={<p>Mission Plan: 5% less</p>} />);
-    expect(await screen.findByText("Mission Plan: 5% less")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Want to save/ })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Your appliances" })).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/appliances/breakdown") || url.endsWith("/missions/plan"))).toBe(false);
+  });
+
+  it("once the appliances are set up, shows where the bill's kWh went by appliance, biggest first", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([true, true, false])}
+      saveCard={<p>Your plan: use 5% less electricity</p>} />);
+    expect(await screen.findByRole("heading", { name: "Your appliances" })).toBeTruthy();
+    const names = [...document.querySelectorAll(".appliance-name strong")].map((el) => el.textContent);
+    expect(names).toEqual(["Aircon", "Refrigerator", "Electric fan ×2"]);
+    expect(screen.getByText("74%")).toBeTruthy();
+    expect(screen.getByText("450 kWh · ₱5,200")).toBeTruthy();
+    expect(screen.getByText("Your plan: use 5% less electricity")).toBeTruthy();
+  });
+
+  it("'Play your bill wrapped' opens the story over Home; × closes it", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Play your bill wrapped" }));
+    const dialog = screen.getByRole("dialog", { name: "Your bill, wrapped" });
+    expect(within(dialog).getByRole("heading", { name: "Your October bill, wrapped" })).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("no Ask Meralco, bill checks or badge on Home", async () => {
+    home = summary({
+      badge: { status: "red", label: "Something doesn't match" },
+      action: { kind: "askMeralco", label: "Ask Meralco", screen: "tama-ba", summary: "Total ₱3,000 vs lines ₱2,690" },
+    });
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    await screen.findByRole("heading", { name: "Your October bill" });
+    expect(document.body.textContent).not.toMatch(/Ask Meralco|Something doesn't match|Bill verified/);
   });
 });

@@ -26,38 +26,6 @@ export interface BillInput {
   lifelineEligible?: boolean;
 }
 
-export interface DisagreeingFigures {
-  labelA: string;
-  valueA: string | number;
-  labelB: string;
-  valueB: string | number;
-}
-
-export interface SingleCheckResult {
-  key: "lineSum" | "readingContinuity" | "rateSchedule" | "paymentReflection";
-  title: string;
-  status: "pass" | "fail" | "skipped";
-  message: string;
-  discrepancy?: DisagreeingFigures;
-}
-
-export interface OutlierEvaluation {
-  isOutlier: boolean;
-  dailyKwh: number;
-  predictedDailyKwh: number;
-  thresholdDailyKwh: number;
-  ratio: number;
-  hasHouseholdChange: boolean;
-}
-
-export interface BillChecksResult {
-  overall: "green" | "yellow" | "red";
-  checks: SingleCheckResult[];
-  failedChecks: SingleCheckResult[];
-  summary: string;
-  outlier?: OutlierEvaluation;
-}
-
 export interface HouseholdChange {
   reason: string;
   period?: string;
@@ -82,63 +50,8 @@ export interface UsageReadings {
   provenance: { kind: "synthetic"; note: string };
   readings: (ReadingRange & { kwh: number; partial: boolean })[];
 }
-export interface HistoryBill extends BillInput { provenance?: { kind: string; note: string } }
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
-}
-
-export interface WeatherDetail {
-  heatSensitivity: number;
-  source: "history" | "cooling_appliance_estimate";
-  label: string;
-  hotDayKwh: number;
-  cddPerDayBefore?: number;
-  cddPerDayNow?: number;
-}
-
-export interface Effect {
-  key: "rate" | "billingDays" | "weather" | "habit";
-  label: string;
-  amount: number;
-  estimate?: boolean;
-  sensitivity?: number;
-  sensitivitySource?: "history" | "cooling_appliance_estimate";
-  sensitivityLabel?: string;
-  hotDayKwh?: number;
-}
-
-export interface BillSide {
-  period: string;
-  kwh: number;
-  billingDays: number;
-  rebuiltTotal: number;
-  printedTotal: number | null;
-  estimated: boolean;
-  extras: { label: string; amount: number; kind: string; kindLabel: string }[];
-  extrasTotal: number;
-}
-
-export interface ExtraLineItem {
-  key: "lifeline" | "catchUp";
-  label: string;
-  amount: number;
-  status?: "gained" | "lost" | "changed";
-  kwh?: number;
-}
-
-/** All amounts are integer centavos. */
-export interface BakitGanito {
-  before: BillSide;
-  now: BillSide;
-  effects: Effect[];
-  /** Lifeline / catch-up lines, only when they apply. */
-  lines: ExtraLineItem[];
-  habitMeasurable: boolean;
-  total: number;
-  printedChange: number | null;
-  extrasChange: number;
-  unexplained: number | null;
-  weatherDetail?: WeatherDetail;
 }
 
 async function json<T>(res: Response): Promise<T> {
@@ -173,47 +86,11 @@ export const api = {
     const res = await fetch("/api/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) await json(res);
   },
-  history: (token: string, sin: string, signal?: AbortSignal) => fetch(`/api/households/${encodeURIComponent(sin)}/bills`, {
-    headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
-  }).then((r) => json<HistoryBill[]>(r)),
   /** Omit bounds so the server selects its latest available window for this interval. */
   readings: (token: string, sin: string, interval: ReadingInterval, signal?: AbortSignal) =>
     fetch(`/api/households/${encodeURIComponent(sin)}/readings?${new URLSearchParams({ interval })}`, {
       headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
     }).then((r) => json<UsageReadings>(r)),
-  householdExplanation: (token: string, sin: string, signal?: AbortSignal) => fetch(`/api/households/${encodeURIComponent(sin)}/bakit-ganito`, {
-    headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
-  }).then((r) => json<BakitGanito>(r)),
-  periods: () => fetch("/api/rate-schedules").then((r) => json<{ periods: string[] }>(r)),
-  bakitGanito: (token: string, before: BillInput, now: BillInput) =>
-    fetch("/api/bakit-ganito", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({ before, now }),
-    }).then((r) => json<BakitGanito>(r)),
-  billChecks: (
-    token: string,
-    now: BillInput,
-    before?: BillInput,
-    options?: { tolerancePesos?: number; payments?: PaymentRecord[] },
-  ) =>
-    fetch("/api/bills/check", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({ now, before, ...options }),
-    }).then((r) => json<BillChecksResult>(r)),
-  householdBillChecks: (token: string, sin: string, signal?: AbortSignal) =>
-    fetch(`/api/households/${encodeURIComponent(sin)}/check`, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-      signal,
-    }).then((r) => json<BillChecksResult>(r)),
-  recordHouseholdChange: (token: string, sin: string, reason: string, period?: string) =>
-    fetch(`/api/households/${encodeURIComponent(sin)}/changes`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify({ reason, period }),
-    }).then((r) => json<{ ok: boolean; change: HouseholdChange }>(r)),
 };
 
 export interface DraftBill {
@@ -289,6 +166,31 @@ export async function scanBill(photo: File, token: string): Promise<ScanOutcome>
   if (res.status === 401) return { kind: "unavailable", error: "HTTP 401: Please sign in first." };
   if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
   return { kind: "unavailable", error: body.error ?? `We couldn't read the photo (HTTP ${res.status}).` };
+}
+
+/** Simulate reading a bill without uploading a photo or using vision AI quota. */
+export async function simulateBill(
+  token: string,
+  options?: { can?: string; meterType?: "traditional" | "smart" },
+): Promise<ScanOutcome> {
+  let res: Response;
+  try {
+    res = await fetch("/api/bills/simulate", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(options ?? {}),
+    });
+  } catch {
+    return { kind: "unavailable", error: "We couldn't reach the server. Please try again." };
+  }
+  const body = await res.json().catch(() => ({}));
+  if (res.ok) return { kind: "read", ...body };
+  if (res.status === 401) return { kind: "unavailable", error: "HTTP 401: Please sign in first." };
+  if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
+  return { kind: "unavailable", error: body.error ?? `We couldn't simulate the bill (HTTP ${res.status}).` };
 }
 
 export interface BillBreakdownRow {
@@ -636,9 +538,15 @@ export interface HomeSummary {
   smartMeter: { monthToDateKwh: number | null } | null;
 }
 
+/** One month of the Bill History, as the usage chart on Home needs it. */
+export interface UsageMonth { period: string; kwh: number; billingDays: number; provenance?: { kind: string; note: string } }
+
 export const homeApi = {
   summary: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(`/api/households/${encodeURIComponent(sin)}/home`, authed(token, signal)).then((r) => json<HomeSummary>(r)),
+  /** Bill History, oldest first; Home charts its kWh. */
+  usage: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/bills`, authed(token, signal)).then((r) => json<UsageMonth[]>(r)),
 };
 
 export interface ChargeAnswer {

@@ -1,48 +1,172 @@
-import { useEffect, useState } from "react";
-import { ApiError, homeApi, type HomeChargeLine, type HomePart, type Household, type HomeSummary } from "../api/client";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  ApiError, appliancesApi, homeApi, missionPlanApi,
+  type ApplianceBreakdown, type HomeChargeLine, type Household, type HomeSummary, type MissionPlan, type SetupStatus, type UsageMonth,
+} from "../api/client";
 import { peso } from "../lib/format";
+import { greeting, HomeWrapped, month, plainPeso, wholePeso } from "./HomeWrapped";
 
-const BADGE: Record<HomeSummary["badge"]["status"], string> = { green: "Bill verified", yellow: "Higher than usual", red: "Something doesn't match" };
-const EFFECT_LABEL: Record<string, (amount: number) => string> = {
-  rate: () => "Rate",
-  billingDays: () => "Billing days",
-  weather: (a) => (a >= 0 ? "Hotter weather" : "Cooler weather"),
-  habit: () => "Household usage",
-  lifeline: () => "Lifeline discount",
-  catchUp: () => "Estimate catch-up",
+/** Eelio's three gamified states (docs/mascot/mascot-branding-eelio.md). */
+type Mood = "charged" | "detective" | "sleepy";
+const MOOD: Record<Mood, { img: string; title: string; line: string }> = {
+  charged: { img: "/mascot/eelio-hero.png", title: "Fully Charged", line: "You used less power than last month. Eelio is buzzing!" },
+  detective: { img: "/mascot/eelio-detective.png", title: "Bill Detective", line: "Eelio read your bill. Tap play to see what happened." },
+  sleepy: { img: "/mascot/eelio-sleepy.png", title: "Low Battery", line: "Eelio is running low. Set up your home to charge Eelio up." },
 };
-const EFFECT_COLOR: Record<string, string> = { rate: "var(--chart-5)", billingDays: "var(--chart-3)", weather: "var(--chart-2)", habit: "var(--primary)" };
 
-const month = (period: string) => new Date(`${period}-01T00:00:00`).toLocaleDateString("en-PH", { month: "long" });
-const shortDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
-/** Whole pesos for tiles: "+₱937". */
-const wholePeso = (centavos: number, signed = true) => {
-  const s = `₱${Math.round(Math.abs(centavos) / 100).toLocaleString("en-PH")}`;
-  return centavos < 0 ? `−${s}` : signed && centavos > 0 ? `+${s}` : s;
-};
-function greeting(now = new Date()) {
-  const h = now.getHours();
-  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+function moodFor(data: HomeSummary, setup: SetupStatus | null): Mood {
+  const habit = data.bakitGanito?.habit ?? 0;
+  if (habit < 0) return "charged";
+  if (setup && !setup.complete) return "sleepy";
+  return "detective";
 }
 
-function ChargeButton({ line, onAsk }: { line: HomeChargeLine; onAsk?: (line: HomeChargeLine) => void }) {
+/** Eelio's charge (0–100): each setup step, an active plan, and lower usage than last month. */
+function chargeFor(data: HomeSummary, setup: SetupStatus | null, plan: MissionPlan | null): number {
+  const steps = setup ? setup.doneCount * 20 : 0;
+  return Math.min(100, steps + (plan ? 20 : 0) + ((data.bakitGanito?.habit ?? 0) < 0 ? 20 : 0));
+}
+
+/** 1–5 stars from how much an effect moved the bill, as a share of last month's bill. */
+function starsFrom(amount: number | undefined, base: number): number {
+  if (amount === undefined) return 3;
+  const share = amount / Math.max(1, base);
+  return share <= -0.05 ? 5 : share < 0 ? 4 : share <= 0.03 ? 3 : share <= 0.1 ? 2 : 1;
+}
+
+function Stars({ value, label }: { value: number; label: string }) {
   return (
-    <button type="button" className="charge" onClick={() => onAsk?.(line)}
-      aria-label={`${line.label}: ${peso(line.amount)}${line.change !== null ? `, ${peso(line.change, true)} vs. last month` : ""}${line.goesTo ? `, ${line.goesTo}` : ""}. Ask about this charge`}>
-      <span className="charge-head">{line.label}
-        {line.change !== null && <span className={line.change > 0 ? "up" : line.change < 0 ? "down" : "muted"}>{wholePeso(line.change)}</span>}
-      </span>
-      <span className="muted">{wholePeso(line.amount, false)}{line.goesTo ? ` · ${line.goesTo}` : ""}</span>
-    </button>
+    <span className="stars" role="img" aria-label={`${label}: ${value} of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((n) => <span key={n} className={n <= value ? "on" : ""} aria-hidden="true">★</span>)}
+    </span>
+  );
+}
+
+const ICON = {
+  bolt: "M13 2 4 14h7l-1 8 9-12h-7z",
+  sun: "M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z",
+  target: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
+  play: "M8 5v14l11-7z",
+};
+const Svg = ({ d }: { d: string }) => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
+);
+
+const isSample = (m: UsageMonth) => !!m.provenance?.kind && !["scanned", "real-derived"].includes(m.provenance.kind);
+
+/** kWh of the last 12 Bills as bars; the latest Bill is highlighted, the average is a dashed line. */
+function UsageBars({ months }: { months: UsageMonth[] }) {
+  const data = months.slice(-12);
+  if (data.length < 2) return <p className="muted small">Your usage chart appears once there are two bills.</p>;
+  const max = Math.max(...data.map((m) => m.kwh)) || 1;
+  const avg = data.reduce((s, m) => s + m.kwh, 0) / data.length;
+  const last = data.at(-1)!;
+  return (
+    <figure className="usage-bars">
+      <div className="bars" role="img" aria-label={`kWh per bill, ${month(data[0]!.period)} to ${month(last.period)}. Latest ${last.kwh} kWh; ${data.length}-month average ${Math.round(avg)} kWh.`}>
+        <span className="bars-avg" style={{ bottom: `calc(22px + (100% - 44px) * ${avg / max})` }} aria-hidden="true"><span>avg {Math.round(avg)}</span></span>
+        {data.map((m, i) => {
+          const latest = i === data.length - 1;
+          return (
+            <span key={m.period} className={`bar-col${latest ? " latest" : ""}${isSample(m) ? " sample" : ""}`} aria-hidden="true">
+              <span className="ubar" style={{ height: `${Math.max(4, (m.kwh / max) * 100)}%`, animationDelay: `${i * 40}ms` }}>
+                {latest && <span className="ubar-value">{m.kwh} kWh</span>}
+              </span>
+              <span className="bar-month">{month(m.period).slice(0, 3)}</span>
+            </span>
+          );
+        })}
+      </div>
+      {data.some(isSample) && <figcaption className="muted small"><span className="swatch sample" aria-hidden="true" /> Earlier months are sample values.</figcaption>}
+    </figure>
+  );
+}
+
+const GROUPS: { key: string; label: string; note: string }[] = [
+  { key: "Pass-through", label: "Pass-through", note: "Goes to power generators and the grid" },
+  { key: "Meralco", label: "Meralco", note: "Meralco's own distribution charges" },
+  { key: "Government", label: "Government", note: "Taxes and government charges" },
+  { key: "Subsidy", label: "Subsidies", note: "Discounts for other customers, set by law" },
+  { key: "Other", label: "Other", note: "Other charges on the bill" },
+];
+
+/** Every charge on the Bill, grouped by who gets the money; each line opens the charge chat. */
+function ChargesBreakdown({ data, onAsk }: { data: HomeSummary; onAsk?: (line: HomeChargeLine) => void }) {
+  const all = [...data.chargeLines.all].sort((a, b) => b.amount - a.amount);
+  if (all.length === 0) return null;
+  const lines = all.filter((l) => Math.round(l.amount / 100) !== 0);
+  const zero = all.length - lines.length;
+  const total = lines.reduce((s, l) => s + Math.max(0, l.amount), 0) || 1;
+  const groupOf = (l: HomeChargeLine) => (GROUPS.some((g) => g.key === l.goesTo) ? l.goesTo! : "Other");
+  const groups = GROUPS.map((g) => ({ ...g, amount: lines.filter((l) => groupOf(l) === g.key).reduce((s, l) => s + Math.max(0, l.amount), 0) }))
+    .filter((g) => g.amount > 0);
+  return (
+    <div className="card charges-card">
+      <div className="charges-head">
+        <h3>Charges on your bill</h3>
+        <span className="muted small">Tap a charge to ask Eelio</span>
+      </div>
+      <div className="split-bar" role="img" aria-label={groups.map((g) => `${g.label} ${Math.round((g.amount / total) * 100)}%`).join(", ")}>
+        {groups.map((g) => <span key={g.key} className={`seg g-${g.key.toLowerCase().replace(/\W/g, "")}`} style={{ width: `${(g.amount / total) * 100}%` }} />)}
+      </div>
+      <ul className="split-legend">
+        {groups.map((g) => (
+          <li key={g.key} title={g.note}>
+            <span className={`swatch g-${g.key.toLowerCase().replace(/\W/g, "")}`} aria-hidden="true" />
+            <span>{g.label}</span>
+            <strong>{wholePeso(g.amount, false)}</strong>
+            <span className="muted">{Math.round((g.amount / total) * 100)}%</span>
+          </li>
+        ))}
+      </ul>
+      <ul className="charge-list">
+        {lines.map((l) => (
+          <li key={l.id}>
+            <button type="button" className="charge-row" onClick={() => onAsk?.(l)}
+              aria-label={`${l.label}: ${peso(l.amount)}${l.change !== null ? `, ${peso(l.change, true)} vs. last month` : ""}${l.goesTo ? `, ${l.goesTo}` : ""}. Ask about this charge`}>
+              <span className={`swatch g-${groupOf(l).toLowerCase().replace(/\W/g, "")}`} aria-hidden="true" />
+              <span className="charge-row-name"><strong>{l.label}</strong><span>{Math.round((Math.max(0, l.amount) / total) * 100)}% of the bill</span></span>
+              <span className="charge-row-amount">
+                <strong>{wholePeso(l.amount, false)}</strong>
+                {l.change !== null && l.change !== 0 && <span className={l.change > 0 ? "up" : "down"}>{wholePeso(l.change)}</span>}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {zero > 0 && <p className="muted small">+{zero} more {zero === 1 ? "charge" : "charges"} at ₱0 on this bill.</p>}
+    </div>
+  );
+}
+
+/** Where the Bill's kWh went, by appliance; shown only after the appliances are set up. */
+function AppliancesCard({ data }: { data: ApplianceBreakdown }) {
+  const rows = [...data.rows].sort((a, b) => b.kwh - a.kwh);
+  const top = rows[0]?.share || 1;
+  return (
+    <div className="card appliances-card">
+      <div className="usage-head"><h3>Your appliances</h3><span className="muted small">{month(data.bill.period)} bill · {Math.round(data.bill.kwh)} kWh</span></div>
+      <ul className="appliance-bars">
+        {rows.map((r) => (
+          <li key={r.index}>
+            <span className="appliance-name"><strong>{r.label}{r.quantity > 1 ? ` ×${r.quantity}` : ""}</strong><span>{r.sourceLabel}</span></span>
+            <span className="appliance-track" aria-hidden="true"><span style={{ width: `${(r.share / top) * 100}%` }} /></span>
+            <span className="appliance-amount"><strong>{Math.round(r.share * 100)}%</strong><span>{Math.round(r.kwh)} kWh · {wholePeso(r.pesos, false)}</span></span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">Estimates from the appliances and routine you set up; they add up to your bill's kWh.</p>
+    </div>
   );
 }
 
 /**
- * Home is the explanation of the latest Bill (mockup screen 6): amount due, why it changed
- * (four effects that add up), every charge line as a button, and the save card.
+ * Home, gamified around Eelio: a hero card with the bill, Eelio's mood and charge, three star
+ * skills, the last 12 bills' kWh as bars, the appliances (once set up), and on the side every
+ * Meralco charge grouped by who gets the money. The bill's full story opens as "Wrapped".
  * Parent keys it by session and SIN.
  */
-export function Home({ token, household, onExpired, onAskCharge, onSave, saveCard }: {
+export function Home({ token, household, onExpired, onAskCharge, onSave, saveCard, setup }: {
   token: string;
   household: Household;
   onExpired: () => void;
@@ -51,118 +175,114 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   /** "Want to save on your next bill?" → rewards onboarding (#51). */
   onSave?: () => void;
   /** Replaces the save card once Household Setup is done (Mission Plan summary). */
-  saveCard?: React.ReactNode;
+  saveCard?: ReactNode;
+  /** Household Setup progress: Eelio's charge, and the appliances card once appliances are set up. */
+  setup?: SetupStatus | null;
 }) {
   const [data, setData] = useState<HomeSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [usage, setUsage] = useState<UsageMonth[] | null>(null);
+  const [plan, setPlan] = useState<MissionPlan | null>(null);
+  const [appliances, setAppliances] = useState<ApplianceBreakdown | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const planReady = !!setup?.complete;
+  const appliancesReady = !!setup?.steps.find((st) => st.key === "appliances")?.done;
 
   useEffect(() => {
     const controller = new AbortController();
-    homeApi
-      .summary(token, household.sin, controller.signal)
-      .then(setData)
-      .catch((err) => {
-        if (controller.signal.aborted) return;
-        if (err instanceof ApiError && err.status === 401) onExpired();
-        else setError(err instanceof Error ? err.message : "Couldn't load Home.");
-      });
+    const fail = (err: unknown) => {
+      if (controller.signal.aborted) return;
+      if (err instanceof ApiError && err.status === 401) onExpired();
+      else setError(err instanceof Error ? err.message : "Couldn't load Home.");
+    };
+    homeApi.summary(token, household.sin, controller.signal).then(setData).catch(fail);
+    homeApi.usage(token, household.sin, controller.signal).then(setUsage).catch(() => { if (!controller.signal.aborted) setUsage([]); });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, household.sin]);
 
+  useEffect(() => {
+    if (!planReady) { setPlan(null); return; }
+    const controller = new AbortController();
+    missionPlanApi.get(token, household.sin, controller.signal).then(setPlan).catch(() => {});
+    return () => controller.abort();
+  }, [token, household.sin, planReady]);
+
+  useEffect(() => {
+    if (!appliancesReady) { setAppliances(null); return; }
+    const controller = new AbortController();
+    appliancesApi.breakdown(token, household.sin, controller.signal)
+      .then((b) => setAppliances(b.rows.length ? b : null)).catch(() => setAppliances(null));
+    return () => controller.abort();
+  }, [token, household.sin, appliancesReady]);
+
   if (error) return <section className="card home"><p className="error" role="alert">{error}</p></section>;
-  if (!data) return <section className="card home"><p className="muted">Loading your Bill…</p></section>;
+  if (!data) return <section className="dash loading" aria-busy="true"><p className="muted">Eelio is reading your bill…</p></section>;
 
-  const action = data.action;
   const change = data.bakitGanito;
-  const parts: HomePart[] = change ? [...change.effects, ...change.lines] : [];
-  const barTotal = parts.reduce((s, p) => s + Math.abs(p.amount), 0) || 1;
-  const ask = (line: HomeChargeLine) => onAskCharge?.(line, data);
-
-  async function copySummary() {
-    if (action.kind !== "askMeralco") return;
-    try { await navigator.clipboard.writeText(action.summary); setCopied(true); } catch { setCopied(false); }
-  }
+  const mood = moodFor(data, setup ?? null);
+  const charge = chargeFor(data, setup ?? null, plan);
+  const base = change ? Math.max(1, (data.bill.amountDue ?? 0) - change.total) : 1;
+  const effect = (key: string) => change?.effects.find((e) => e.key === key)?.amount;
+  const setupStars = setup ? Math.min(5, 1 + setup.doneCount + (plan ? 1 : 0)) : 1;
 
   return (
-    <section className={`home2 badge-${data.badge.status}`} aria-label="Home" aria-live="polite">
-      <div className="home-top">
-        <div>
-          <span className="muted small">{data.area} home{data.canMasked ? ` · CAN ${data.canMasked}` : ""}</span>
-          <h2>{greeting()}</h2>
+    <section className="dash" aria-label="Home">
+      <div className="dash-main">
+        <div className={`hero mood-${mood}`}>
+          <div className="hero-copy">
+            <p className="hero-hello">{greeting()} · {data.area} home</p>
+            <h2>Your {month(data.bill.period)} bill</h2>
+            <p className="hero-amount">{data.bill.amountDue === null ? "—" : wholePeso(data.bill.amountDue, false)}
+              {change && change.total !== 0 && <span className={`hero-change ${change.total < 0 ? "down" : "up"}`}>
+                {change.total < 0 ? "▼" : "▲"} {plainPeso(change.total)} vs. {month(change.previousPeriod)}
+              </span>}
+            </p>
+            <div className="hero-title">
+              <span className="hero-title-icon"><Svg d={ICON.bolt} /></span>
+              <span><span className="small">Eelio says you're</span><strong>{MOOD[mood].title}</strong></span>
+            </div>
+            <div className="charge-meter" role="meter" aria-label="Eelio's charge" aria-valuemin={0} aria-valuemax={100} aria-valuenow={charge}>
+              <span className="charge-track"><span style={{ width: `${charge}%` }} /></span>
+              <span className="small">{charge}% charged</span>
+            </div>
+            <p className="hero-line">{MOOD[mood].line}</p>
+            <button type="button" className="hero-play" onClick={() => setPlaying(true)}><Svg d={ICON.play} /> Play your bill wrapped</button>
+          </div>
+          <img className="hero-mascot" src={MOOD[mood].img} alt={`Eelio, ${MOOD[mood].title}`} />
         </div>
-        <span className={`home-badge ${data.badge.status}`}><span className="dot" aria-hidden="true" />{BADGE[data.badge.status]}</span>
-      </div>
 
-      <div className="home-grid">
-      <div className="home-main">
-      {action.kind === "askMeralco" && (
-        <div className="card home-ask" role="alert">
-          <strong>Ask Meralco</strong>
-          <p className="muted">{data.tamaBa.failedChecks} Bill Check(s) don't match. The app never files complaints; copy the summary if you want to ask Meralco.</p>
-          <p className="small">{action.summary}</p>
-          <button type="button" className="ghost wide" onClick={copySummary}>{copied ? "Copied ✓" : "Copy summary"}</button>
-        </div>
-      )}
-
-      <div className="card home-due">
-        <div>
-          <span className="muted small">{month(data.bill.period)} bill{data.bill.dueDate ? ` · due ${shortDate(data.bill.dueDate)}` : ""}</span>
-          <strong className="home-amount">{data.bill.amountDue === null ? "—" : wholePeso(data.bill.amountDue, false)}</strong>
-        </div>
-        {change && <div className="home-change">
-          <strong className={change.total > 0 ? "up" : change.total < 0 ? "down" : ""}>{wholePeso(change.total)}</strong>
-          <span className="muted small">vs. {month(change.previousPeriod)}</span>
-        </div>}
-      </div>
-
-      {change ? <>
-        <h3>{change.total >= 0 ? "Why it went up" : "Why it went down"}</h3>
-        <div className="effect-bar" role="img" aria-label={parts.map((p) => `${(EFFECT_LABEL[p.key] ?? (() => p.label))(p.amount)} ${wholePeso(p.amount)}`).join(", ")}>
-          {parts.map((p) => <span key={p.key} style={{ width: `${(Math.abs(p.amount) / barTotal) * 100}%`, background: EFFECT_COLOR[p.key] ?? "var(--chart-1)" }} />)}
-        </div>
-        <ul className="effect-tiles">
-          {parts.map((p) => (
-            <li key={p.key} className={p.key === "habit" ? "habit" : ""}>
-              <span className="muted small"><i style={{ background: EFFECT_COLOR[p.key] ?? "var(--chart-1)" }} aria-hidden="true" />{(EFFECT_LABEL[p.key] ?? (() => p.label))(p.amount)}</span>
-              <strong>{wholePeso(p.amount)}</strong>
-            </li>
-          ))}
+        <ul className="skills" aria-label="Your energy skills">
+          <li><span className="skill-icon tone-a"><Svg d={ICON.bolt} /></span><Stars value={starsFrom(change?.habit, base)} label="Usage control" /><strong>Usage control</strong></li>
+          <li><span className="skill-icon tone-b"><Svg d={ICON.sun} /></span><Stars value={starsFrom(effect("weather"), base)} label="Weather-proof" /><strong>Weather-proof</strong></li>
+          <li><span className="skill-icon tone-c"><Svg d={ICON.target} /></span><Stars value={setupStars} label="Mission ready" /><strong>Mission ready</strong></li>
         </ul>
-        <p className="small muted">{change.addsUp ? `✓ Adds up: ${peso(change.total, true)}` : "The total doesn't add up yet; see Bill Checks."}</p>
-      </> : <p className="muted">{data.bakitGanitoUnavailable}</p>}
-      </div>
 
-      <div className="home-side">
-      {data.chargeLines.all.length > 0 && <>
-        <div className="section-head"><h3>Charges on your bill</h3><span className="muted small">Tap any charge to ask</span></div>
-        <div className="charges">
-          {data.chargeLines.featured.map((l) => <ChargeButton key={l.id} line={l} onAsk={ask} />)}
-          <button type="button" className="charge" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}>
-            <span className="charge-head">{showAll ? "Hide list" : `View all ${data.chargeLines.all.length}`}<span className="muted">{showAll ? "‹" : "›"}</span></span>
-            <span className="muted">Itemized bill</span>
-          </button>
+        <div className="card usage-card">
+          <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh per bill · last 12 months</span></div>
+          {usage === null ? <p className="muted small">Loading…</p> : <UsageBars months={usage} />}
         </div>
-        {showAll && <div className="charges all" aria-label="All charges">
-          {data.chargeLines.all.map((l) => <ChargeButton key={l.id} line={l} onAsk={ask} />)}
-        </div>}
-      </>}
 
-      {saveCard ?? (
-        <button type="button" className="save-card" onClick={onSave}>
-          <span>
-            <strong>Want to save on your next bill?</strong>
-            <span>{change && change.habit > 0
-              ? `${wholePeso(change.habit, false)} came from usage. Cut it and earn points.`
-              : "Use a little less and earn points on your next bill."}</span>
-          </span>
-          <span aria-hidden="true">→</span>
-        </button>
+        {appliances && <AppliancesCard data={appliances} />}
+      </div>
+
+      <aside className="dash-side" aria-label="Your bill's charges">
+        {saveCard ?? (
+          <button type="button" className="save-card" onClick={onSave}>
+            <span><strong>Want to save on your next bill?</strong>
+              <span>{change && change.habit > 0 ? `${plainPeso(change.habit)} came from usage. Cut it and earn points.` : "Use a little less and earn points on your next bill."}</span>
+            </span>
+            <span aria-hidden="true">→</span>
+          </button>
+        )}
+        <ChargesBreakdown data={data} onAsk={(line) => onAskCharge?.(line, data)} />
+      </aside>
+
+      {playing && (
+        <div className="wrapped-overlay" role="dialog" aria-modal="true" aria-label="Your bill, wrapped">
+          <HomeWrapped data={data} onAskCharge={onAskCharge} onSave={onSave} saveCard={saveCard} onClose={() => setPlaying(false)} />
+        </div>
       )}
-      </div>
-      </div>
     </section>
   );
 }

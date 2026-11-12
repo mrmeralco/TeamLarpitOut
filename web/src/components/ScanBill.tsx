@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ApiError, linkApi, scanBill, type DraftBill, type LinkCorrections, type ScanOutcome } from "../api/client";
+import { ApiError, linkApi, scanBill, simulateBill, type DraftBill, type LinkCorrections, type ScanOutcome } from "../api/client";
 import { BackButton, Icon, ICON } from "./auth/AuthScreens";
 
 type ReadScan = Extract<ScanOutcome, { kind: "read" }>;
@@ -33,6 +33,18 @@ export function ScanBill({ token, onLinked, onExpired, onBack, onLogout }: {
   async function onPhoto(file: File) {
     setBusy(true); setError(null);
     const out = await scanBill(file, token);
+    setBusy(false);
+    if (out.kind !== "read") {
+      if (out.kind === "unavailable" && /HTTP 401|sign in/i.test(out.error)) return onExpired();
+      setError(out.kind === "unreadable" ? out.problem : out.error);
+      return;
+    }
+    setScan(out); setTypedCan(""); setEdits({});
+  }
+
+  async function onSimulate(meterType?: "traditional" | "smart") {
+    setBusy(true); setError(null);
+    const out = await simulateBill(token, meterType ? { meterType } : undefined);
     setBusy(false);
     if (out.kind !== "read") {
       if (out.kind === "unavailable" && /HTTP 401|sign in/i.test(out.error)) return onExpired();
@@ -98,11 +110,21 @@ export function ScanBill({ token, onLinked, onExpired, onBack, onLogout }: {
         </div>
         <span>{busy ? "Reading your bill…" : "Align the whole bill inside the frame"}</span>
       </div>
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && <div className="scan-error">
+        <p className="error" role="alert">{error}</p>
+        <button type="button" className="btn-outline" disabled={busy} onClick={() => void onSimulate()}>
+          Continue with simulated bill
+        </button>
+      </div>}
       <div className="camera-controls">
         <button type="button" className="square-btn" aria-label="Upload from gallery" disabled={busy} onClick={() => gallery.current?.click()}><Icon d={GALLERY} size={22} /></button>
         <button type="button" className="shutter" aria-label="Take photo" disabled={busy} onClick={() => camera.current?.click()}><span /></button>
-        <span className="square-btn placeholder" aria-hidden="true" />
+        <button type="button" className="square-btn" aria-label="Simulate bill scan" title="Simulate bill data" disabled={busy} onClick={() => void onSimulate()}><Icon d={ICON.receipt} size={22} /></button>
+      </div>
+      <div className="simulate-action">
+        <button type="button" className="btn-text simulate-btn" disabled={busy} onClick={() => void onSimulate()}>
+          <Icon d={ICON.bolt} size={16} /> Simulate bill data
+        </button>
       </div>
     </section>;
   }
