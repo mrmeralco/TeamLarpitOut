@@ -5,6 +5,7 @@ import { BillChangeModule } from "./bill-change/bill-change.module.js";
 import { BillChecksModule } from "./bill-checks/bill-checks.module.js";
 import { BillScanModule } from "./bill-scan/bill-scan.module.js";
 import { HealthController } from "./health/health.controller.js";
+import { HomeModule } from "./home/home.module.js";
 import { HouseholdsModule } from "./households/households.module.js";
 import { RateSchedulesModule } from "./rate-schedules/rate-schedules.module.js";
 import { UsagePlanModule } from "./usage-plan/usage-plan.module.js";
@@ -19,6 +20,7 @@ import { UsagePlanModule } from "./usage-plan/usage-plan.module.js";
     AppliancesModule,
     BillChecksModule,
     UsagePlanModule,
+    HomeModule,
   ],
   controllers: [HealthController],
 })

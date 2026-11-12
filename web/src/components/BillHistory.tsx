@@ -69,7 +69,7 @@ export function BillHistory({ token, household, onExpired, renderExplanation }: 
       </>}
       {explanationError && <p className="error" role="alert">{explanationError}</p>}
     </section>
-    {explanation && renderExplanation(explanation)}
-    {checks && <BillChecks data={checks} />}
+    {explanation && <div id="bakit-ganito" className="anchor">{renderExplanation(explanation)}</div>}
+    {checks && <div id="tama-ba" className="anchor"><BillChecks data={checks} /></div>}
   </>;
 }

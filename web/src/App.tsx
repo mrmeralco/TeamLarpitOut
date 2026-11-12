@@ -19,6 +19,7 @@ import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
 import { Appliances } from "./components/Appliances";
 import { UsagePlan } from "./components/UsagePlan";
+import { Home } from "./components/Home";
 import { ScanLinkageNotice } from "./components/ScanLinkageNotice";
 import { BillBreakdown } from "./components/BillBreakdown";
 import { BillChecks } from "./components/BillChecks";
@@ -494,6 +495,7 @@ export function App() {
           if (!(err instanceof ApiError && err.status === 401)) setSessionNotice("Hindi makumpirma ang logout sa server. Na-clear na ang session sa device na ito; mag-e-expire ang token sa loob ng isang oras.");
         });
       }} /> : <MyMeralcoLogin onLogin={(next) => { setSession(next); setSelectedSin(""); setSessionNotice(null); }} />}
+      {session && selected && <Home key={`home:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />}
       {session && selected && <BillHistory key={`${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <Result r={r} />} />}
       {session && selected && <Appliances key={`appliances:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} onSaved={() => setApplianceVersion((v) => v + 1)} />}
       {session && selected && selected.meter_type === "traditional" && <UsagePlan key={`plan:${session.token}:${selected.sin}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />}
