@@ -14,9 +14,10 @@ export function useHashRoute(): [Route, (tab: Tab, ...sub: string[]) => void] {
   const [route, setRoute] = useState<Route>(() => parse(window.location.hash));
   useEffect(() => {
     const onChange = () => setRoute(parse(window.location.hash));
+    onChange();
     window.addEventListener("hashchange", onChange);
     return () => window.removeEventListener("hashchange", onChange);
-  }, []);
+  }, [TABS.length]);
   const go = useCallback((tab: Tab, ...sub: string[]) => {
     const hash = `#/${[tab, ...sub].join("/")}`;
     if (window.location.hash !== hash) window.location.hash = hash.slice(1);

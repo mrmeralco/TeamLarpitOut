@@ -13,7 +13,7 @@ const LABELS: Record<Tab, string> = { home: "Home", missions: "Missions", reward
  * The app's navigation: a sidebar on desktop that folds into an icon rail (to give the content
  * more room), and a bottom tab bar on phones.
  */
-export function TabBar({ tab, onLogout, collapsed = false, onToggle }: { tab: Tab; onLogout?: () => void; collapsed?: boolean; onToggle?: () => void }) {
+export function TabBar({ tab, onSelect, onLogout, collapsed = false, onToggle }: { tab: Tab; onSelect?: (tab: Tab) => void; onLogout?: () => void; collapsed?: boolean; onToggle?: () => void }) {
   return <nav className={`tabbar${collapsed ? " collapsed" : ""}`} aria-label="Main">
     <div className="tabbar-top">
       <div className="tabbar-brand" aria-hidden="true">
@@ -28,7 +28,7 @@ export function TabBar({ tab, onLogout, collapsed = false, onToggle }: { tab: Ta
       )}
     </div>
     {(Object.keys(LABELS) as Tab[]).map((t) => (
-      <a key={t} href={`#/${t}`} aria-current={t === tab ? "page" : undefined} title={collapsed ? LABELS[t] : undefined}>
+      <a key={t} href={`#/${t}`} onClick={() => onSelect?.(t)} aria-current={t === tab ? "page" : undefined} title={collapsed ? LABELS[t] : undefined}>
         <span className="tabbar-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[t]} /></svg>
         </span>

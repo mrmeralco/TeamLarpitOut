@@ -179,7 +179,7 @@ export function App() {
           />
         )}
       </main>
-      <TabBar tab={tab} onLogout={logout} collapsed={navCollapsed} onToggle={toggleNav} />
+      <TabBar tab={tab} onSelect={(t) => go(t)} onLogout={logout} collapsed={navCollapsed} onToggle={toggleNav} />
     </div>
   );
 }
