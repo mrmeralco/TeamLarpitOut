@@ -1,5 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Bill, ChargeLine } from "../domain/bill.js";
+import { buildBillBreakdown } from "../domain/bill-breakdown.js";
+import { classifyLine } from "../domain/charge-catalog.js";
+import { homeChargeLines } from "../domain/charge-lines.js";
 import { VISION_PROVIDER } from "../common/injection-tokens.js";
 import type { BillImage, RawBillReading, VisionProvider } from "../vision/vision-provider.interface.js";
 
@@ -160,6 +163,51 @@ export class BillScanService {
     return {
       result: { ...result, scanToken: this.contexts.create(raw.customerAccountNumber, result.now) },
       can: tenDigits(raw.customerAccountNumber),
+    };
+  }
+
+  /** Guest scan: reads only the current Bill without previous-month history or CAN linking. */
+  async scanGuest(image: BillImage): Promise<ScanResult> {
+    const raw = await this.vision.readBill(image);
+    const result = toScanResult({ ...raw, history: null });
+    if (result.status !== "read") return result;
+    return { ...result, before: null, estimated: [] };
+  }
+
+  /** Guest simulated scan: single-bill draft without previous-month history or CAN linking. */
+  simulateGuest(): Extract<ScanResult, { status: "read" }> {
+    const result = toScanResult({ ...DEFAULT_SIMULATED_BILL, history: null });
+    if (result.status !== "read") throw new Error("Default simulated bill must be readable");
+    return { ...result, before: null, estimated: [] };
+  }
+
+  /** Single-bill explanation for a guest: explains this Bill's charges without comparison or appliance breakdown. */
+  explainGuest(now: DraftBill) {
+    const lines = chargeLines(now.chargeLines);
+    const breakdown = buildBillBreakdown(lines, []);
+    const charges = homeChargeLines(lines, []);
+    const enrich = (l: (typeof charges.all)[number]) => ({
+      ...l,
+      what: classifyLine(l.printed[0] ?? l.label).what,
+    });
+    const totalFromLines = lines.length ? lines.reduce((s, l) => s + Math.round(l.amount * 100), 0) : null;
+    const amountDue = typeof now.totalAmount === "number" && Number.isFinite(now.totalAmount) && now.totalAmount >= 0
+      ? Math.round(now.totalAmount * 100)
+      : totalFromLines;
+    return {
+      currency: "PHP-centavos" as const,
+      bill: {
+        period: str(now.period, PERIOD) ?? null,
+        kwh: num(now.kwh) ?? null,
+        billingDays: num(now.billingDays, 1) ?? null,
+        dueDate: str(now.dueDate, DATE) ?? null,
+        amountDue,
+      },
+      chargeLines: {
+        featured: charges.featured.map(enrich),
+        all: charges.all.map(enrich),
+      },
+      breakdown,
     };
   }
 }
