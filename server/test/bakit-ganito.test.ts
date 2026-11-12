@@ -8,7 +8,7 @@ const amount = (body: any, key: string) => body.effects.find((e: any) => e.key =
 
 describe("POST /api/bakit-ganito", () => {
   it("splits a higher Bill into effects that add up exactly to cost(now) − cost(before)", async () => {
-    const api = harness();
+    const api = await harness();
     const { status, body } = await api.post("/api/bakit-ganito", {
       before: bill("2026-09", 200, 30), // 200 × ₱10 + ₱50 = ₱2,050
       now: bill("2026-10", 240, 32), //   240 × ₱11 + ₱50 = ₱2,690
@@ -26,7 +26,7 @@ describe("POST /api/bakit-ganito", () => {
   });
 
   it("includes Fixed Charges in the sum: a fixed-charge change lands in the Rate Effect", async () => {
-    const api = harness({ schedules: [schedule("2026-09", 10, 40), schedule("2026-10", 10, 65)] });
+    const api = await harness({ schedules: [schedule("2026-09", 10, 40), schedule("2026-10", 10, 65)] });
     const { body } = await api.post("/api/bakit-ganito", {
       before: bill("2026-09", 150, 30),
       now: bill("2026-10", 150, 30),
@@ -40,7 +40,7 @@ describe("POST /api/bakit-ganito", () => {
   });
 
   it("shows negative effects when the Bill went down", async () => {
-    const api = harness({ schedules: [schedule("2026-10", 11), schedule("2026-11", 9.5)] });
+    const api = await harness({ schedules: [schedule("2026-10", 11), schedule("2026-11", 9.5)] });
     const { body } = await api.post("/api/bakit-ganito", {
       before: bill("2026-10", 300, 31),
       now: bill("2026-11", 250, 29),
@@ -54,7 +54,7 @@ describe("POST /api/bakit-ganito", () => {
   });
 
   it("stays exact to the centavo with the real Rate Schedule table's decimals", async () => {
-    const api = harness({ schedules: table.schedules as RateSchedule[] });
+    const api = await harness({ schedules: table.schedules as RateSchedule[] });
     const periods = ["2026-09", "2026-10", "2026-11"];
     for (const [i, kwhBefore] of [87.3, 143, 199.9, 201, 412.75].entries()) {
       for (const kwhNow of [0, 55.5, 188, 333.33]) {
@@ -69,7 +69,7 @@ describe("POST /api/bakit-ganito", () => {
   });
 
   it("keeps Per-kWh and Fixed Charges as separate rebuilt lines", async () => {
-    const api = harness();
+    const api = await harness();
     const { body } = await api.post("/api/bakit-ganito", {
       before: bill("2026-09", 100, 30),
       now: bill("2026-10", 100, 30),
@@ -83,7 +83,7 @@ describe("POST /api/bakit-ganito", () => {
   });
 
   it("reports the change in printed totals when charge lines are typed", async () => {
-    const api = harness();
+    const api = await harness();
     const { body } = await api.post("/api/bakit-ganito", {
       before: bill("2026-09", 200, 30, [
         { label: "Generation", amount: 1200 },
@@ -101,7 +101,7 @@ describe("POST /api/bakit-ganito", () => {
   });
 
   it("returns 422 when a Bill's month has no Rate Schedule", async () => {
-    const api = harness();
+    const api = await harness();
     const { status, body } = await api.post("/api/bakit-ganito", {
       before: bill("2025-01", 200, 30),
       now: bill("2026-10", 240, 32),
@@ -111,7 +111,7 @@ describe("POST /api/bakit-ganito", () => {
   });
 
   it("returns 400 for a malformed Bill", async () => {
-    const api = harness();
+    const api = await harness();
     const { status } = await api.post("/api/bakit-ganito", { before: { kwh: -1 }, now: {} });
     expect(status).toBe(400);
   });
@@ -119,7 +119,7 @@ describe("POST /api/bakit-ganito", () => {
 
 describe("GET /api/households/:sin/bakit-ganito (injected Bill source)", () => {
   it("decodes the two latest Bills from a fake Bill source", async () => {
-    const api = harness({
+    const api = await harness({
       bills: {
         "1234567890": [bill("2026-10", 240, 32), bill("2026-09", 200, 30)],
       },
@@ -132,7 +132,7 @@ describe("GET /api/households/:sin/bakit-ganito (injected Bill source)", () => {
   });
 
   it("accepts a fully custom Bill source", async () => {
-    const api = harness({
+    const api = await harness({
       billSource: { bills: async () => [bill("2026-09", 100, 30), bill("2026-10", 100, 30)] },
     });
     const { body } = await api.get("/api/households/any/bakit-ganito");
@@ -140,7 +140,7 @@ describe("GET /api/households/:sin/bakit-ganito (injected Bill source)", () => {
   });
 
   it("404s when the Household has fewer than two Bills", async () => {
-    const api = harness({ bills: { "1": [bill("2026-10", 240, 32)] } });
+    const api = await harness({ bills: { "1": [bill("2026-10", 240, 32)] } });
     const { status } = await api.get("/api/households/1/bakit-ganito");
     expect(status).toBe(404);
   });
