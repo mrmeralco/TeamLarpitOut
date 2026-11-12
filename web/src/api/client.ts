@@ -83,7 +83,6 @@ export interface UsageReadings {
   readings: (ReadingRange & { kwh: number; partial: boolean })[];
 }
 export interface HistoryBill extends BillInput { provenance?: { kind: string; note: string } }
-export type ScanLinkage = { status: "linked"; householdSin: string } | { status: "unlinked" | "unknown" };
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
 }
@@ -176,25 +175,22 @@ export const api = {
   householdExplanation: (token: string, sin: string, signal?: AbortSignal) => fetch(`/api/households/${encodeURIComponent(sin)}/bakit-ganito`, {
     headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
   }).then((r) => json<BakitGanito>(r)),
-  scanLinkage: (token: string, scanToken: string, signal?: AbortSignal) => fetch("/api/bills/scan-linkage", {
-    method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ scanToken }), signal,
-  }).then((r) => json<ScanLinkage>(r)),
   periods: () => fetch("/api/rate-schedules").then((r) => json<{ periods: string[] }>(r)),
-  bakitGanito: (before: BillInput, now: BillInput) =>
+  bakitGanito: (token: string, before: BillInput, now: BillInput) =>
     fetch("/api/bakit-ganito", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ before, now }),
     }).then((r) => json<BakitGanito>(r)),
   billChecks: (
+    token: string,
     now: BillInput,
     before?: BillInput,
     options?: { tolerancePesos?: number; payments?: PaymentRecord[] },
   ) =>
     fetch("/api/bills/check", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ now, before, ...options }),
     }).then((r) => json<BillChecksResult>(r)),
   householdBillChecks: (token: string, sin: string, signal?: AbortSignal) =>
@@ -267,17 +263,18 @@ export type ScanOutcome =
   | { kind: "unavailable"; error: string };
 
 /** Send a Bill photo to be read. The result is a draft the user must confirm. */
-export async function scanBill(photo: File, token?: string): Promise<ScanOutcome> {
+export async function scanBill(photo: File, token: string): Promise<ScanOutcome> {
   const form = new FormData();
   form.append("photo", photo);
   let res: Response;
   try {
-    res = await fetch("/api/bills/scan", { method: "POST", body: form, ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) });
+    res = await fetch("/api/bills/scan", { method: "POST", body: form, headers: { Authorization: `Bearer ${token}` } });
   } catch {
     return { kind: "unavailable", error: "Hindi maabot ang server. I-type na lang ang Bill." };
   }
   const body = await res.json().catch(() => ({}));
   if (res.ok) return { kind: "read", ...body };
+  if (res.status === 401) return { kind: "unavailable", error: "HTTP 401: Mag-sign in muna." };
   if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
   return { kind: "unavailable", error: body.error ?? `Hindi nabasa ang litrato (HTTP ${res.status}).` };
 }
@@ -300,10 +297,10 @@ export interface BillBreakdown {
   split: { passThrough: number; meralco: number };
 }
 
-export const fetchBillBreakdown = (now: BillInput, before: BillInput) =>
+export const fetchBillBreakdown = (token: string, now: BillInput, before?: BillInput) =>
   fetch("/api/bills/laman", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify({ now, before }),
   }).then((r) => json<BillBreakdown>(r));
 

@@ -17,7 +17,6 @@ const expired = () => response({ error: "Mag-sign in muna." }, 401);
 let fetchMock: Mock<(input: string, init?: RequestInit) => Promise<Response>>;
 let historyRequest: (sin: string) => Promise<Response>;
 let loginHouseholds = households;
-let linkage: { status: string; householdSin?: string };
 let loginFails = false;
 let failHistory = false;
 let readingsRequest: (sin: string) => Promise<Response>;
@@ -32,13 +31,13 @@ beforeEach(() => {
   historyRequest = async (sin) => response(history(sin === households[0]!.sin ? 230 : 370));
   readingsRequest = async (sin) => response(usage(sin));
   loginHouseholds = households;
-  linkage = { status: "unlinked" };
   loginFails = false; failHistory = false;
   fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10", "2026-11"] });
     if (input === "/api/auth/email/start") return response({ sent: true, expiresInSeconds: 600 }, 202);
     if (input === "/api/auth/email/verify") return loginFails ? response({ error: "Mali o expired na ang code. Humingi ng bagong code." }, 401) : response({ token: "test-session" });
     if (input === "/api/households") return response(loginHouseholds);
+    if (input === "/api/households/link") return response({ pending: null });
     if (input === "/api/auth/logout") return new Response(null, { status: 204 });
     const match = /^\/api\/households\/([^/]+)\/bills$/.exec(input);
     if (match) return failHistory ? response({ error: "Hindi makuha ang Bill History. Subukan ulit." }, 502) : historyRequest(match[1]!);
@@ -60,9 +59,6 @@ beforeEach(() => {
     });
     if (/^\/api\/households\/[^/]+\/usage-plan$/.test(input)) return response({ active: false, plan: null });
     if (/^\/api\/households\/[^/]+\/missions$/.test(input)) return response({ error: "Ilista muna ang mga appliance." }, 409);
-    if (input === "/api/bills/scan") return response({ status: "read", now: { period: "2026-10", kwh: 200, billingDays: 31 }, before: { period: "2026-09", kwh: 150, billingDays: 30 }, missing: [], estimated: [], serviceIdMasked: "••••••7890", scanToken: "a".repeat(43) });
-    if (input === "/api/bills/scan-linkage") return response(linkage);
-    if (input === "/api/bakit-ganito") return response(verdictResponse());
     if (input === "/api/bills/check") {
       return response({
         overall: "green",
@@ -107,14 +103,6 @@ async function login() {
   await screen.findByRole("heading", { name: "Mga Household mo" });
 }
 function select(sin: string) { fireEvent.change(screen.getByLabelText("Piliin ang Household"), { target: { value: sin } }); }
-async function scanAndConfirm() {
-  const photo = new File(["fake-jpeg"], "bill.jpg", { type: "image/jpeg" });
-  const input = document.querySelector('input[type="file"]')!;
-  fireEvent.change(input, { target: { files: [photo] } });
-  const confirm = await screen.findByRole("button", { name: "Oo, tama" });
-  await waitFor(() => expect((confirm as HTMLButtonElement).disabled).toBe(false));
-  fireEvent.click(confirm);
-}
 
 describe("My Meralco PWA", () => {
   it("resets to daily and isolates readings when changing between smart Households", async () => {
@@ -240,10 +228,14 @@ describe("My Meralco PWA", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("handles an empty Household list", async () => {
+  it("a login with no linked Household lands on Link CAN; signed-out users only see sign-in", async () => {
     loginHouseholds = [];
-    render(<App />); await login();
-    expect(screen.getByText(/Wala pang naka-link na Household/)).toBeTruthy();
+    render(<App />);
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeTruthy();
+    expect(screen.queryByText(/walang login|Quick verdict/i)).toBeNull();
+    expect(document.querySelector('input[type="file"]')).toBeNull();
+    await enterCode();
+    await screen.findByRole("heading", { name: "Link your Meralco account" });
     expect(screen.queryByLabelText("Piliin ang Household")).toBeNull();
   });
 
@@ -268,127 +260,4 @@ describe("My Meralco PWA", () => {
     await screen.findByRole("cell", { name: "230" });
   });
 
-  it("keeps an unlinked scan on the quick-verdict path after confirmation and login", async () => {
-    render(<App />);
-    await scanAndConfirm();
-    expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan-linkage")).toBe(false);
-    await login();
-    await screen.findByText(/Hindi naka-link ang account na ito sa My Meralco mo/);
-    expect(screen.queryByRole("table")).toBeNull();
-    const verdict = screen.getByRole("button", { name: "Bakit ganito?" }) as HTMLButtonElement;
-    expect(verdict.disabled).toBe(false);
-    fireEvent.click(verdict);
-    await screen.findByRole("heading", { name: "Bakit ganito?" });
-  });
-
-  it("offers the matching Household explicitly and clears linkage state on logout", async () => {
-    linkage = { status: "linked", householdSin: households[0]!.sin };
-    render(<App />); await login(); await scanAndConfirm();
-    const button = await screen.findByRole("button", { name: "Tingnan ang Bill History ng Household na ito" });
-    expect(screen.queryByRole("table")).toBeNull();
-    fireEvent.click(button);
-    await screen.findByRole("cell", { name: "230" });
-    fireEvent.click(screen.getByRole("button", { name: "Mag-logout" }));
-    expect(screen.queryByText(/Naka-link sa Household/)).toBeNull();
-    expect(screen.queryByRole("table")).toBeNull();
-  });
-});
-
-
-describe("merged bill breakdown and scan linkage", () => {
-  function scannedBillsWithLines() {
-    const originalFetch = fetchMock.getMockImplementation()!;
-    fetchMock.mockImplementation(async (input, init) => {
-      if (input === "/api/bills/scan") {
-        const result = await originalFetch(input, init);
-        const body = await result.json();
-        return response({ ...body, now: { ...body.now, chargeLines: [{ label: "Generation Charge", amount: 123 }] } });
-      }
-      if (input === "/api/bills/laman") return response({ groups: [], total: 12300, split: { passThrough: 12300, meralco: 0 } });
-      return originalFetch(input, init);
-    });
-  }
-
-  it("shows the printed-charge breakdown alongside an unlinked scan's quick verdict", async () => {
-    scannedBillsWithLines();
-    render(<App />); await login(); await scanAndConfirm();
-    await screen.findByText(/Hindi naka-link ang account na ito sa My Meralco mo\./);
-    fireEvent.click(screen.getByRole("button", { name: "Bakit ganito?" }));
-    await screen.findByRole("heading", { name: "Bakit ganito?" });
-    expect(screen.getByRole("heading", { name: "Ano'ng laman ng bill ko?" })).toBeTruthy();
-    expect(screen.getByText("Kabuuan ng mga linya").parentElement?.textContent).toContain("₱123.00");
-    const breakdownCall = fetchMock.mock.calls.find(([url]) => url === "/api/bills/laman")!;
-    expect(JSON.parse(String(breakdownCall[1]?.body)).now.chargeLines).toEqual([{ label: "Generation Charge", amount: 123 }]);
-  });
-
-  it("discards a delayed verdict and breakdown when a Bill is edited", async () => {
-    scannedBillsWithLines();
-    const originalFetch = fetchMock.getMockImplementation()!;
-    let resolveBreakdown!: (r: Response) => void;
-    fetchMock.mockImplementation((input, init) => input === "/api/bills/laman"
-      ? new Promise<Response>((resolve) => { resolveBreakdown = resolve; }) : originalFetch(input, init));
-    render(<App />); await scanAndConfirm();
-    fireEvent.click(screen.getByRole("button", { name: "Bakit ganito?" }));
-    await waitFor(() => expect(resolveBreakdown).toBeTypeOf("function"));
-    fireEvent.change(screen.getAllByLabelText("kWh na nagamit")[1]!, { target: { value: "201" } });
-    await act(async () => resolveBreakdown(response({ groups: [], total: 12300, split: { passThrough: 12300, meralco: 0 } })));
-    expect(screen.queryByRole("heading", { name: "Bakit ganito?" })).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Ano'ng laman ng bill ko?" })).toBeNull();
-  });
-
-  it("taps Weather Effect in 'Bakit ganito?' to reveal bawat mas mainit na araw", async () => {
-    const originalFetch = fetchMock.getMockImplementation()!;
-    fetchMock.mockImplementation(async (input, init) => {
-      if (input === "/api/bakit-ganito") {
-        return response({
-          ...verdictResponse(),
-          effects: [
-            { key: "rate", label: "Rate Effect", amount: 10000 },
-            { key: "billingDays", label: "Billing Days Effect", amount: 10000 },
-            {
-              key: "weather",
-              label: "Weather Effect (tantya)",
-              amount: 15000,
-              estimate: true,
-              sensitivity: 1.5,
-              sensitivitySource: "history",
-              hotDayKwh: 1.5,
-            },
-            { key: "habit", label: "Habit Effect", amount: 15000 },
-          ],
-        });
-      }
-      if (input === "/api/bills/scan") {
-        return response({
-          status: "read",
-          now: { period: "2026-10", kwh: 200, billingDays: 31 },
-          before: { period: "2026-09", kwh: 150, billingDays: 30 },
-          missing: [],
-          estimated: [],
-          serviceIdMasked: "••••••7890",
-          scanToken: "a".repeat(43),
-        });
-      }
-      if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10"] });
-      return originalFetch(input, init);
-    });
-
-    render(<App />);
-    await scanAndConfirm();
-    const decodeBtn = await screen.findByRole("button", { name: /Bakit ganito/ });
-    fireEvent.click(decodeBtn);
-    await screen.findByRole("heading", { name: "Bakit ganito?" });
-
-    const weatherRow = screen.getByRole("button", { name: /Weather Effect/ });
-    expect(weatherRow.textContent).toContain("Weather Effect (tantya)");
-    expect(weatherRow.textContent).toContain("Epekto ng init ng panahon (tantya)");
-
-    // Tap to expand
-    fireEvent.click(weatherRow);
-    expect(weatherRow.textContent).toContain("bawat mas mainit na araw ≈ +1.5 kWh mula sa sariling mga Bill");
-
-    // Tap to collapse
-    fireEvent.click(weatherRow);
-    expect(weatherRow.textContent).toContain("Epekto ng init ng panahon (tantya)");
-  });
 });

@@ -191,6 +191,7 @@ export async function harness(opts: HarnessOptions = {}) {
   await app.init();
   open.push(app);
   const server = app.getHttpServer();
+  let cachedToken: string | undefined;
 
   return {
     app,
@@ -210,6 +211,18 @@ export async function harness(opts: HarnessOptions = {}) {
       if (token !== undefined) req.set("Authorization", `Bearer ${token}`);
       const res = await req.send(body as object);
       return { status: res.status, body: res.body as any };
+    },
+    /** POST as the default signed-in test login (owner-a). */
+    async userPost(path: string, body: unknown) {
+      return this.post(path, body, await this.userToken());
+    },
+    /** Upload as the default signed-in test login (owner-a). */
+    async userUpload(path: string, photo?: Buffer, mimeType?: string, fields: Record<string, string> = {}) {
+      return this.upload(path, photo, mimeType, await this.userToken(), fields);
+    },
+    async userToken(): Promise<string> {
+      cachedToken ??= await this.login();
+      return cachedToken;
     },
     async put(path: string, body: unknown, token?: string) {
       const req = request(server).put(path);

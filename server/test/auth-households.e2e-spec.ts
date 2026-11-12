@@ -175,14 +175,23 @@ describe("sessions and Household access", () => {
     expect((await otherApp.get("/api/households", another)).status).toBe(401);
   });
 
-  it("keeps the typed-Bill quick verdict and fake-vision scan public", async () => {
+  it("the scan and decode endpoints return 401 without a token; a signed-in scan gets the full verdict", async () => {
     const api = await harness({ vision: { readable: true, serviceIdNumber: "1234567890", period: "2026-10", kwh: 100, billingDays: 30 } });
-    const verdict = await api.post("/api/bakit-ganito", { before: pair[0], now: pair[1] });
+    expect((await api.upload("/api/bills/scan")).status).toBe(401);
+    for (const [path, body] of [
+      ["/api/bakit-ganito", { before: pair[0], now: pair[1] }],
+      ["/api/bills/laman", { now: { chargeLines: [{ label: "Generation", amount: 1 }] } }],
+      ["/api/bills/check", { now: pair[1], before: pair[0] }],
+    ] as const) {
+      const res = await api.post(path, body);
+      expect([path, res.status, res.body.error]).toEqual([path, 401, "Mag-sign in muna."]);
+    }
+    expect((await api.post("/api/bills/scan-linkage", { scanToken: "a".repeat(43) }, await api.userToken())).status).toBe(404);
+    const verdict = await api.userPost("/api/bakit-ganito", { before: pair[0], now: pair[1] });
     expect(verdict.status).toBe(200);
-    expect(verdict.body.total).toBe(10_000);
-    const scan = await api.upload("/api/bills/scan");
+    expect(verdict.body.effects.map((e: { key: string }) => e.key)).toEqual(["rate", "billingDays", "weather", "habit"]);
+    const scan = await api.userUpload("/api/bills/scan");
     expect(scan.status).toBe(200);
     expect(scan.body.serviceIdMasked).toBe("••••••7890");
-    expect((await api.get(householdPath("1234567890"))).status).toBe(401);
   });
 });

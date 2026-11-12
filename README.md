@@ -57,11 +57,11 @@ pnpm typecheck
 - `POST /api/households/link` `{ can }` (Bearer token) → masked summary `{ status: "pending", canMasked, area, meterType, billsOnRecord, firstPeriod, lastPeriod }` (never amounts, kWh or the address); `409` when another login holds the active link, `404` unknown CAN. `GET /api/households/link` → `{ pending }`.
 - Account Linking: a signed-in `POST /api/bills/scan` reads the Bill's CAN and adds `link`: `active` when it matches the pending CAN, `pending` with reason `differentAccount` or `canUnread`, or `refused`. When the CAN was unread, `POST /api/households/link/confirm` `{ scanToken, can }` checks the CAN typed from the Bill. Until the link is active every per-Household route returns `403`.
 - `GET  /api/rate-schedules` → `{ periods }`
-- `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` → effects, total (centavos)
-- `POST /api/bills/laman` `{ now: Bill, before?: Bill }` → grouped charge lines, pass-through vs Meralco distribution split
-- `POST /api/bills/check` `{ now: Bill, before?: Bill, tolerancePesos?: number, payments?: PaymentRecord[] }` → Bill Checks ("Tama ba ito?"): line sum, reading continuity, rate schedule fidelity, payment reflection (overall green / red, disagreeing figures, copyable summary)
+- `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` (Bearer token) → effects, total (centavos)
+- `POST /api/bills/laman` `{ now: Bill, before?: Bill }` (Bearer token) → grouped charge lines, pass-through vs Meralco distribution split
+- `POST /api/bills/check` (Bearer token) `{ now: Bill, before?: Bill, tolerancePesos?: number, payments?: PaymentRecord[] }` → Bill Checks ("Tama ba ito?"): line sum, reading continuity, rate schedule fidelity, payment reflection (overall green / red, disagreeing figures, copyable summary)
 - `GET  /api/households/:sin/check` → same Bill Checks for a Household's latest Bill in the Bill source
-- `POST /api/bills/scan` (multipart, field `photo`) → editable draft: `now`, `before` (from printed history), `missing`, `estimated`, masked Service ID Number. `422` unreadable, `503` no vision key. Nothing is used until the PWA confirms and posts to `/api/bakit-ganito`.
+- `POST /api/bills/scan` (Bearer token, multipart, field `photo`) → editable draft: `now`, `before` (from printed history), `missing`, `estimated`, masked Service ID Number and CAN, and `link` (Account Linking). `401` signed out, `422` unreadable, `503` no vision key. There is no anonymous scan: sign-in comes first (ADR-0005).
 - `POST /api/households/:sin/appliances/scan-label` (authenticated multipart, fields `photo` and `type`: `aircon` or `refrigerator`) → editable energy-label draft; see below.
 - `GET  /api/households/:sin/bakit-ganito` → same, from the Household's two latest Bills in the Bill source
 

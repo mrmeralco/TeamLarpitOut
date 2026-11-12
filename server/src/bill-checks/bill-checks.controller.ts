@@ -11,6 +11,7 @@ export class BillChecksController {
   /** Run the four Bill Checks from submitted bills. */
   @Post("bills/check")
   @HttpCode(200)
+  @UseGuards(SessionGuard)
   checkBills(@Body() body: BillChecksRequestDto) {
     return this.billChecks.check(body.now, body.before, {
       tolerancePesos: body.tolerancePesos,

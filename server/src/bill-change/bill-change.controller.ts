@@ -13,6 +13,7 @@ export class BillChangeController {
   /** From two typed or scanned-and-confirmed Bills. */
   @Post("bakit-ganito")
   @HttpCode(200)
+  @UseGuards(SessionGuard)
   fromBills(@Body() body: BillChangeRequestDto) {
     return this.billChange.explainWithFallback(body.before, body.now);
   }
