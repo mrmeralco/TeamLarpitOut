@@ -244,3 +244,13 @@ label.estimated input { border-color: var(--primary); border-style: dashed; }
 .laman-detail { padding: 0 0 10px; font-size: 0.9rem; }
 .laman-detail p { margin: 4px 0; }
 .laman-total { border-top: 2px solid var(--foreground); padding-top: 10px; margin-top: 8px; }
+
+/* Lifeline / catch-up / extras */
+label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--foreground); }
+label.check input { width: auto; accent-color: var(--primary); }
+.effects li.extra-line { background: var(--muted); margin: 0 -16px; padding: 10px 16px; }
+.extras { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 10px; }
+.extras h3 { font-size: 0.9rem; margin: 0 0 2px; }
+.extras p { margin: 0 0 8px; font-size: 0.85rem; }
+.extras ul { list-style: none; margin: 0 0 8px; padding: 0; }
+.extras li { padding: 6px 0; border-bottom: 1px solid var(--border); }

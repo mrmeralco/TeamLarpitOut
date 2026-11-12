@@ -64,6 +64,7 @@ export function toScanResult(raw: RawBillReading): ScanResult {
     previousReading: num(raw.previousReading),
     presentReading: num(raw.presentReading),
     chargeLines: chargeLines(raw.chargeLines),
+    ...(raw.estimated === true ? { estimated: true } : {}),
   };
 
   const keyFields = ["period", "kwh", "billingDays"] as const;

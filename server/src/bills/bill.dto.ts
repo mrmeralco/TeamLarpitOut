@@ -1,6 +1,7 @@
 import { Type } from "class-transformer";
 import {
   IsArray,
+  IsBoolean,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -53,6 +54,14 @@ export class BillDto implements Bill {
   @IsNumber()
   @Min(0)
   presentReading?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  estimated?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  lifelineEligible?: boolean;
 }
 
 export class BakitGanitoDto {

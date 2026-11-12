@@ -24,6 +24,14 @@ export function schedule(period: string, perKwh: number, fixed = 50): RateSchedu
       { code: "distribution", label: "Distribution", rate: perKwh * 0.4, passThrough: false },
     ],
     fixed: [{ code: "supply_fixed", label: "Supply (per customer)", amount: fixed }],
+    // Lifeline: 50% up to 50 kWh, 20% up to 100 kWh, on generation + distribution.
+    lifeline: {
+      discountedCodes: ["generation", "distribution"],
+      tiers: [
+        { upToKwh: 50, discount: 0.5 },
+        { upToKwh: 100, discount: 0.2 },
+      ],
+    },
   };
 }
 
