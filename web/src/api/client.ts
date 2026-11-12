@@ -245,12 +245,18 @@ export type ScannedAccount =
   | { status: "unknownAccount"; canMasked: string }
   | { status: "ownedByAnother"; canMasked: string; message: string };
 
+export interface LinkCorrections { kwh?: number; billingDays?: number; totalAmount?: number }
+
 export const linkApi = {
-  /** Links the CAN the scan read (or, when it couldn't, the CAN typed from the same Bill). */
-  confirm: (token: string, scanToken: string, can?: string) => fetch("/api/households/link/confirm", {
+  /**
+   * Links the CAN the scan read (or, when it couldn't, the CAN typed from the same Bill).
+   * Corrections from "Does this look right?" go along; in demo mode the confirmed Bill
+   * becomes the demo Household's latest Bill.
+   */
+  confirm: (token: string, scanToken: string, can?: string, corrections: LinkCorrections = {}) => fetch("/api/households/link/confirm", {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify(can ? { scanToken, can } : { scanToken }),
-  }).then((r) => json<{ status: "active"; householdSin: string; canMasked: string }>(r)),
+    body: JSON.stringify({ scanToken, ...(can ? { can } : {}), ...corrections }),
+  }).then((r) => json<{ status: "active"; householdSin: string; canMasked: string; demo?: true }>(r)),
 };
 
 export type ScanOutcome =

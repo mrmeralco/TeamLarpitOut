@@ -4,8 +4,8 @@
   "description": "Why is my bill like this?",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ca3500",
+  "background_color": "#FAF6F0",
+  "theme_color": "#C2500C",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]

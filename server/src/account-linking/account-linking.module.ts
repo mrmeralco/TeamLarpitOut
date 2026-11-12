@@ -10,6 +10,10 @@ import { maskCan, OWNED_BY_ANOTHER } from "../households/households.service.js";
 import { ScanContextModule } from "../vision/scan-context.module.js";
 import { ScanContextStore, tenDigits } from "../vision/scan-context.store.js";
 import { ConfirmLinkDto } from "./dto/link-household.dto.js";
+import { demoHistory, type ScannedBill } from "../domain/demo-history.js";
+
+/** Demo Households get their own Service ID Number, made from the scanned CAN (never a demo account's). */
+export const demoSinFor = (can: string) => `8${can.slice(1)}`;
 
 /** What the scanned Bill's CAN points to, before anything is linked. */
 export type ScannedAccount =
@@ -51,8 +55,8 @@ export class AccountLinkingService {
 
   /**
    * Demo fallback: in demo/test mode (AUTH_FIXED_CODE set), a CAN that isn't in the mock
-   * Meralco data opens the sample Household (DEMO_FALLBACK_SIN, default the Caloocan one),
-   * so a real Bill can be scanned during testing. Several logins may share it.
+   * Meralco data gets a demo Household built on the sample one (DEMO_FALLBACK_SIN, default the
+   * Caloocan one), so a real Bill can be scanned during testing. Several logins may share it.
    */
   private async demoFallback(): Promise<MeralcoAccount | null> {
     if (!process.env.AUTH_FIXED_CODE) return null;
@@ -62,8 +66,8 @@ export class AccountLinkingService {
   async preview(ownerId: string, can: string | null): Promise<ScannedAccount> {
     if (can === null) return { status: "canUnread" };
     const account = await this.meralco.findByCan(can);
-    if (!account) {
-      const sample = await this.demoFallback();
+    if (!account || account.demo) {
+      const sample = account ?? await this.demoFallback();
       if (!sample) return { status: "unknownAccount", canMasked: maskCan(can) };
       const linked = (await this.links.forOwner(ownerId)).some((l) => l.sin === sample.sin && l.status === "active");
       const summary = { ...(await this.summary(sample)), canMasked: maskCan(can), demo: true as const };
@@ -75,13 +79,15 @@ export class AccountLinkingService {
     return owner === ownerId ? { status: "alreadyLinked", householdSin: account.sin, ...summary } : { status: "found", ...summary };
   }
 
-  async link(ownerId: string, can: string) {
+  /** `scanned` is the confirmed Bill; only a demo Household uses it (as its latest Bill). */
+  async link(ownerId: string, can: string, scanned: ScannedBill = {}) {
     const account = await this.meralco.findByCan(can);
-    if (!account) {
+    if (!account || account.demo) {
       const sample = await this.demoFallback();
       if (sample) {
-        await this.links.save({ ownerId, sin: sample.sin, can, status: "active" });
-        return { status: "active" as const, householdSin: sample.sin, canMasked: maskCan(can), demo: true as const };
+        const sin = await this.demoHousehold(can, sample, scanned);
+        await this.links.save({ ownerId, sin, can, status: "active" });
+        return { status: "active" as const, householdSin: sin, canMasked: maskCan(can), demo: true as const };
       }
     }
     if (!account) throw new NotFoundException({ error: "No Meralco account has this CAN. Please check your Bill again.", reason: "unknownAccount" });
@@ -89,6 +95,19 @@ export class AccountLinkingService {
     if (owner !== null && owner !== ownerId) throw new ConflictException({ error: OWNED_BY_ANOTHER, reason: "ownedByAnother" });
     await this.links.save({ ownerId, sin: account.sin, can: account.can, status: "active" });
     return { status: "active" as const, householdSin: account.sin, canMasked: maskCan(account.can) };
+  }
+
+  /**
+   * The demo Household for a scanned CAN: the scanned Bill is its latest Bill, and the sample
+   * Household's earlier Bills fill the months before it. Re-confirming a newer scan rebuilds it.
+   * Sources that can't store demo Households fall back to sharing the sample Household.
+   */
+  private async demoHousehold(can: string, sample: MeralcoAccount, scanned: ScannedBill): Promise<string> {
+    if (!this.meralco.addDemo || !this.bills.setBills) return sample.sin;
+    const sin = demoSinFor(can);
+    await this.meralco.addDemo({ can, sin, area: sample.area, meter_type: sample.meter_type });
+    await this.bills.setBills(sin, demoHistory(await this.bills.bills(sample.sin), scanned));
+    return sin;
   }
 }
 
@@ -108,7 +127,10 @@ export class AccountLinkingController {
     const scanned = this.contexts.context(body.scanToken);
     const can = scanned.can ?? (body.can !== undefined ? tenDigits(body.can) : null);
     if (can === null) throw new BadRequestException({ error: "Type the 10-digit CAN printed on the Bill.", reason: "canRequired" });
-    return this.linking.link(request.auth.ownerId, can);
+    const corrections = Object.fromEntries(
+      (["kwh", "billingDays", "totalAmount"] as const).filter((k) => body[k] !== undefined).map((k) => [k, body[k]]),
+    );
+    return this.linking.link(request.auth.ownerId, can, { ...scanned.bill, ...corrections });
   }
 }
 

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ApiError, linkApi, scanBill, type DraftBill, type ScanOutcome } from "../api/client";
+import { ApiError, linkApi, scanBill, type DraftBill, type LinkCorrections, type ScanOutcome } from "../api/client";
 import { BackButton, Icon, ICON } from "./auth/AuthScreens";
 
 type ReadScan = Extract<ScanOutcome, { kind: "read" }>;
@@ -45,15 +45,31 @@ export function ScanBill({ token, onLinked, onExpired, onBack }: {
   async function confirm() {
     if (!scan) return;
     const account = scan.account;
-    if (account?.status === "alreadyLinked") return onLinked(account.householdSin);
+    if (account?.status === "alreadyLinked" && !account.demo) return onLinked(account.householdSin);
     setBusy(true); setError(null);
     try {
-      const linked = await linkApi.confirm(token, scan.scanToken, account?.status === "canUnread" ? typedCan : undefined);
+      const linked = await linkApi.confirm(token, scan.scanToken, account?.status === "canUnread" ? typedCan : undefined, corrections());
       onLinked(linked.householdSin);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return onExpired();
       setError(err instanceof Error ? err.message : "We couldn't link this bill right now.");
     } finally { setBusy(false); }
+  }
+
+  /** Only the numbers the person actually changed; blank or unreadable edits are ignored. */
+  function corrections(): LinkCorrections {
+    const n = (key: string) => {
+      const raw = edits[key];
+      if (raw === undefined) return undefined;
+      const v = Number(raw.replace(/[₱,\s]/g, ""));
+      return raw.trim() && Number.isFinite(v) && v >= 0 ? v : undefined;
+    };
+    const days = n("days");
+    return {
+      ...(n("kwh") !== undefined ? { kwh: n("kwh") } : {}),
+      ...(days !== undefined && Number.isInteger(days) && days >= 1 && days <= 62 ? { billingDays: days } : {}),
+      ...(n("total") !== undefined ? { totalAmount: n("total") } : {}),
+    };
   }
 
   const fileInputs = <>
@@ -91,7 +107,12 @@ export function ScanBill({ token, onLinked, onExpired, onBack }: {
   const account = scan.account;
   const canUnread = account?.status === "canUnread";
   const blocked = account?.status === "ownedByAnother" || account?.status === "unknownAccount";
-  const ready = !blocked && (!canUnread || typedCan.replace(/\D/g, "").length === 10);
+  const isDemo = (account?.status === "found" || account?.status === "alreadyLinked") && account.demo === true;
+  // Demo mode explains this Bill itself, so the kWh and billing days the scan missed must be typed in.
+  const needed = isDemo ? scan.missing.flatMap((f) => (f === "kwh" ? ["kwh"] : f === "billingDays" ? ["days"] : [])) : [];
+  const corrected = corrections();
+  const filled = needed.every((k) => (k === "kwh" ? corrected.kwh !== undefined : corrected.billingDays !== undefined));
+  const ready = !blocked && filled && (!canUnread || typedCan.replace(/\D/g, "").length === 10);
   const tag = account?.status === "found" || account?.status === "alreadyLinked"
     ? account.demo ? <span className="tag-warn">Demo account</span>
       : <span className="tag-ok">{account.status === "alreadyLinked" ? "Already linked" : "Read from your bill"}</span>
@@ -129,7 +150,7 @@ export function ScanBill({ token, onLinked, onExpired, onBack }: {
       <input id="typed-can" className="input-lg" inputMode="numeric" maxLength={20} value={typedCan} onChange={(e) => setTypedCan(e.target.value.replace(/[^\d\s-]/g, ""))} />
     </div>}
     {(account?.status === "found" || account?.status === "alreadyLinked") && account.demo &&
-      <p className="notice-inline" role="status">Demo mode: this CAN isn't in the demo Meralco data, so confirming opens the sample {account.area} household. Its bills are sample values, not your bill.</p>}
+      <p className="notice-inline" role="status">Demo mode: this CAN isn't in the demo Meralco data. Confirming explains this bill as your latest bill; the months before it are sample {account.area} values, not your real history.</p>}
     {account?.status === "ownedByAnother" && <p className="notice-inline" role="alert">{account.message}</p>}
     {account?.status === "unknownAccount" && <p className="notice-inline" role="alert">No Meralco account has this CAN. Retake the photo so the CAN is clear.</p>}
     <div className="compare">
@@ -138,11 +159,13 @@ export function ScanBill({ token, onLinked, onExpired, onBack }: {
         <div className="compare-row" key={r.key}>
           <label htmlFor={`scan-${r.key}`}>{r.label}</label>
           <span>{r.before || (r.key === "due" ? "" : "—")}</span>
-          <input id={`scan-${r.key}`} value={edits[r.key] ?? r.now} onChange={(e) => setEdits({ ...edits, [r.key]: e.target.value })} />
+          <input id={`scan-${r.key}`} value={edits[r.key] ?? r.now} aria-required={needed.includes(r.key) || undefined}
+            placeholder={needed.includes(r.key) ? "Type it" : undefined} onChange={(e) => setEdits({ ...edits, [r.key]: e.target.value })} />
         </div>
       ))}
     </div>
     <p className="notice-inline with-icon"><Icon d={INFO} size={18} /><span>Confirming links this CAN to your account. {month(scan.before?.period)} figures come from its Meralco bill history.</span></p>
+    {needed.length > 0 && !filled && <p className="notice-inline" role="status">We couldn't read the {needed.map((k) => (k === "kwh" ? "usage (kWh)" : "billing days")).join(" and ")} on this bill. Type {needed.length > 1 ? "them" : "it"} from the bill to continue.</p>}
     {error && <p className="error" role="alert">{error}</p>}
     <div className="screen-bottom">
       <button type="button" className="btn-primary" disabled={busy || !ready} onClick={() => void confirm()}>{busy ? "Linking…" : "Yes, explain my bill"}</button>
