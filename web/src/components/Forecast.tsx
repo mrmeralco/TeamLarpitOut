@@ -92,9 +92,9 @@ export function Forecast({
               className="banner heat-wave"
               role="alert"
               style={{
-                background: "#fef2f2",
-                border: "1px solid #f87171",
-                color: "#991b1b",
+                background: "var(--bad-soft)",
+                border: "1px solid color-mix(in srgb, var(--bad) 20%, transparent)",
+                color: "var(--bad)",
                 borderRadius: "8px",
                 padding: "12px 16px",
                 marginBottom: "16px",
@@ -109,7 +109,7 @@ export function Forecast({
             <div className="forecast-range-box">
               <p>
                 Expected Bill for {monthLabel(data.period)}:{" "}
-                <strong style={{ fontSize: "1.25rem", color: "var(--color-primary, #0284c7)" }}>
+                <strong style={{ fontSize: "1.25rem", color: "var(--primary)" }}>
                   {peso(data.range.minPesos)} – {peso(data.range.maxPesos)}
                 </strong>{" "}
                 <span className="muted">({data.range.minKwh} – {data.range.maxKwh} kWh)</span>
@@ -144,7 +144,7 @@ export function Forecast({
             <div className="forecast-single-box">
               <p>
                 Expected Bill for {monthLabel(data.period)}:{" "}
-                <strong style={{ fontSize: "1.35rem", color: "var(--color-primary, #0284c7)" }}>
+                <strong style={{ fontSize: "1.35rem", color: "var(--primary)" }}>
                   {peso(data.projected.pesos)}
                 </strong>{" "}
                 <span className="muted">({data.projected.kwh} kWh)</span>
@@ -152,7 +152,7 @@ export function Forecast({
 
               <div
                 style={{
-                  background: "var(--bg-subtle, #f8fafc)",
+                  background: "var(--muted)",
                   padding: "12px",
                   borderRadius: "6px",
                   margin: "12px 0",
@@ -179,12 +179,12 @@ export function Forecast({
                     borderRadius: "6px",
                     margin: "12px 0",
                     background:
-                      data.targetComparison.status === "within_target" ? "#ecfdf5" : "#fffbeb",
+                      data.targetComparison.status === "within_target" ? "var(--ok-soft)" : "var(--warn-soft)",
                     border: `1px solid ${
-                      data.targetComparison.status === "within_target" ? "#10b981" : "#f59e0b"
+                      data.targetComparison.status === "within_target" ? "var(--ok)" : "var(--warn)"
                     }`,
                     color:
-                      data.targetComparison.status === "within_target" ? "#065f46" : "#92400e",
+                      data.targetComparison.status === "within_target" ? "var(--ok)" : "var(--warn)",
                   }}
                 >
                   <strong>
