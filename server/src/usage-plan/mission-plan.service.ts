@@ -48,7 +48,7 @@ export class MissionPlanService {
 
   private async requireSetup(sin: string) {
     if (!(await this.setup.isComplete(sin))) {
-      throw new ConflictException({ error: "Tapusin ang setup para ma-unlock ang Missions.", reason: "setupIncomplete" });
+      throw new ConflictException({ error: "Finish setup to unlock Missions.", reason: "setupIncomplete" });
     }
   }
 
@@ -160,13 +160,13 @@ export class MissionPlanService {
     const { target, goal, candidates } = await this.candidates(sin);
     const current = (await this.plans.find(sin))!;
     const ids = current.missions.map((m) => m.id);
-    if (!ids.includes(missionId)) throw new NotFoundException({ error: "Wala ang Mission na ito sa plan mo." });
+    if (!ids.includes(missionId)) throw new NotFoundException({ error: "This Mission is not in your plan." });
     const keep = ids.filter((id) => id !== missionId);
     const keptGroups = new Set(candidates.filter((c) => keep.includes(c.id)).map((c) => c.group));
     const replacement = candidates
       .filter((c) => !ids.includes(c.id) && !keptGroups.has(c.group))
       .sort((a, b) => b.kwhSaved - a.kwhSaved || a.id.localeCompare(b.id))[0];
-    if (!replacement) throw new ConflictException({ error: "Walang ibang Mission na puwedeng ipalit para sa bahay na ito.", reason: "noAlternative" });
+    if (!replacement) throw new ConflictException({ error: "There is no other Mission to swap in for this home.", reason: "noAlternative" });
     const missions = [...candidates.filter((c) => keep.includes(c.id)), replacement].sort((a, b) => b.kwhSaved - a.kwhSaved);
     const wording = { ...(current.wording ?? {}) };
     delete wording[missionId];

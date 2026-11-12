@@ -67,12 +67,12 @@ describe("POST /api/bills/check", () => {
       const check = body.checks.find((c: any) => c.key === "lineSum");
       expect(check.status).toBe("fail");
       expect(check.discrepancy).toBeDefined();
-      expect(check.discrepancy.labelA).toBe("Kabuuan ng Charge Lines sa Bill");
+      expect(check.discrepancy.labelA).toBe("Sum of the charge lines on the Bill");
       expect(check.discrepancy.valueA).toBe("₱1050.00");
-      expect(check.discrepancy.labelB).toBe("Naka-print na Total Amount sa Bill");
+      expect(check.discrepancy.labelB).toBe("Total Amount printed on the Bill");
       expect(check.discrepancy.valueB).toBe("₱1200.00");
-      expect(body.summary).toContain("Kabuuan ng Charge Lines sa Bill: ₱1050.00");
-      expect(body.summary).toContain("Naka-print na Total Amount sa Bill: ₱1200.00");
+      expect(body.summary).toContain("Sum of the charge lines on the Bill: ₱1050.00");
+      expect(body.summary).toContain("Total Amount printed on the Bill: ₱1200.00");
     });
   });
 
@@ -122,9 +122,9 @@ describe("POST /api/bills/check", () => {
       expect(body.overall).toBe("red");
       const check = body.checks.find((c: any) => c.key === "readingContinuity");
       expect(check.status).toBe("fail");
-      expect(check.discrepancy.labelA).toBe("Previous reading sa kasalukuyang Bill");
+      expect(check.discrepancy.labelA).toBe("Previous reading on this Bill");
       expect(check.discrepancy.valueA).toBe(1150);
-      expect(check.discrepancy.labelB).toBe("Present reading sa nakaraang Bill");
+      expect(check.discrepancy.labelB).toBe("Present reading on the last Bill");
       expect(check.discrepancy.valueB).toBe(1100);
     });
 
@@ -150,7 +150,7 @@ describe("POST /api/bills/check", () => {
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "readingContinuity");
       expect(check.status).toBe("skipped");
-      expect(check.message).toContain("Nagpalit ng metro");
+      expect(check.message).toContain("The meter was replaced");
     });
 
     it("skips continuity check across a missing Bill (non-consecutive periods)", async () => {
@@ -173,7 +173,7 @@ describe("POST /api/bills/check", () => {
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "readingContinuity");
       expect(check.status).toBe("skipped");
-      expect(check.message).toContain("missing Bill");
+      expect(check.message).toContain("in between is missing");
     });
   });
 
@@ -213,7 +213,7 @@ describe("POST /api/bills/check", () => {
       expect(body.overall).toBe("red");
       const check = body.checks.find((c: any) => c.key === "rateSchedule");
       expect(check.status).toBe("fail");
-      expect(check.discrepancy.labelA).toContain("Rate sa Bill");
+      expect(check.discrepancy.labelA).toContain("Rate on the Bill");
       expect(check.discrepancy.valueA).toContain("7.5000");
       expect(check.discrepancy.labelB).toContain("Published Rate Schedule");
       expect(check.discrepancy.valueB).toContain("6.0000");
@@ -254,7 +254,7 @@ describe("POST /api/bills/check", () => {
       expect(status).toBe(200);
       const check = body.checks.find((c: any) => c.key === "paymentReflection");
       expect(check.status).toBe("pass");
-      expect(check.message).toContain("Walang naitalang bayad bago o sa araw ng bill date");
+      expect(check.message).toContain("No payment was recorded on or before the bill date");
     });
 
     it("fails when payment before bill date was not reflected, results in red, and names two Meralco figures", async () => {
@@ -273,11 +273,11 @@ describe("POST /api/bills/check", () => {
       expect(body.overall).toBe("red");
       const check = body.checks.find((c: any) => c.key === "paymentReflection");
       expect(check.status).toBe("fail");
-      expect(check.discrepancy.labelA).toContain("Naitalang bayad bago ang bill date");
+      expect(check.discrepancy.labelA).toContain("Payments recorded before the bill date");
       expect(check.discrepancy.valueA).toBe("₱2500.00");
-      expect(check.discrepancy.labelB).toBe("Naka-reflect na bayad sa Bill");
+      expect(check.discrepancy.labelB).toBe("Payments credited on the Bill");
       expect(check.discrepancy.valueB).toBe("₱0.00");
-      expect(body.summary).toContain("Naitalang bayad bago ang bill date");
+      expect(body.summary).toContain("Payments recorded before the bill date");
       expect(body.summary).toContain("₱2500.00");
     });
   });
@@ -313,7 +313,7 @@ describe("POST /api/bills/check", () => {
       expect(status).toBe(200);
       expect(body.overall).toBe("green");
       expect(body.failedChecks).toHaveLength(0);
-      expect(body.summary).toContain("Lahat ng nasuring Meralco figures ay nagtutugma");
+      expect(body.summary).toContain("All of Meralco's figures checked match");
     });
 
     it("returns yellow when all checks pass and usage exceeds threshold (Usage Outlier)", async () => {
@@ -353,7 +353,7 @@ describe("POST /api/bills/check", () => {
       expect(body.outlier.isOutlier).toBe(true);
       // Acceptance criterion: yellow never includes a Meralco inquiry
       expect(body.summary).not.toContain("Meralco Customer Care");
-      expect(body.summary).not.toContain("Itanong kay Meralco");
+      expect(body.summary).not.toContain("Ask Meralco");
       expect(body.summary).not.toContain("Maaari po bang paki-verify");
     });
 

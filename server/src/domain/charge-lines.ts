@@ -68,7 +68,7 @@ export function homeChargeLines(now: ChargeLine[], before: ChargeLine[] = []) {
       if (existing.kind !== row.kind) existing.kind = null;
       continue;
     }
-    const payee = id === "taxes" ? { type: "government" as const, name: "Gobyerno (BIR at lokal na pamahalaan)" } : row.payee;
+    const payee = id === "taxes" ? { type: "government" as const, name: "Government (BIR and local government)" } : row.payee;
     byId.set(id, {
       id,
       label: TITLE[id] ?? row.label,

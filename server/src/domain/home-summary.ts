@@ -20,9 +20,9 @@ export function homeBadge({ checksOverall, usageOutlier }: BadgeInput): Badge {
 }
 
 export const BADGE_LABEL: Record<Badge, string> = {
-  green: "Tugma ang bill",
-  yellow: "Mas mataas kaysa karaniwan mo",
-  red: "May hindi tugma",
+  green: "Bill verified",
+  yellow: "Higher than usual",
+  red: "Something doesn't match",
 };
 
 export type HomeAction =
@@ -30,11 +30,11 @@ export type HomeAction =
   | { kind: "householdChange"; label: string; screen: "missions" }
   | { kind: "askMeralco"; label: string; screen: "tama-ba"; summary: string };
 
-/** One "Ano ang gagawin ko?" action, chosen by the badge. Red never points to Missions; yellow never to Meralco. */
+/** One "What should I do?" action, chosen by the badge. Red never points to Missions; yellow never to Meralco. */
 export function homeAction(badge: Badge, checksSummary: string): HomeAction {
-  if (badge === "red") return { kind: "askMeralco", label: "Itanong kay Meralco", screen: "tama-ba", summary: checksSummary };
-  if (badge === "yellow") return { kind: "householdChange", label: "May nagbago ba sa bahay? Tingnan ang Missions", screen: "missions" };
-  return { kind: "missions", label: "Tingnan ang Missions", screen: "missions" };
+  if (badge === "red") return { kind: "askMeralco", label: "Ask Meralco", screen: "tama-ba", summary: checksSummary };
+  if (badge === "yellow") return { kind: "householdChange", label: "Did something change at home? See Missions", screen: "missions" };
+  return { kind: "missions", label: "See Missions", screen: "missions" };
 }
 
 interface ChangePart {
@@ -49,32 +49,31 @@ function reason(key: string, amount: number): string {
   const up = amount > 0;
   switch (key) {
     case "rate":
-      return up ? "pagtaas ng singil kada kWh" : "pagbaba ng singil kada kWh";
+      return up ? "a higher rate per kWh" : "a lower rate per kWh";
     case "billingDays":
-      return up ? "mas mahabang billing period" : "mas maikling billing period";
+      return up ? "a longer billing period" : "a shorter billing period";
     case "weather":
-      return up ? "mas mainit na panahon" : "mas malamig na panahon";
+      return up ? "hotter weather" : "cooler weather";
     case "habit":
-      return up ? "mas maraming gamit sa bahay" : "mas kaunting gamit sa bahay";
+      return up ? "more use at home" : "less use at home";
     case "lifeline":
-      return up ? "nawalang lifeline discount" : "nakuhang lifeline discount";
+      return up ? "losing the lifeline discount" : "getting the lifeline discount";
     case "catchUp":
-      return "catch-up mula sa tantyang Bill";
+      return "catch-up from an estimated Bill";
     default:
       return key;
   }
 }
 
 /**
- * The one-sentence "Bakit ganito?": the change and its biggest driver in the
- * same direction, e.g. "Tumaas ng ₱312.40 mula Oktubre, pinakamalaki ang mas
- * mainit na panahon."
+ * The one-sentence "Why this bill?": the change and its biggest driver in the
+ * same direction, e.g. "Up ₱312.40 from October, mostly from hotter weather."
  */
 export function bakitGanitoSentence(total: number, parts: ChangePart[], previousMonth: string): string {
-  if (Math.abs(total) < 100) return `Halos pareho sa ${previousMonth}; wala pang ₱1 ang pinagbago.`;
+  if (Math.abs(total) < 100) return `About the same as ${previousMonth}; it changed by less than ₱1.`;
   const sameDirection = parts.filter((p) => Math.sign(p.amount) === Math.sign(total));
   const biggest = sameDirection.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))[0];
-  const verb = total > 0 ? "Tumaas" : "Bumaba";
-  const driver = biggest ? `, pinakamalaki ang ${reason(biggest.key, biggest.amount)}` : "";
-  return `${verb} ng ${peso(total)} mula ${previousMonth}${driver}.`;
+  const verb = total > 0 ? "Up" : "Down";
+  const driver = biggest ? `, mostly from ${reason(biggest.key, biggest.amount)}` : "";
+  return `${verb} ${peso(total)} from ${previousMonth}${driver}.`;
 }

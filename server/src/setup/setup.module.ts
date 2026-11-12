@@ -45,9 +45,9 @@ export class SetupController {
   @Header("Cache-Control", "no-store")
   @UseInterceptors(FileInterceptor("photo", { limits: { fileSize: 10 * 1024 * 1024 } }))
   airconPhoto(@Param("sin") sin: string, @UploadedFile() photo?: Express.Multer.File) {
-    if (!photo) throw new BadRequestException({ error: "Walang litrato (field: photo)" });
+    if (!photo) throw new BadRequestException({ error: "No photo (field: photo)" });
     if (!["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(photo.mimetype)) {
-      throw new BadRequestException({ error: "Hindi tanggap ang uri ng larawan." });
+      throw new BadRequestException({ error: "This image type is not accepted." });
     }
     return this.setup.airconPhoto(sin, { mimeType: photo.mimetype, data: photo.buffer });
   }

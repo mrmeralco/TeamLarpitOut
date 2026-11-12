@@ -49,14 +49,14 @@ export function SetupAppliances({ token, sin, status, onSaved, onBack, onExpired
       setPhotoNote(`About ${out.kwhPerHour} kWh per hour · Estimated from photo`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return onExpired();
-      setPhotoNote(err instanceof Error ? err.message : "Typical value muna.");
+      setPhotoNote(err instanceof Error ? err.message : "Using the typical value for now.");
     } finally { setBusy(false); }
   }
 
   async function save() {
     setBusy(true); setError(null);
     try { onSaved(await setupApi.grid(token, sin, Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 0)))); }
-    catch (err) { fail(err, "Hindi ma-save."); } finally { setBusy(false); }
+    catch (err) { fail(err, "Couldn't save."); } finally { setBusy(false); }
   }
 
   return (

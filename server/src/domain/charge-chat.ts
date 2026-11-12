@@ -102,7 +102,7 @@ const kwh = (n: number) => `${Math.abs(n).toLocaleString("en-PH", { maximumFract
 const rate = (n: number) => `₱${Math.abs(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}/kWh`;
 
 export const ASK_MERALCO =
-  "KuryenteKo does not file complaints. If something looks wrong, ask Meralco directly (Itanong kay Meralco) and copy the Bill Check summary to show them.";
+  "Eelio does not file complaints. If something looks wrong, ask Meralco directly and copy the Bill Check summary to show them.";
 
 /** Deterministic answer from the facts only; used without an AI and whenever the AI's answer fails the figure check. */
 export function templateChargeAnswer(intent: ChargeIntent, f: ChargeFacts): string {
@@ -111,20 +111,20 @@ export function templateChargeAnswer(intent: ChargeIntent, f: ChargeFacts): stri
     case "complaint":
       return ASK_MERALCO;
     case "offTopic":
-      return `I can only answer questions about the ${f.line} charge on this bill. Try "Bakit tumaas ito?" or "Can I lower this?".`;
+      return `I can only answer questions about the ${f.line} charge on this bill. Try "Why did this go up?" or "Can I lower this?".`;
     case "who":
       if (f.passThrough) return `${f.line} is pass-through: Meralco collects it and pays it to ${f.payee ?? "someone else"}. It is not Meralco's income. Its rates are regulated by the ERC.`;
       if (f.goesTo === "Meralco") return `${f.line} is Meralco's own charge for running the distribution network. Its rates are approved by the ERC.`;
       if (f.goesTo === "Government") return `${f.line} goes to the government. Tax rates are set by law; Meralco only collects them.`;
       if (f.goesTo === "Subsidy") return `${f.line} funds discounts for other customers (${f.payee ?? "subsidies"}), as set by law and the ERC.`;
-      return `This bill doesn't say who receives the ${f.line} line. Itanong kay Meralco if you need to know.`;
+      return `This bill doesn't say who receives the ${f.line} line. Ask Meralco if you need to know.`;
     case "lower":
       if (f.kind === "perKwh" && f.ratePerKwhNow !== null) return `${f.line} is charged per kWh at about ${rate(f.ratePerKwhNow)} on this bill, so every kWh you don't use takes about that much off it. The rate itself is not something a household can change.`;
       if (f.kind === "fixed") return `${f.line} is a fixed monthly charge, so using less electricity won't lower it.`;
       if (f.kind === "tax") return `${f.line} is a tax on your other charges, so using fewer kWh lowers it a little too.`;
       return `This bill doesn't print whether ${f.line} is per kWh or per month, so we can't say how much using less would lower it.`;
     case "correct":
-      if (f.billCheck === "red") return `A Bill Check on this bill does not match Meralco's own figures. Itanong kay Meralco and copy the summary; KuryenteKo does not file complaints.`;
+      if (f.billCheck === "red") return `A Bill Check on this bill does not match Meralco's own figures. Ask Meralco and copy the summary; Eelio does not file complaints.`;
       return `The Bill Checks for this bill pass: the lines add up to the total, the readings continue from last month and the rates match the published Rate Schedule. ${f.line} is ${peso(f.amountNow)} on this bill.`;
     case "why":
     default: {
@@ -171,10 +171,10 @@ export function figuresComeFromFacts(answer: string, f: ChargeFacts): boolean {
 
 /** The whole prompt for one question: this line's facts and the question, nothing else. */
 export function chargePrompt(f: ChargeFacts, question: string): string {
-  return `You are KuryenteKo, explaining ONE charge line on a Meralco (Philippines) electricity bill.
-Answer in 2-4 short sentences in the same language as the question (English, Tagalog or Taglish).
+  return `You are Eelio, explaining ONE charge line on a Meralco (Philippines) electricity bill.
+Answer in 2-4 short sentences in English, even if the question is in Tagalog or Taglish.
 Use ONLY these facts. Every peso (₱) or kWh figure you write must be copied from them; never compute or invent a number.
-If the question is about filing a complaint or dispute, say KuryenteKo does not file complaints and suggest "Itanong kay Meralco".
+If the question is about filing a complaint or dispute, say Eelio does not file complaints and suggest asking Meralco.
 If the question is not about this charge, briefly say you can only answer about this charge.
 Facts (JSON): ${JSON.stringify(f)}
 Question: ${question.replace(/\s+/g, " ").slice(0, 300)}`;

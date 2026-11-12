@@ -110,7 +110,7 @@ describe("sessions and Household access", () => {
     for (const path of ["/api/households", householdPath("1234567890"), householdPath("unknown")]) {
       const response = await api.get(path, token);
       expect(response.status).toBe(401);
-      expect(response.body.error).toBe("Mag-sign in muna.");
+      expect(response.body.error).toBe("Please sign in first.");
       expect(response.body.effects).toBeUndefined();
     }
     expect((await api.post("/api/auth/logout", {}, token)).status).toBe(401);
@@ -135,7 +135,7 @@ describe("sessions and Household access", () => {
     expect((await api.get(householdPath("5555555555"), b)).status).toBe(200);
     const forbidden = await api.get(householdPath("5555555555"), a);
     expect(forbidden).toEqual(await api.get(householdPath("unknown"), a));
-    expect(forbidden).toEqual({ status: 404, body: { error: "Hindi makita ang Household." } });
+    expect(forbidden).toEqual({ status: 404, body: { error: "Household not found." } });
     expect((await api.get(householdPath("1234567890"), b)).status).toBe(404);
   });
 
@@ -184,7 +184,7 @@ describe("sessions and Household access", () => {
       ["/api/bills/check", { now: pair[1], before: pair[0] }],
     ] as const) {
       const res = await api.post(path, body);
-      expect([path, res.status, res.body.error]).toEqual([path, 401, "Mag-sign in muna."]);
+      expect([path, res.status, res.body.error]).toEqual([path, 401, "Please sign in first."]);
     }
     expect((await api.post("/api/bills/scan-linkage", { scanToken: "a".repeat(43) }, await api.userToken())).status).toBe(404);
     const verdict = await api.userPost("/api/bakit-ganito", { before: pair[0], now: pair[1] });

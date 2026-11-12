@@ -11,17 +11,17 @@ export class SmartMeterService {
 
   async readings(household: Household, query: ReadingsQueryDto): Promise<UsageReadings> {
     if (household.meter_type !== "smart") {
-      throw new UnprocessableEntityException({ error: "Walang interval readings ang Traditional meter." });
+      throw new UnprocessableEntityException({ error: "Traditional meters have no interval readings." });
     }
     if ((query.from === undefined) !== (query.to === undefined)) {
-      throw new BadRequestException({ error: "Ibigay ang parehong from at to." });
+      throw new BadRequestException({ error: "Give both from and to." });
     }
     let range: ReadingRange | null = null;
     if (query.from !== undefined && query.to !== undefined) {
       const from = Date.parse(query.from);
       const to = Date.parse(query.to);
       if (!isHourAligned(from) || !isHourAligned(to) || from >= to || to - from > 366 * DAY_MS) {
-        throw new BadRequestException({ error: "Gumamit ng hour-aligned range na hanggang 366 araw, from bago ang to." });
+        throw new BadRequestException({ error: "Use an hour-aligned range of up to 366 days, with from before to." });
       }
       range = { from: new Date(from).toISOString(), to: new Date(to).toISOString() };
     }
@@ -43,7 +43,7 @@ export class SmartMeterService {
         readings: range ? aggregateReadings(rows, range, query.interval) : [],
       };
     } catch {
-      throw new BadGatewayException({ error: "Hindi makuha ang smart meter readings. Subukan ulit." });
+      throw new BadGatewayException({ error: "We couldn't get the smart meter readings. Please try again." });
     }
   }
 }

@@ -30,7 +30,7 @@ import type { PointsEntry, PointsRepository } from "./points-repository.interfac
 import type { UsagePlan, UsagePlanRepository } from "./usage-plan-repository.interface.js";
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
-const MONTHS = ["Enero", "Pebrero", "Marso", "Abril", "Mayo", "Hunyo", "Hulyo", "Agosto", "Setyembre", "Oktubre", "Nobyembre", "Disyembre"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const monthName = (period: string) => MONTHS[Number(period.slice(5, 7)) - 1] ?? period;
 
 /** KilosWatt for traditional meters: Baseline, Target, and Missions for one billing period. */
@@ -55,10 +55,10 @@ export class UsagePlanService {
   async target(sin: string) {
     const history = await this.bills.bills(sin);
     const latest = history.at(-1);
-    if (!latest) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    if (!latest) throw new NotFoundException({ error: "There is no Bill for this Household." });
     const schedule = this.rates.get(latest.period);
     if (!schedule) {
-      throw new UnprocessableEntityException({ error: `Walang Rate Schedule para sa ${latest.period}`, period: latest.period });
+      throw new UnprocessableEntityException({ error: `There is no Rate Schedule for ${latest.period}`, period: latest.period });
     }
 
     const withWeather = await Promise.all(
@@ -139,13 +139,13 @@ export class UsagePlanService {
 
   async savePlan(sin: string, input: { cut: TargetCut; missionIds: string[]; airconSetting?: number }) {
     if (!(await this.setup.isComplete(sin))) {
-      throw new ConflictException({ error: "Tapusin ang setup para ma-unlock ang Missions.", reason: "setupIncomplete" });
+      throw new ConflictException({ error: "Finish setup to unlock Missions.", reason: "setupIncomplete" });
     }
     const [target, available] = await Promise.all([this.target(sin), this.missions(sin, input.airconSetting)]);
     const chosen = input.missionIds.map((id) => available.missions.find((m) => m.id === id));
     const missing = input.missionIds.filter((_, i) => !chosen[i]);
     if (missing.length) {
-      throw new BadRequestException({ error: "May Mission na hindi para sa bahay na ito.", issues: missing });
+      throw new BadRequestException({ error: "A Mission doesn't apply to this home.", issues: missing });
     }
     const option = target.options.find((o) => o.cut === input.cut)!;
     const plan: UsagePlan = {
@@ -169,10 +169,10 @@ export class UsagePlanService {
   async forecast(sin: string) {
     const history = await this.bills.bills(sin);
     const latest = history.at(-1);
-    if (!latest) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    if (!latest) throw new NotFoundException({ error: "There is no Bill for this Household." });
     const schedule = this.rates.get(latest.period);
     if (!schedule) {
-      throw new UnprocessableEntityException({ error: `Walang Rate Schedule para sa ${latest.period}`, period: latest.period });
+      throw new UnprocessableEntityException({ error: `There is no Rate Schedule for ${latest.period}`, period: latest.period });
     }
 
     const withWeather = await Promise.all(
@@ -285,11 +285,11 @@ export class UsagePlanService {
   async saveReading(sin: string, input: { reading: number; elapsedDays?: number; readingDate?: string }) {
     const history = await this.bills.bills(sin);
     const latest = history.at(-1);
-    if (!latest) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    if (!latest) throw new NotFoundException({ error: "There is no Bill for this Household." });
 
     if (latest.presentReading !== undefined && input.reading < latest.presentReading) {
       throw new BadRequestException({
-        error: `Ang reading ay hindi maaaring mas mababa sa huling reading sa bill (${latest.presentReading}).`,
+        error: `The reading can't be lower than the last reading on the bill (${latest.presentReading}).`,
       });
     }
 
@@ -327,7 +327,7 @@ export class UsagePlanService {
    */
   async getPoints(sin: string) {
     const history = await this.bills.bills(sin);
-    if (!history.length) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    if (!history.length) throw new NotFoundException({ error: "There is no Bill for this Household." });
     await this.autoSettle(sin);
     const [balance, entries] = await Promise.all([
       this.pointsRepo.getBalance(sin),
@@ -346,16 +346,16 @@ export class UsagePlanService {
 
   /**
    * Self-report for a Mission.
-   * Per specification (§2.6): "Never self-reported. Tapping 'tapos na' earns nothing."
+   * Per specification (§2.6): "Never self-reported. Tapping 'done' earns nothing."
    */
   async selfReport(sin: string, _missionId?: string) {
     const history = await this.bills.bills(sin);
-    if (!history.length) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    if (!history.length) throw new NotFoundException({ error: "There is no Bill for this Household." });
     const balance = await this.pointsRepo.getBalance(sin);
     return {
       awardedPoints: 0,
       balance,
-      message: "Ang Points ay ibinibigay lamang mula sa Verified Savings sa susunod na Bill, hindi sa self-report.",
+      message: "Points come only from Verified Savings on your next Bill, not from self-reports.",
     };
   }
 
@@ -412,10 +412,10 @@ export class UsagePlanService {
     });
 
     const desc = result.hasOutage
-      ? `May naitalang brownout/outage noong ${monthName(result.period)} (${result.period}) kaya hindi kwalipikado sa Points.`
+      ? `A brownout/outage was recorded in ${monthName(result.period)} (${result.period}), so it does not qualify for Points.`
       : result.points > 0
-        ? `Verified Savings sa Bill ng ${monthName(result.period)} (${result.savedKwh} kWh natipid)`
-        : `Walang Verified Savings para sa Bill ng ${monthName(result.period)}`;
+        ? `Verified Savings on the ${monthName(result.period)} Bill (${result.savedKwh} kWh saved)`
+        : `No Verified Savings on the ${monthName(result.period)} Bill`;
 
     const entry: PointsEntry = {
       id: `pts-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,

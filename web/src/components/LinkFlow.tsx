@@ -12,7 +12,7 @@ const REASON: Record<string, string> = {
 
 /**
  * Account Linking (ADR-0005): type the CAN → masked summary → scan the latest Bill →
- * "Tama ba?" with whether the CAN matches. One screen at a time.
+ * "Is this right?" with whether the CAN matches. One screen at a time.
  */
 export function LinkFlow({ token, onLinked, onExpired, onCancel }: {
   token: string;
@@ -50,7 +50,7 @@ export function LinkFlow({ token, onLinked, onExpired, onCancel }: {
       const found = await linkApi.start(token, can);
       if (found.status === "active" && found.householdSin) return onLinked(found.householdSin);
       setSummary(found);
-    } catch (err) { fail(err, "Hindi ma-check ang CAN ngayon."); } finally { setBusy(false); }
+    } catch (err) { fail(err, "Couldn't check the CAN right now."); } finally { setBusy(false); }
   }
 
   async function onPhoto(file: File) {
@@ -69,7 +69,7 @@ export function LinkFlow({ token, onLinked, onExpired, onCancel }: {
     if (!scan) return;
     setBusy(true); setError(null);
     try { setLink(await linkApi.confirmTyped(token, scan.scanToken, typedCan)); }
-    catch (err) { fail(err, "Hindi ma-check ang CAN ngayon."); } finally { setBusy(false); }
+    catch (err) { fail(err, "Couldn't check the CAN right now."); } finally { setBusy(false); }
   }
 
   const back = (to: Step | null) => () => { setError(null); if (to) setStep(to); else onCancel?.(); };
@@ -114,7 +114,7 @@ export function LinkFlow({ token, onLinked, onExpired, onCancel }: {
       <input ref={photo} type="file" accept="image/*" capture="environment" hidden
         onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onPhoto(f); }} />
       <button type="button" className="primary scan" disabled={busy} onClick={() => photo.current?.click()}>
-        {busy ? "Binabasa…" : "📷 I-scan ang Bill"}
+        {busy ? "Reading…" : "📷 Scan the Bill"}
       </button>
       {error && <p className="error" role="alert">{error}</p>}
     </section>;
@@ -129,7 +129,7 @@ export function LinkFlow({ token, onLinked, onExpired, onCancel }: {
 
   return <section className="card flow">
     <button type="button" className="back" aria-label="Back" onClick={back("scan")}>‹</button>
-    <h2>Tama ba?</h2>
+    <h2>Is this right?</h2>
     <p className="muted">Correct anything we misread. Nothing is used until you confirm.</p>
     <div className="can-row">
       <div><span className="muted small">Customer Account Number</span><br /><strong>{scan!.canMasked ?? "—"}</strong></div>

@@ -3,7 +3,7 @@ import type { ChargeLine } from "./bill.js";
 /**
  * Printed lines that are not part of the month's energy charges: credits,
  * refunds, adjustments and balances carried over. They are listed apart from
- * "Bakit ganito?" so they never distort the four effects.
+ * "Why this bill?" so they never distort the four effects.
  */
 
 export type ExtraKind = "priorBalance" | "refund" | "credit" | "adjustment";
@@ -12,7 +12,7 @@ const RULES: { kind: ExtraKind; match: RegExp; label: string }[] = [
   {
     kind: "priorBalance",
     match: /previous\s*balance|prior\s*balance|balance\s*(from|forward)|arrear|unpaid|outstanding|overdue/,
-    label: "Balanse mula sa nakaraan",
+    label: "Balance from previous bills",
   },
   { kind: "refund", match: /refund/, label: "Refund" },
   { kind: "credit", match: /credit|rebate|overpay|advance\s*payment|bill\s*deposit/, label: "Credit" },

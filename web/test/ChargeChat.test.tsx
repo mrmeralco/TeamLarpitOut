@@ -5,7 +5,7 @@ import type { HomeChargeLine } from "../src/api/client";
 
 const line: HomeChargeLine = {
   id: "generation", label: "Generation", amount: 342000, previous: 301000, change: 41000, kind: "perKwh",
-  payee: { type: "passThrough", name: "Mga planta ng kuryente" }, goesTo: "Pass-through", printed: ["Generation Charge"],
+  payee: { type: "passThrough", name: "Power plants" }, goesTo: "Pass-through", printed: ["Generation Charge"],
 };
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 let fetchMock: Mock<(input: string, init?: RequestInit) => Promise<Response>>;
@@ -13,7 +13,7 @@ let fetchMock: Mock<(input: string, init?: RequestInit) => Promise<Response>>;
 beforeEach(() => {
   fetchMock = vi.fn(async (_input: string, init?: RequestInit) => {
     const { question } = JSON.parse(String(init!.body));
-    if (/file|reklamo/i.test(question)) return response({ lineId: "generation", kind: "askMeralco", source: "template", answer: "KuryenteKo does not file complaints. Itanong kay Meralco.", summary: "Total ₱3,000 vs lines ₱2,690" });
+    if (/file|reklamo/i.test(question)) return response({ lineId: "generation", kind: "askMeralco", source: "template", answer: "KuryenteKo does not file complaints. Ask Meralco.", summary: "Total ₱3,000 vs lines ₱2,690" });
     return response({ lineId: "generation", kind: "answer", source: "template", answer: `Answer to: ${question}` });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -28,11 +28,11 @@ describe("ChargeChat", () => {
     expect(screen.getByText("vs. September")).toBeTruthy();
     expect(screen.getByText("+₱410.00")).toBeTruthy();
     expect(screen.getByText("Pass-through")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Bakit tumaas ito?" }));
-    expect(await screen.findByText("Answer to: Bakit tumaas ito?")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Why did this go up?" }));
+    expect(await screen.findByText("Answer to: Why did this go up?")).toBeTruthy();
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe("/api/households/1234567890/charges/generation/ask");
-    expect(JSON.parse(String(init!.body))).toEqual({ question: "Bakit tumaas ito?" });
+    expect(JSON.parse(String(init!.body))).toEqual({ question: "Why did this go up?" });
   });
 
   it("asks a typed question and shows only the latest answer (stateless)", async () => {
@@ -45,12 +45,12 @@ describe("ChargeChat", () => {
     expect(screen.queryByText("Answer to: Who gets this money?")).toBeNull();
   });
 
-  it("offers the copyable summary for Itanong kay Meralco, never a complaint form", async () => {
+  it("offers the copyable summary for Ask Meralco, never a complaint form", async () => {
     render(<ChargeChat token="t" sin="1234567890" line={line} previousMonth={null} onClose={() => {}} onExpired={() => {}} />);
     fireEvent.change(screen.getByLabelText("Ask a question"), { target: { value: "Can you file a complaint?" } });
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(await screen.findByText(/does not file complaints/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Kopyahin ang buod para kay Meralco" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy the summary for Meralco" })).toBeTruthy();
   });
 
   it("closes with the close button", () => {

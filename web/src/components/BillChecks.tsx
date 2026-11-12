@@ -8,10 +8,10 @@ interface BillChecksProps {
 }
 
 const HOUSEHOLD_CHANGE_OPTIONS = [
-  "May bisita",
-  "May bagong appliance",
-  "Wala kami sa bahay",
-  "Iba pa",
+  "We had guests",
+  "New appliance",
+  "Someone was home more",
+  "Other",
 ];
 
 export function BillChecks({ data, onReportChange, onNavigateMissions }: BillChecksProps) {
@@ -65,17 +65,17 @@ export function BillChecks({ data, onReportChange, onNavigateMissions }: BillChe
   return (
     <section className="card bill-checks" aria-live="polite">
       <div className="card-head">
-        <h2>Tama ba ito? · Bill Checks</h2>
+        <h2>Is it right? · Bill Checks</h2>
         <span
           className={`status-badge ${
             isGreen ? "green" : isYellow ? "yellow" : "red"
           }`}
         >
           {isGreen
-            ? "✓ Tugma ang bill"
+            ? "✓ Bill verified"
             : isYellow
-            ? "🟡 Mas mataas kaysa karaniwan mo"
-            : "⚠ May hindi tugma"}
+            ? "🟡 Higher than usual"
+            : "⚠ Something doesn't match"}
         </span>
       </div>
 
@@ -90,15 +90,15 @@ export function BillChecks({ data, onReportChange, onNavigateMissions }: BillChe
       >
         {isGreen ? (
           <p>
-            <strong>✓ Tugma ang mga numero ng Meralco.</strong> Lahat ng nasuring opisyal na figures ay nagtutugma.
+            <strong>✓ Meralco's figures match.</strong> Every official figure checked agrees.
           </p>
         ) : isYellow ? (
           <p>
-            <strong>🟡 Mas mataas kaysa karaniwan mo.</strong> Higit sa karaniwang konsumo para sa ganitong panahon pero tugma ang lahat ng Meralco checks.
+            <strong>🟡 Higher than usual.</strong> More than your usual use for this weather, but all of Meralco's checks match.
           </p>
         ) : (
           <p>
-            <strong>⚠ May nakitang discrepancy sa Meralco figures.</strong> May mga numerong hindi nagtutugma sa sariling figures ng bill.
+            <strong>⚠ Meralco's figures don't match.</strong> Some numbers disagree with the bill's own figures.
           </p>
         )}
       </div>
@@ -111,13 +111,13 @@ export function BillChecks({ data, onReportChange, onNavigateMissions }: BillChe
 
       {isYellow && (
         <div className="household-change-section" aria-labelledby="household-change-heading">
-          <h3 id="household-change-heading">May nagbago ba sa bahay?</h3>
+          <h3 id="household-change-heading">Did something change at home?</h3>
           <p className="muted">
-            Ang pagtaas ng konsumo ay maaaring dahil sa bisita, bagong kagamitan, o pagbabago sa routine. Hindi ito problema sa bill ng Meralco.
+            Higher use can come from guests, a new appliance or a change in routine. It is not a problem with Meralco's bill.
           </p>
 
           {!reported ? (
-            <div className="change-options" role="group" aria-label="Mga posibleng dahilan sa pagbabago ng konsumo">
+            <div className="change-options" role="group" aria-label="Possible reasons for the change in usage">
               {HOUSEHOLD_CHANGE_OPTIONS.map((opt) => (
                 <button
                   key={opt}
@@ -133,14 +133,14 @@ export function BillChecks({ data, onReportChange, onNavigateMissions }: BillChe
           ) : (
             <div className="notice banner-green change-confirmed">
               <p>
-                <strong>✓ Naitala ang dahilan ({selectedChange}).</strong> Gabay ito upang maiakma ang iyong mga suhestiyon sa pagtitipid.
+                <strong>✓ Reason saved ({selectedChange}).</strong> We'll use it to fit your saving suggestions.
               </p>
               <button
                 type="button"
                 className="primary missions-btn"
                 onClick={onNavigateMissions}
               >
-                Tingnan ang Missions (Ano ang gagawin ko?) →
+                See Missions (What should I do?) →
               </button>
             </div>
           )}
@@ -149,16 +149,16 @@ export function BillChecks({ data, onReportChange, onNavigateMissions }: BillChe
 
       {isRed && (
         <div className="itanong-section">
-          <h3>Itanong kay Meralco</h3>
+          <h3>Ask Meralco</h3>
           <p className="muted">
-            Maaari mong kopyahin ang buod sa ibaba upang maipakita o maitawag sa Meralco Customer Care (16211).
+            Copy the summary below to show or read to Meralco Customer Care (16211).
           </p>
           <pre className="summary-pre">{data.summary}</pre>
           <button type="button" className="primary copy-btn" onClick={onCopy}>
-            {copied ? "✓ Nakopya na sa clipboard!" : "📋 Kopyahin ang Buod"}
+            {copied ? "✓ Copied to clipboard!" : "📋 Copy summary"}
           </button>
           <small className="muted adr-note">
-            Paalala (ADR-0002): Walang automatic na ticket o reklamo na ipinapadala ang app. Gabay lamang ito para sa iyong sariling pagtatanong.
+            Note (ADR-0002): the app never sends a ticket or complaint. This is only a guide for your own question.
           </small>
         </div>
       )}

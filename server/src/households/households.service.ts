@@ -4,8 +4,8 @@ import { HOUSEHOLD_LINKS, MERALCO_ACCOUNTS } from "../common/injection-tokens.js
 import type { Household, HouseholdChange } from "../domain/household.js";
 import type { HouseholdLink, HouseholdLinkRepository } from "./household-link.repository.js";
 
-export const OWNED_BY_ANOTHER = "Naka-link na ang account na ito sa ibang login. Kausapin ang may-ari ng account.";
-export const SCAN_TO_CONFIRM = "I-scan muna ang pinakabagong Bill na may parehong CAN para mabuksan ang Household.";
+export const OWNED_BY_ANOTHER = "This account is already linked to another login. Please contact the account owner.";
+export const SCAN_TO_CONFIRM = "Scan your latest Bill with the same CAN first to open this Household.";
 
 /** Shows a CAN like "39•• ••• 482": enough to recognise, not enough to reuse. */
 export function maskCan(can: string): string {
@@ -83,7 +83,7 @@ export class HouseholdsService {
    */
   async startLink(ownerId: string, can: string) {
     const account = await this.meralco.findByCan(can);
-    if (!account) throw new NotFoundException({ error: "Walang Meralco account na may ganitong CAN. Tingnan ulit ang Bill." });
+    if (!account) throw new NotFoundException({ error: "No Meralco account has this CAN. Please check your Bill again." });
     const owner = await this.links.activeOwner(account.sin);
     if (owner !== null && owner !== ownerId) throw new ConflictException({ error: OWNED_BY_ANOTHER, reason: "ownedByAnother" });
     if (owner === ownerId) return { account, status: "active" as const };
@@ -113,7 +113,7 @@ export class HouseholdsService {
         throw new ForbiddenException({ error: SCAN_TO_CONFIRM, reason: "pendingScan" });
       }
       // Unknown and foreign services have the same response to avoid disclosing ownership.
-      throw new NotFoundException({ error: "Hindi makita ang Household." });
+      throw new NotFoundException({ error: "Household not found." });
     }
     return household;
   }

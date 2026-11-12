@@ -4,7 +4,7 @@
  * 1 point = ₱1 of Verified Savings.
  * Traditional: at the next Bill, points = cost(baseline) - cost(actual) if positive,
  * with the Baseline adjusted for weather and billing days.
- * Never self-reported: tapping "tapos na" earns nothing.
+ * Never self-reported: tapping "done" earns nothing.
  * Brownouts excluded: days or periods with a recorded outage don't count.
  */
 import type { Bill } from "./bill.js";
@@ -66,7 +66,7 @@ export function computeVerifiedSavings(input: VerifiedSavingsInput): VerifiedSav
       savedPesos: 0,
       points: 0,
       hasOutage: true,
-      excludedReason: "May naitalang outage/brownout noong panahong ito kaya hindi kwalipikado sa Points.",
+      excludedReason: "An outage/brownout was recorded in this period, so it does not qualify for Points.",
     };
   }
 

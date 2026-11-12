@@ -21,9 +21,9 @@ const catalog = {
       label: "Aircon",
       routine: "timeRanges",
       questions: [
-        { key: "mount", label: "Split o window type?", options: [{ value: "split", label: "Split" }] },
-        { key: "inverter", label: "May nakasulat bang Inverter?", options: [{ value: "yes", label: "Oo" }] },
-        { key: "room", label: "Gaano kalaki ang kwarto?", options: [{ value: "medium", label: "Katamtaman" }] },
+        { key: "mount", label: "Split or window type?", options: [{ value: "split", label: "Split" }] },
+        { key: "inverter", label: "Does it say Inverter?", options: [{ value: "yes", label: "Yes" }] },
+        { key: "room", label: "How big is the room?", options: [{ value: "medium", label: "Katamtaman" }] },
       ],
       defaultRating: 1.0,
     },
@@ -43,7 +43,7 @@ const catalog = {
     },
     {
       type: "lights",
-      label: "Mga ilaw",
+      label: "Lights",
       routine: "timeRanges",
       questions: [],
       defaultRating: 0.05,
@@ -86,11 +86,11 @@ describe("13 · Aircon hours from Bill History (traditional) - UI", () => {
           hours: 8,
           coolingKwhPerDay: 8,
           airconKw: 1.0,
-          prompt: "Mukhang mga 8 oras/araw bukas ang aircon mo. Tama ba?",
+          prompt: "Your aircon seems to run about 8 hours a day. Is that right?",
           options: [
-            { action: "confirm", label: "Oo", hours: 8 },
-            { action: "longer", label: "Mas matagal", hours: 10 },
-            { action: "shorter", label: "Mas maikli", hours: 6 },
+            { action: "confirm", label: "Yes", hours: 8 },
+            { action: "longer", label: "Longer", hours: 10 },
+            { action: "shorter", label: "Shorter", hours: 6 },
           ],
         };
       }
@@ -117,34 +117,34 @@ describe("13 · Aircon hours from Bill History (traditional) - UI", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Mga appliance sa bahay")).toBeDefined();
+      expect(screen.getByText("Appliances at home")).toBeDefined();
     });
 
     // Add Aircon from dropdown
-    const select = screen.getByLabelText("Magdagdag ng appliance");
+    const select = screen.getByLabelText("Add an appliance");
     fireEvent.change(select, { target: { value: "aircon" } });
-    fireEvent.click(screen.getByRole("button", { name: "Idagdag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     // Verify the proposal prompt appears
     await waitFor(() => {
-      expect(screen.getByText("Mukhang mga 8 oras/araw bukas ang aircon mo. Tama ba?")).toBeDefined();
+      expect(screen.getByText("Your aircon seems to run about 8 hours a day. Is that right?")).toBeDefined();
     });
 
-    // Verify the buttons [Oo], [Mas matagal], [Mas maikli]
-    expect(screen.getByRole("button", { name: "Oo" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Mas matagal" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Mas maikli" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Ibahin / manu-manong ilagay ang routine" })).toBeDefined();
+    // Verify the buttons [Yes], [Longer], [Shorter]
+    expect(screen.getByRole("button", { name: "Yes" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Longer" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Shorter" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Change / enter the routine manually" })).toBeDefined();
 
-    // Confirm proposal with [Oo]
-    fireEvent.click(screen.getByRole("button", { name: "Oo" }));
+    // Confirm proposal with [Yes]
+    fireEvent.click(screen.getByRole("button", { name: "Yes" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Kinumpirma: 8 oras\/araw/)).toBeDefined();
+      expect(screen.getByText(/Confirmed: 8 hours\/day/)).toBeDefined();
     });
 
     // Save appliances
-    fireEvent.click(screen.getByRole("button", { name: "I-save at tingnan kung saan napupunta" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save and see where it goes" }));
 
     await waitFor(() => {
       expect(savedPayload).not.toBeNull();
@@ -155,7 +155,7 @@ describe("13 · Aircon hours from Bill History (traditional) - UI", () => {
     expect(savedAircon.timeRanges).toEqual([{ start: "22:00", end: "06:00", days: "everyday" }]);
   });
 
-  it("adjusts hours when clicking Mas matagal or Mas maikli", async () => {
+  it("adjusts hours when clicking Longer or Shorter", async () => {
     mockFetch((url, init) => {
       if (url === "/api/appliances/catalog") return catalog;
       if (url === "/api/households/1234567890/appliances" && (!init || init.method === "GET")) {
@@ -165,7 +165,7 @@ describe("13 · Aircon hours from Bill History (traditional) - UI", () => {
         return {
           canPropose: true,
           hours: 8,
-          prompt: "Mukhang mga 8 oras/araw bukas ang aircon mo. Tama ba?",
+          prompt: "Your aircon seems to run about 8 hours a day. Is that right?",
         };
       }
       return {};
@@ -180,22 +180,22 @@ describe("13 · Aircon hours from Bill History (traditional) - UI", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Mga appliance sa bahay")).toBeDefined();
+      expect(screen.getByText("Appliances at home")).toBeDefined();
     });
 
-    const select = screen.getByLabelText("Magdagdag ng appliance");
+    const select = screen.getByLabelText("Add an appliance");
     fireEvent.change(select, { target: { value: "aircon" } });
-    fireEvent.click(screen.getByRole("button", { name: "Idagdag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Mas matagal" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Longer" })).toBeDefined();
     });
 
-    // Click Mas matagal
-    fireEvent.click(screen.getByRole("button", { name: "Mas matagal" }));
+    // Click Longer
+    fireEvent.click(screen.getByRole("button", { name: "Longer" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Kinumpirma: 10 oras\/araw/)).toBeDefined();
+      expect(screen.getByText(/Confirmed: 10 hours\/day/)).toBeDefined();
     });
   });
 
@@ -209,7 +209,7 @@ describe("13 · Aircon hours from Bill History (traditional) - UI", () => {
         return {
           canPropose: true,
           hours: 8,
-          prompt: "Mukhang mga 8 oras/araw bukas ang aircon mo. Tama ba?",
+          prompt: "Your aircon seems to run about 8 hours a day. Is that right?",
         };
       }
       return {};
@@ -224,22 +224,22 @@ describe("13 · Aircon hours from Bill History (traditional) - UI", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Mga appliance sa bahay")).toBeDefined();
+      expect(screen.getByText("Appliances at home")).toBeDefined();
     });
 
-    const select = screen.getByLabelText("Magdagdag ng appliance");
+    const select = screen.getByLabelText("Add an appliance");
     fireEvent.change(select, { target: { value: "aircon" } });
-    fireEvent.click(screen.getByRole("button", { name: "Idagdag" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Ibahin / manu-manong ilagay ang routine" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Change / enter the routine manually" })).toBeDefined();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Ibahin / manu-manong ilagay ang routine" }));
+    fireEvent.click(screen.getByRole("button", { name: "Change / enter the routine manually" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Bumalik sa tantya mula sa Bill History")).toBeDefined();
-      expect(screen.getAllByLabelText("Simula").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Go back to the Bill History estimate")).toBeDefined();
+      expect(screen.getAllByLabelText("Start").length).toBeGreaterThanOrEqual(1);
     });
   });
 });

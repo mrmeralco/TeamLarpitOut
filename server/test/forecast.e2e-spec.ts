@@ -121,7 +121,7 @@ describe("16 · Forecast: range, typed Mid-month Reading, heat wave banner", () 
     // Banner must be active and cite the extreme heat
     expect(heatRes.body.heatWave.active).toBe(true);
     expect(heatRes.body.heatWave.heatIndex).toBe(43.5);
-    expect(heatRes.body.heatWave.banner).toContain("Babala sa Heat Wave");
+    expect(heatRes.body.heatWave.banner).toContain("Heat wave warning");
     expect(heatRes.body.heatWave.banner).toContain("43.5°C");
 
     // Heat wave must raise the forecast compared to normal weather
@@ -159,7 +159,7 @@ describe("16 · Forecast: range, typed Mid-month Reading, heat wave banner", () 
     );
     expect(withinRes.body.targetComparison).toBeDefined();
     expect(withinRes.body.targetComparison.status).toBe("within_target");
-    expect(withinRes.body.targetComparison.label).toContain("Pasok sa target");
+    expect(withinRes.body.targetComparison.label).toContain("Within target");
     expect(withinRes.body.targetComparison.diffPesos).toBeLessThanOrEqual(0);
 
     // Case B: High reading (12980 = 240 kWh used in 15 days) -> over target
@@ -170,7 +170,7 @@ describe("16 · Forecast: range, typed Mid-month Reading, heat wave banner", () 
     );
     expect(overRes.body.targetComparison).toBeDefined();
     expect(overRes.body.targetComparison.status).toBe("over_target");
-    expect(overRes.body.targetComparison.label).toContain("Lalampas sa target");
+    expect(overRes.body.targetComparison.label).toContain("Over target");
     expect(overRes.body.targetComparison.diffPesos).toBeGreaterThan(0);
   });
 
@@ -183,7 +183,7 @@ describe("16 · Forecast: range, typed Mid-month Reading, heat wave banner", () 
       token,
     );
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("hindi maaaring mas mababa");
+    expect(res.body.error).toContain("can't be lower");
   });
 
   it("Requires authentication and owner household access", async () => {

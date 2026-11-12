@@ -24,11 +24,11 @@ export class AirconPatternService {
 
   async propose(household: Household, input: AirconPatternRequestDto) {
     if (household.meter_type !== "smart") {
-      throw new UnprocessableEntityException({ error: "Para sa smart meter ang pattern proposal." });
+      throw new UnprocessableEntityException({ error: "Pattern proposals are for smart meters." });
     }
     const candidate: ApplianceInput = { ...input, type: "aircon" };
     const issues = validateApplianceRating(candidate);
-    if (issues.length) throw new BadRequestException({ error: "May mali sa detalye ng aircon.", issues });
+    if (issues.length) throw new BadRequestException({ error: "Something is wrong in the aircon details.", issues });
     const estimate = estimateAppliance(candidate);
     const expectedKw = estimate.rating * (candidate.quantity ?? 1);
     let metadata: Awaited<ReturnType<ReadingSource["describe"]>>;
@@ -51,7 +51,7 @@ export class AirconPatternService {
       rows = await this.readings.readings(household.sin, range);
       aggregateReadings(rows, range, "hour");
     } catch {
-      throw new BadGatewayException({ error: "Hindi makuha ang smart meter readings. Subukan ulit o ilagay ang routine." });
+      throw new BadGatewayException({ error: "We couldn't get the smart meter readings. Try again or enter the routine." });
     }
     const base = { timeZone: METER_TIME_ZONE, range, expectedKw, ratingSource: estimate.source };
     let daily: DailyWeather;
@@ -78,7 +78,7 @@ export class AirconPatternService {
     const analysis = analyzeAirconPattern(rows, range, expectedKw, daily.days);
     const provenance = { readings: metadata.provenance, weather: daily.provenance };
     if (!analysis.canPropose) return { ...base, ...analysis, status: "fallback" as const, fallback: "routine" as const, provenance };
-    const prompt = `May malaking gamit mula ${displayTime(analysis.routine.start)} hanggang ${displayTime(analysis.routine.end)} (mga ${analysis.stepKw.toFixed(1)} kW). Aircon ba ito?`;
+    const prompt = `There is a large load from ${displayTime(analysis.routine.start)} to ${displayTime(analysis.routine.end)} (about ${analysis.stepKw.toFixed(1)} kW). Is this the aircon?`;
     return { ...base, ...analysis, status: "proposal" as const, prompt, provenance };
   }
 }

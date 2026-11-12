@@ -12,7 +12,7 @@ export type PayeeType = "passThrough" | "meralco" | "government" | "subsidy";
 
 export interface Payee {
   type: PayeeType;
-  /** Plain Tagalog, e.g. "Mga planta ng kuryente". */
+  /** Plain English, e.g. "Power plants". */
   name: string;
 }
 
@@ -25,7 +25,7 @@ export interface CatalogEntry {
   what: string;
 }
 
-const MERALCO: Payee = { type: "meralco", name: "Meralco (ito ang bahaging kanila)" };
+const MERALCO: Payee = { type: "meralco", name: "Meralco (this is the part Meralco keeps)" };
 
 /** Order matters: the first matching entry wins. */
 export const CHARGE_CATALOG: CatalogEntry[] = [
@@ -33,92 +33,92 @@ export const CHARGE_CATALOG: CatalogEntry[] = [
     code: "lifeline",
     match: /lifeline/,
     kind: "perKwh",
-    payee: { type: "subsidy", name: "Discount o ambag para sa mga lifeline (low-income) customer" },
-    what: "Discount kung mababa ang konsumo mo, o ambag mo para sa mga lifeline customer kung hindi.",
+    payee: { type: "subsidy", name: "Discount for, or contribution to, lifeline (low-income) customers" },
+    what: "A discount if your usage is low; otherwise your contribution for lifeline customers.",
   },
   {
     code: "senior_citizen",
     match: /senior/,
     kind: "perKwh",
-    payee: { type: "subsidy", name: "Discount o ambag para sa mga senior citizen" },
-    what: "Subsidy para sa mga senior citizen na itinakda ng batas.",
+    payee: { type: "subsidy", name: "Discount for, or contribution to, senior citizens" },
+    what: "The senior citizen subsidy set by law.",
   },
   {
     code: "subsidies",
     match: /subsid/,
     kind: "perKwh",
-    payee: { type: "subsidy", name: "Ibang customer na may subsidy" },
-    what: "Mga subsidy na itinakda ng batas, hinahati sa mga customer.",
+    payee: { type: "subsidy", name: "Other customers with a subsidy" },
+    what: "Subsidies set by law, shared among customers.",
   },
   {
     code: "universal",
     match: /universal|missionary|environmental|stranded|\bnpc\b|psalm/,
     kind: "perKwh",
-    payee: { type: "passThrough", name: "Gobyerno (PSALM / NPC) para sa mga programang pang-kuryente" },
-    what: "Universal Charges: pondo para sa kuryente sa malalayong lugar, kalikasan, at lumang utang ng NPC.",
+    payee: { type: "passThrough", name: "Government (PSALM / NPC) for electricity programs" },
+    what: "Universal Charges: funds for power in remote areas, the environment, and old NPC debts.",
   },
   {
     code: "fit_all",
     match: /fit[\s-]?all|feed[\s-]?in/,
     kind: "perKwh",
-    payee: { type: "passThrough", name: "Mga renewable energy developer (sa pamamagitan ng TransCo)" },
-    what: "Feed-in Tariff Allowance: tulong sa mga planta ng solar, hangin at iba pang renewable.",
+    payee: { type: "passThrough", name: "Renewable energy developers (through TransCo)" },
+    what: "Feed-in Tariff Allowance: support for solar, wind and other renewable plants.",
   },
   {
     code: "generation",
     match: /generation/,
     kind: "perKwh",
-    payee: { type: "passThrough", name: "Mga planta ng kuryente (generation companies)" },
-    what: "Ang presyo ng kuryente mismo, binili ng Meralco sa mga planta. Pinakamalaking bahagi ng bill.",
+    payee: { type: "passThrough", name: "Power plants (generation companies)" },
+    what: "The price of the electricity itself, bought by Meralco from power plants. The biggest part of the bill.",
   },
   {
     code: "transmission",
     match: /transmission/,
     kind: "perKwh",
-    payee: { type: "passThrough", name: "NGCP (ang nagpapatakbo ng transmission lines)" },
-    what: "Bayad sa pagdadala ng kuryente mula sa planta hanggang sa Meralco.",
+    payee: { type: "passThrough", name: "NGCP (which runs the transmission lines)" },
+    what: "The cost of carrying power from the plants to Meralco.",
   },
   {
     code: "system_loss",
     match: /system\s*loss/,
     kind: "perKwh",
-    payee: { type: "passThrough", name: "Mga planta ng kuryente (para sa kuryenteng nawala sa linya)" },
-    what: "Gastos sa kuryenteng nawawala sa mga linya bago makarating sa bahay, may takdang limit.",
+    payee: { type: "passThrough", name: "Power plants (for power lost on the lines)" },
+    what: "The cost of power lost on the lines before it reaches homes, within a set cap.",
   },
   {
     code: "distribution",
     match: /distribution/,
     kind: "perKwh",
     payee: MERALCO,
-    what: "Bayad sa Meralco sa pagpapatakbo at pag-aalaga ng mga linya at poste papunta sa bahay mo.",
+    what: "Paid to Meralco for running and maintaining the lines and poles to your home.",
   },
   {
     code: "supply",
     match: /supply/,
     kind: "byUnit",
     payee: MERALCO,
-    what: "Bayad sa Meralco sa serbisyo sa customer: billing, collection, at customer care.",
+    what: "Paid to Meralco for customer service: billing, collection and customer care.",
   },
   {
     code: "metering",
     match: /meter/,
     kind: "byUnit",
     payee: MERALCO,
-    what: "Bayad sa Meralco sa metro mo: pagbasa, pag-aalaga at pagpapalit nito.",
+    what: "Paid to Meralco for your meter: reading, maintaining and replacing it.",
   },
   {
     code: "vat",
     match: /\bvat\b|value[\s-]?added/,
     kind: "tax",
-    payee: { type: "government", name: "Gobyerno (BIR)" },
-    what: "Value Added Tax na ipinapataw sa mga singil.",
+    payee: { type: "government", name: "Government (BIR)" },
+    what: "Value Added Tax on the charges.",
   },
   {
     code: "local_tax",
     match: /franchise|local\s*tax|real\s*property|\btax\b/,
     kind: "tax",
-    payee: { type: "government", name: "Lokal na pamahalaan o gobyerno" },
-    what: "Buwis na kinokolekta ng Meralco para sa pamahalaan.",
+    payee: { type: "government", name: "Local or national government" },
+    what: "A tax Meralco collects for the government.",
   },
 ];
 
@@ -134,7 +134,7 @@ export interface Classified {
   what: string;
 }
 
-export const UNKNOWN_LINE = "Hindi pa namin kilala ang linyang ito.";
+export const UNKNOWN_LINE = "We don't recognise this line yet.";
 
 export function classifyLine(label: string): Classified {
   const l = label.toLowerCase();

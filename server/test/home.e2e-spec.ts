@@ -34,10 +34,10 @@ describe("GET /api/households/:sin/home", () => {
     expect(status).toBe(200);
     expect(body.meterType).toBe("traditional");
     expect(body.bill).toEqual({ period: "2026-10", amountDue: 269_000, dueDate: "2026-11-15", billDate: "2026-11-01" });
-    expect(body.badge).toEqual({ status: "green", label: "Tugma ang bill" });
+    expect(body.badge).toEqual({ status: "green", label: "Bill verified" });
     // ₱640 up; the biggest upward part is the household's own use (Habit ₱266.67 > Rate ₱240 > Days ₱133.33).
     expect(body.bakitGanito).toMatchObject({
-      sentence: "Tumaas ng ₱640.00 mula Setyembre, pinakamalaki ang mas maraming gamit sa bahay.",
+      sentence: "Up ₱640.00 from September, mostly from more use at home.",
       total: 64_000,
       screen: "bakit-ganito",
       previousPeriod: "2026-09",
@@ -49,18 +49,18 @@ describe("GET /api/households/:sin/home", () => {
     expect(body.bakitGanito.habit).toBe(body.bakitGanito.effects[3].amount);
     expect(body.canMasked).toBe("10•• ••• 001");
     expect(body.tamaBa).toMatchObject({ status: "green", failedChecks: 0, screen: "tama-ba" });
-    expect(body.action).toEqual({ kind: "missions", label: "Tingnan ang Missions", screen: "missions" });
+    expect(body.action).toEqual({ kind: "missions", label: "See Missions", screen: "missions" });
     expect(body.smartMeter).toBeNull();
   });
 
-  it("turns red and switches the action to 'Itanong kay Meralco' when a Bill Check fails", async () => {
+  it("turns red and switches the action to 'Ask Meralco' when a Bill Check fails", async () => {
     // Printed total ₱3,000 but the printed lines add up to ₱2,690.
     const { body } = await home(TRADITIONAL, { [TRADITIONAL]: bills(3000) });
 
     expect(body.badge.status).toBe("red");
     expect(body.tamaBa.failedChecks).toBe(1);
     expect(body.action.kind).toBe("askMeralco");
-    expect(body.action.label).toBe("Itanong kay Meralco");
+    expect(body.action.label).toBe("Ask Meralco");
     expect(body.action.screen).toBe("tama-ba");
     expect(body.action.summary).toBe(body.tamaBa.summary);
     expect(body.action.summary.length).toBeGreaterThan(0);
@@ -69,7 +69,7 @@ describe("GET /api/households/:sin/home", () => {
   it("says when the Bill went down", async () => {
     const down: Bill[] = [bill("2026-09", 300, 30), bill("2026-10", 200, 30)];
     const { body } = await home(TRADITIONAL, { [TRADITIONAL]: down });
-    expect(body.bakitGanito.sentence).toMatch(/^Bumaba ng ₱/);
+    expect(body.bakitGanito.sentence).toMatch(/^Down ₱/);
     expect(body.bakitGanito.total).toBeLessThan(0);
   });
 
@@ -78,7 +78,7 @@ describe("GET /api/households/:sin/home", () => {
     expect(body.bill.amountDue).toBe(269_000);
     expect(body.bill.dueDate).toBeNull();
     expect(body.bakitGanito).toBeNull();
-    expect(body.bakitGanitoUnavailable).toBe("Kailangan ng dalawang Bill para maikumpara.");
+    expect(body.bakitGanitoUnavailable).toBe("Two Bills are needed to compare.");
     expect(body.badge.status).toBe("green");
   });
 
@@ -127,7 +127,7 @@ describe("Home badge and action", () => {
 
     expect(homeAction("yellow", "summary")).toEqual({
       kind: "householdChange",
-      label: "May nagbago ba sa bahay? Tingnan ang Missions",
+      label: "Did something change at home? See Missions",
       screen: "missions",
     });
     expect(homeAction("red", "summary").kind).toBe("askMeralco");

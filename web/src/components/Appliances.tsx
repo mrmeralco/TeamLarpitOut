@@ -15,7 +15,7 @@ import { EnergyLabelScan } from "./EnergyLabelScan";
 import { AirconPatternProposal } from "./AirconPatternProposal";
 
 const DAYS: { value: TimeRange["days"]; label: string }[] = [
-  { value: "everyday", label: "Araw-araw" },
+  { value: "everyday", label: "Every day" },
   { value: "weekdays", label: "Weekdays" },
   { value: "weekends", label: "Weekends" },
 ];
@@ -94,7 +94,7 @@ function ApplianceCard(props: {
         <h3>{def.label}</h3>
         <div className="row qty">
           <label>
-            <span>Ilan</span>
+            <span>How many</span>
             <input
               type="number"
               min={1}
@@ -104,7 +104,7 @@ function ApplianceCard(props: {
               onChange={(e) => set({ quantity: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })}
             />
           </label>
-          <button type="button" className="ghost" aria-label={`Alisin ang ${def.label}`} onClick={props.onRemove}>
+          <button type="button" className="ghost" aria-label={`Remove ${def.label}`} onClick={props.onRemove}>
             ×
           </button>
         </div>
@@ -128,16 +128,16 @@ function ApplianceCard(props: {
         </label>
       ))}
 
-      {def.routine === "alwaysOn" && <p className="muted">Laging bukas, kaya walang tanong sa oras.</p>}
+      {def.routine === "alwaysOn" && <p className="muted">Always on, so there is no question about hours.</p>}
 
       {def.routine === "timeRanges" && isTraditionalAircon && !manualRoutine && proposal?.canPropose && (
         <div className="proposal-box">
           <p className="proposal-prompt">
-            {proposal.prompt ?? `Mukhang mga ${proposal.hours} oras/araw bukas ang aircon mo. Tama ba?`}
+            {proposal.prompt ?? `Your aircon seems to run about ${proposal.hours} hours a day. Is that right?`}
           </p>
           {confirmedHours !== null && ranges.length > 0 ? (
             <div className="row proposal-confirmed">
-              <span className="muted">Kinumpirma: {confirmedHours} oras/araw</span>
+              <span className="muted">Confirmed: {confirmedHours} hours/day</span>
               <button
                 type="button"
                 className="ghost"
@@ -146,7 +146,7 @@ function ApplianceCard(props: {
                   set({ timeRanges: [] });
                 }}
               >
-                Baguhin
+                Change
               </button>
             </div>
           ) : (
@@ -160,7 +160,7 @@ function ApplianceCard(props: {
                   set({ timeRanges: [rangeFromHours(h)] });
                 }}
               >
-                Oo
+                Yes
               </button>
               <button
                 type="button"
@@ -171,7 +171,7 @@ function ApplianceCard(props: {
                   set({ timeRanges: [rangeFromHours(h)] });
                 }}
               >
-                Mas matagal
+                Longer
               </button>
               <button
                 type="button"
@@ -182,7 +182,7 @@ function ApplianceCard(props: {
                   set({ timeRanges: [rangeFromHours(h)] });
                 }}
               >
-                Mas maikli
+                Shorter
               </button>
             </div>
           )}
@@ -194,7 +194,7 @@ function ApplianceCard(props: {
               if (ranges.length === 0) set({ timeRanges: [{ start: "18:00", end: "22:00", days: "everyday" }] });
             }}
           >
-            Ibahin / manu-manong ilagay ang routine
+            Change / enter the routine manually
           </button>
         </div>
       )}
@@ -215,7 +215,7 @@ function ApplianceCard(props: {
                 setManualRoutine(false);
               }}
             >
-              Bumalik sa tantya mula sa Bill History
+              Go back to the Bill History estimate
             </button>
           )}
         </>
@@ -223,7 +223,7 @@ function ApplianceCard(props: {
 
       {def.routine === "usesPerWeek" && (
         <label>
-          <span>Ilang beses kada linggo?</span>
+          <span>How many times a week?</span>
           <input
             type="number"
             min={0}
@@ -244,20 +244,20 @@ function RoutineEditor({ ranges, setRange, set }: {
   set: (patch: Partial<ApplianceInput>) => void;
 }) {
   return <div className="routine">
-    <span className="muted">Kailan bukas?</span>
+    <span className="muted">When is it on?</span>
     {ranges.map((range, i) => <div className="row range" key={i}>
-      <input type="time" aria-label="Simula" value={range.start} onChange={(e) => setRange(i, { start: e.target.value })} />
-      <span>hanggang</span>
-      <input type="time" aria-label="Tapos" value={range.end} onChange={(e) => setRange(i, { end: e.target.value })} />
-      <select aria-label="Mga araw" value={range.days} onChange={(e) => setRange(i, { days: e.target.value as TimeRange["days"] })}>
+      <input type="time" aria-label="Start" value={range.start} onChange={(e) => setRange(i, { start: e.target.value })} />
+      <span>to</span>
+      <input type="time" aria-label="End" value={range.end} onChange={(e) => setRange(i, { end: e.target.value })} />
+      <select aria-label="Days" value={range.days} onChange={(e) => setRange(i, { days: e.target.value as TimeRange["days"] })}>
         {DAYS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
       </select>
-      {ranges.length > 1 && <button type="button" className="ghost" aria-label="Alisin ang oras"
+      {ranges.length > 1 && <button type="button" className="ghost" aria-label="Remove time"
         onClick={() => set({ timeRanges: ranges.filter((_, j) => j !== i) })}>×</button>}
     </div>)}
     {ranges.length < 6 && <button type="button" className="ghost"
       onClick={() => set({ timeRanges: [...ranges, { start: "06:00", end: "08:00", days: "everyday" }] })}>
-      {ranges.length ? "+ Isa pang oras" : "Ilagay ang oras"}
+      {ranges.length ? "+ Another time" : "Add a time"}
     </button>}
   </div>;
 }
@@ -283,7 +283,7 @@ function Survey(props: {
 
   return (
     <fieldset className="survey-fields" disabled={props.saving}>
-      <p className="muted">Isang beses lang ito. Sagutin ang kaya mo; "Hindi ko alam" ay ayos lang.</p>
+      <p className="muted">You only do this once. Answer what you can; "I don't know" is fine.</p>
       <ul className="appliance-list">
         {list.map(({ id, value: a }) => (
           <ApplianceCard
@@ -299,8 +299,8 @@ function Survey(props: {
         ))}
       </ul>
       <div className="row">
-        <select aria-label="Magdagdag ng appliance" value={adding} onChange={(e) => setAdding(e.target.value)}>
-          <option value="">Magdagdag ng appliance…</option>
+        <select aria-label="Add an appliance" value={adding} onChange={(e) => setAdding(e.target.value)}>
+          <option value="">Add an appliance…</option>
           {props.catalog.map((d) => (
             <option key={d.type} value={d.type}>
               {d.label}
@@ -317,16 +317,16 @@ function Survey(props: {
             setAdding("");
           }}
         >
-          Idagdag
+          Add
         </button>
       </div>
       <button type="button" className="primary" disabled={props.saving || list.length === 0
         || list.some(({ value }) => value.type === "aircon" && !value.timeRanges?.length)} onClick={() => props.onSave(list.map((a) => a.value))}>
-        {props.saving ? "Sine-save…" : "I-save at tingnan kung saan napupunta"}
+        {props.saving ? "Saving…" : "Save and see where it goes"}
       </button>
       {props.onCancel && (
         <button type="button" className="ghost wide" onClick={props.onCancel}>
-          Huwag na lang baguhin
+          Cancel changes
         </button>
       )}
     </fieldset>
@@ -338,7 +338,7 @@ function Breakdown({ data, onEdit }: { data: ApplianceBreakdown; onEdit: () => v
   return (
     <>
       <p className="muted">
-        Bill ng {monthLabel(data.bill.period)}: {data.bill.kwh} kWh. Inayos ang tantya para tumugma ang kabuuan sa kWh ng Bill.
+        {monthLabel(data.bill.period)} Bill: {data.bill.kwh} kWh. The estimates are adjusted so the total matches the Bill's kWh.
       </p>
       <ul className="usage">
         {data.rows.map((r) => (
@@ -361,20 +361,20 @@ function Breakdown({ data, onEdit }: { data: ApplianceBreakdown; onEdit: () => v
         ))}
       </ul>
       <div className="effect-head usage-total">
-        <span>Kabuuan ({data.totals.kwh} kWh)</span>
+        <span>Total ({data.totals.kwh} kWh)</span>
         <strong>{peso(data.totals.perKwhCharges)}</strong>
       </div>
       <small className="muted">
-        Hindi kasama ang {peso(data.totals.fixedCharges)} na Fixed Charges: sinisingil ito kada buwan kahit gaano kakonti ang gamit.
+        Not including {peso(data.totals.fixedCharges)} in fixed charges: these are charged every month however little you use.
       </small>
       <button type="button" className="ghost wide" onClick={onEdit}>
-        Baguhin ang mga appliance
+        Change the appliances
       </button>
     </>
   );
 }
 
-/** Appliances (asked once per Household) and "Saan napupunta?". Parent keys it by session and SIN. */
+/** Appliances (asked once per Household) and "Where does it go?". Parent keys it by session and SIN. */
 type AppliancesProps = {
   token: string; household: Household; onExpired: () => void; onSaved?: () => void;
 };
@@ -400,7 +400,7 @@ function HouseholdAppliances({ token, household, onExpired, onSaved }: Appliance
     try {
       setBreakdown(await appliancesApi.breakdown(token, household.sin, signal));
     } catch (err) {
-      if (!signal?.aborted) fail(err, "Hindi makuha kung saan napupunta ang kuryente.");
+      if (!signal?.aborted) fail(err, "Couldn't work out where the electricity goes.");
     }
   }
 
@@ -431,7 +431,7 @@ function HouseholdAppliances({ token, household, onExpired, onSaved }: Appliance
           setEditing(true);
         }
       } catch (err) {
-        if (!controller.signal.aborted) fail(err, "Hindi makuha ang mga appliance.");
+        if (!controller.signal.aborted) fail(err, "Couldn't get the appliances.");
       }
     })();
     return () => controller.abort();
@@ -449,7 +449,7 @@ function HouseholdAppliances({ token, household, onExpired, onSaved }: Appliance
       setBreakdown(null);
       await loadBreakdown();
     } catch (err) {
-      fail(err, "Hindi na-save ang mga appliance.");
+      fail(err, "Couldn't save the appliances.");
     } finally {
       setSaving(false);
     }
@@ -457,10 +457,10 @@ function HouseholdAppliances({ token, household, onExpired, onSaved }: Appliance
 
   return (
     <section className="card appliances" aria-live="polite">
-      <h2>{editing ? "Mga appliance sa bahay" : "Saan napupunta?"}</h2>
+      <h2>{editing ? "Appliances at home" : "Where does it go?"}</h2>
       {error && <p className="error">{error}</p>}
       {!catalog || saved === null ? (
-        !error && <p className="muted">Kinukuha…</p>
+        !error && <p className="muted">Loading…</p>
       ) : editing ? (
         <Survey
           token={token} sin={household.sin} onExpired={onExpired}
@@ -474,7 +474,7 @@ function HouseholdAppliances({ token, household, onExpired, onSaved }: Appliance
       ) : breakdown ? (
         <Breakdown data={breakdown} onEdit={() => setEditing(true)} />
       ) : (
-        !error && <p className="muted">Kinukuwenta…</p>
+        !error && <p className="muted">Calculating…</p>
       )}
     </section>
   );

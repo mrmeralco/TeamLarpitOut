@@ -145,18 +145,18 @@ describe("GET /api/households/:sin/missions", () => {
     const plain = await setup();
     const reference = (await plain.api.get(`/api/households/${SIN}/missions`, plain.token)).body.missions;
 
-    const liar = await setup({ coach: { phraseMission: async () => "Gawin mo ito at tipid ka ng ₱999,999!" } });
+    const liar = await setup({ coach: { phraseMission: async () => "Do this and save ₱999,999!" } });
     const worded = (await liar.api.get(`/api/households/${SIN}/missions`, liar.token)).body.missions;
 
     expect(worded.map((m: any) => [m.id, m.kwhSaved, m.pesoValue])).toEqual(reference.map((m: any) => [m.id, m.kwhSaved, m.pesoValue]));
-    expect(worded[0].message).toBe("Gawin mo ito at tipid ka ng ₱999,999!");
+    expect(worded[0].message).toBe("Do this and save ₱999,999!");
   });
 
   it("falls back to the template wording when the Coach fails", async () => {
     const { api, token } = await setup({ coach: { phraseMission: async () => Promise.reject(new Error("AI down")) } });
     const { status, body } = await api.get(`/api/households/${SIN}/missions`, token);
     expect(status).toBe(200);
-    expect(body.missions[0].message).toMatch(/kWh ang matitipid mo/);
+    expect(body.missions[0].message).toMatch(/you could save about/);
   });
 
   it("asks for the appliance list first", async () => {
@@ -169,8 +169,8 @@ describe("GET /api/households/:sin/missions", () => {
 describe("Gemini Coach", () => {
   it("uses the template when no API key is configured", async () => {
     const coach = new GeminiCoachProvider("");
-    expect(await coach.phraseMission({ id: "x", title: "Ref sa medium", kwhSaved: 3.5, pesoValue: 3_850 })).toBe(
-      "Ref sa medium: mga 3.5 kWh ang matitipid mo, mga ₱38.50 sa susunod na Bill.",
+    expect(await coach.phraseMission({ id: "x", title: "Set the ref to medium", kwhSaved: 3.5, pesoValue: 3_850 })).toBe(
+      "Set the ref to medium: you could save about 3.5 kWh, about ₱38.50 on your next Bill.",
     );
   });
 });

@@ -66,14 +66,14 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
       .catch((err) => {
         if (controller.signal.aborted) return;
         if (err instanceof ApiError && err.status === 401) onExpired();
-        else setError(err instanceof Error ? err.message : "Hindi makuha ang Home.");
+        else setError(err instanceof Error ? err.message : "Couldn't load Home.");
       });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, household.sin]);
 
   if (error) return <section className="card home"><p className="error" role="alert">{error}</p></section>;
-  if (!data) return <section className="card home"><p className="muted">Kinukuha ang Bill…</p></section>;
+  if (!data) return <section className="card home"><p className="muted">Loading your Bill…</p></section>;
 
   const action = data.action;
   const change = data.bakitGanito;
@@ -98,10 +98,10 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
 
       {action.kind === "askMeralco" && (
         <div className="card home-ask" role="alert">
-          <strong>Itanong kay Meralco</strong>
-          <p className="muted">{data.tamaBa.failedChecks} sa mga Bill Check ang hindi tugma. Ang app ay hindi nagfa-file ng reklamo; kopyahin ang buod kung gusto mong magtanong sa Meralco.</p>
+          <strong>Ask Meralco</strong>
+          <p className="muted">{data.tamaBa.failedChecks} Bill Check(s) don't match. The app never files complaints; copy the summary if you want to ask Meralco.</p>
           <p className="small">{action.summary}</p>
-          <button type="button" className="ghost wide" onClick={copySummary}>{copied ? "Nakopya na ✓" : "Kopyahin ang buod"}</button>
+          <button type="button" className="ghost wide" onClick={copySummary}>{copied ? "Copied ✓" : "Copy summary"}</button>
         </div>
       )}
 
@@ -129,7 +129,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
             </li>
           ))}
         </ul>
-        <p className="small muted">{change.addsUp ? `✓ Adds up: ${peso(change.total, true)}` : "Hindi pa tugma ang kabuuan; titingnan ito sa Bill Checks."}</p>
+        <p className="small muted">{change.addsUp ? `✓ Adds up: ${peso(change.total, true)}` : "The total doesn't add up yet; see Bill Checks."}</p>
       </> : <p className="muted">{data.bakitGanitoUnavailable}</p>}
 
       {data.chargeLines.all.length > 0 && <>

@@ -14,7 +14,7 @@ export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 export const randomSignInCode: SignInCodeGenerator = () => String(randomInt(0, 1_000_000)).padStart(6, "0");
 
-const INVALID = "Mali o expired na ang code. Humingi ng bagong code.";
+const INVALID = "The code is wrong or expired. Ask for a new code.";
 
 /** Issues and checks 6-digit email codes. Codes are stored only as keyed hashes and work once. */
 @Injectable()

@@ -14,7 +14,7 @@ const plan = (missions: PlanMission[], over: Partial<Plan> = {}): Plan => ({
 });
 const first = [
   m("aircon-off-1h", "Turn off the aircon 1 hour earlier", 3, 20800),
-  m("iron-batch", "Iron clothes once a week, all at once", 0.7, 4500, { basis: "assumption", effort: "Medium", assumptions: [{ key: "ironBatch", label: "Tipid sa isang beses na pag-init (palagay)", value: 0.2 }] }),
+  m("iron-batch", "Iron clothes once a week, all at once", 0.7, 4500, { basis: "assumption", effort: "Medium", assumptions: [{ key: "ironBatch", label: "Savings from heating up once (assumption)", value: 0.2 }] }),
   m("ref-medium", "Set the ref to medium, not max", 0.6, 4000),
 ];
 const response = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
@@ -64,7 +64,7 @@ describe("Missions tab: the 5% plan", () => {
     expect(screen.getByText("Step two.")).toBeTruthy();
     expect(screen.getByText(/whole bill, not per mission/)).toBeTruthy();
     expect(screen.getByText("Based on assumptions")).toBeTruthy();
-    expect(screen.getByText("Tipid sa isang beses na pag-init (palagay): 0.2")).toBeTruthy();
+    expect(screen.getByText("Savings from heating up once (assumption): 0.2")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Remind me tonight" }));
     expect(screen.getByRole("button", { name: "Reminder set ✓" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Swap for a different mission" }));

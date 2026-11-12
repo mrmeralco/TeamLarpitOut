@@ -36,18 +36,18 @@ export class AppliancesController {
   @Header("Cache-Control", "no-store")
   @UseInterceptors(FileInterceptor("photo", { limits: { fileSize: 10 * 1024 * 1024 } }))
   async scanLabel(@Body() body: ScanApplianceLabelDto, @UploadedFile() photo?: Express.Multer.File) {
-    if (!photo) throw new BadRequestException({ error: "Walang litrato (field: photo)" });
+    if (!photo) throw new BadRequestException({ error: "No photo (field: photo)" });
     if (!["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(photo.mimetype)) {
-      throw new BadRequestException({ error: "Hindi tanggap ang uri ng larawan." });
+      throw new BadRequestException({ error: "This image type is not accepted." });
     }
     try {
       return await this.labelScan.scan(body.type, { mimeType: photo.mimetype, data: photo.buffer });
     } catch (err) {
       if (err instanceof UnprocessableEntityException) throw err;
       if (err instanceof VisionUnavailableError) {
-        throw new ServiceUnavailableException({ error: "Hindi pa naka-set up ang energy label scan. Gamitin muna ang mga sagot mo." });
+        throw new ServiceUnavailableException({ error: "Energy label scan is not set up yet. Use your answers for now." });
       }
-      throw new BadGatewayException({ error: "Hindi mabasa ang energy label ngayon. Subukan ulit o gamitin ang mga sagot mo." });
+      throw new BadGatewayException({ error: "We couldn't read the energy label right now. Try again or use your answers." });
     }
   }
 

@@ -39,9 +39,9 @@ export class BillScanController {
   @UseGuards(SessionGuard)
   @UseInterceptors(FileInterceptor("photo", { limits: { fileSize: MAX_PHOTO_BYTES } }))
   async scan(@Req() request: AuthenticatedRequest, @UploadedFile() photo?: Express.Multer.File) {
-    if (!photo) throw new BadRequestException({ error: "Walang litrato (field: photo)" });
+    if (!photo) throw new BadRequestException({ error: "No photo (field: photo)" });
     if (!IMAGE_TYPES.includes(photo.mimetype)) {
-      throw new BadRequestException({ error: `Hindi larawan ang file (${photo.mimetype})` });
+      throw new BadRequestException({ error: `The file is not an image (${photo.mimetype})` });
     }
 
     let scanned;
@@ -51,13 +51,13 @@ export class BillScanController {
       if (err instanceof VisionUnavailableError) {
         throw new ServiceUnavailableException({
           status: "unavailable",
-          error: "Hindi pa naka-set up ang bill scan. I-type na lang ang Bill.",
+          error: "Bill scan is not set up yet.",
         });
       }
       console.error(err);
       throw new BadGatewayException({
         status: "unavailable",
-        error: "Hindi nabasa ang litrato ngayon. Subukan ulit o i-type ang Bill.",
+        error: "We couldn't read the photo right now. Please try again.",
       });
     }
     const { result, can } = scanned;

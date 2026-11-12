@@ -6,10 +6,10 @@ import { TemplateCoachProvider } from "./template-coach.provider.js";
 
 const TIMEOUT_MS = 4000;
 
-const prompt = (f: MissionFacts) => `Ikaw si Eelio, ang friendly electric eel energy coach. Sumulat ng ISANG maikling pangungusap sa Taglish na
-naghihikayat sa isang pamilyang Pilipino na gawin ang Mission na ito: "${f.title}".
-Huwag maglagay ng kahit anong numero, presyo o porsyento; ipapakita ng app ang mga iyon.
-Huwag mangako ng tiyak na tipid. Isang pangungusap lang, walang emoji.`;
+const prompt = (f: MissionFacts) => `You are Eelio, the friendly electric eel energy coach. Write ONE short sentence in English
+encouraging a Filipino family to do this Mission: "${f.title}".
+Do not include any number, price or percentage; the app shows those.
+Do not promise exact savings. One sentence only, no emoji.`;
 
 /**
  * Gemini words the Mission; any reply with a digit is discarded so a number can
@@ -59,7 +59,7 @@ export class GeminiCoachProvider implements CoachProvider {
   /** Gets only the computed candidates; the server validates ids and figures and falls back to its own pick. */
   async pickMissionPlan({ goalPercent, candidates, avoid }: { goalPercent: number; candidates: CandidateFacts[]; avoid: string[][] }): Promise<PlannedMission[] | null> {
     if (!this.client) return null;
-    const prompt = `You are KuryenteKo's coach for a Filipino household. Pick 1 to 5 Missions from the candidates whose "percent" values add up to at least ${goalPercent} (use fewer if possible), mixing appliances, at most one per "group".
+    const prompt = `You are Eelio's coach for a Filipino household. Pick 1 to 5 Missions from the candidates whose "percent" values add up to at least ${goalPercent} (use fewer if possible), mixing appliances, at most one per "group".
 Do not pick exactly any of these sets: ${JSON.stringify(avoid)}.
 For each pick write a short friendly "title" (max 8 words) and a one-sentence "why" for this home, in English.
 Use ONLY numbers that appear in that candidate's own fields; never invent or compute a number.

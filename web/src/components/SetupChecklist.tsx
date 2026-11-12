@@ -54,7 +54,7 @@ export function SetupChecklist({ status, onStep, onIntro }: {
           <li>Iron clothes once a week</li>
           <li>Unplug chargers at night</li>
         </ul>
-        <p className="muted small">Tapusin ang setup para ma-unlock ang Missions.</p>
+        <p className="muted small">Finish setup to unlock Missions.</p>
       </div>
     </section>
   );

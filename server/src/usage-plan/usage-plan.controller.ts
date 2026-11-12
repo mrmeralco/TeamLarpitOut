@@ -22,7 +22,7 @@ function parseAirconSetting(value?: string): number | undefined {
   if (value === undefined || value === "") return undefined;
   const n = Number(value);
   if (!Number.isInteger(n) || n < 16 || n > 30) {
-    throw new BadRequestException({ error: "Ang aircon setting ay 16 hanggang 30°C." });
+    throw new BadRequestException({ error: "The aircon setting is 16 to 30°C." });
   }
   return n;
 }

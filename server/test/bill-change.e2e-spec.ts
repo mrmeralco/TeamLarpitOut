@@ -143,6 +143,6 @@ describe("GET /api/households/:sin/bakit-ganito (injected Bill source)", () => {
     const api = await harness({ bills: { "1234567890": [bill("2026-10", 240, 32)] } });
     const { status, body } = await api.get("/api/households/1234567890/bakit-ganito", await api.login());
     expect(status).toBe(404);
-    expect(body.error).toBe("Kailangan ng dalawang Bill");
+    expect(body.error).toBe("Two Bills are needed");
   });
 });

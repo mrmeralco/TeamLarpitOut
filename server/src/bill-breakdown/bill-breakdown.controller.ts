@@ -3,7 +3,7 @@ import { SessionGuard } from "../auth/session.guard.js";
 import { buildBillBreakdown } from "../domain/bill-breakdown.js";
 import { BillBreakdownRequestDto } from "./dto/bill-breakdown-request.dto.js";
 
-/** "Ano'ng laman ng bill ko?": the Bill's printed lines, grouped and explained. */
+/** "What's on my bill?": the Bill's printed lines, grouped and explained. */
 @Controller("bills")
 export class BillBreakdownController {
   @Post("laman")

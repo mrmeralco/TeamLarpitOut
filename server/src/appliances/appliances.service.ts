@@ -46,7 +46,7 @@ export class AppliancesService {
   async save(sin: string, input: ApplianceDto[]) {
     const appliances = input.map((a) => this.normalize(a));
     const errors = appliances.flatMap(validateAppliance);
-    if (errors.length) throw new BadRequestException({ error: "May mali sa listahan ng appliance.", issues: errors });
+    if (errors.length) throw new BadRequestException({ error: "Something is wrong in the appliance list.", issues: errors });
     const stored = await this.repository.save(sin, appliances);
     return { saved: true, updatedAt: stored.updatedAt, appliances: stored.appliances.map((a) => this.describe(a)) };
   }
@@ -58,13 +58,13 @@ export class AppliancesService {
   async calibratedUsage(sin: string) {
     const stored = await this.repository.find(sin);
     if (!stored || stored.appliances.length === 0) {
-      throw new ConflictException({ error: "Ilista muna ang mga appliance sa bahay." });
+      throw new ConflictException({ error: "List the appliances in your home first." });
     }
     const latest = (await this.bills.bills(sin)).at(-1);
-    if (!latest) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    if (!latest) throw new NotFoundException({ error: "There is no Bill for this Household." });
     const schedule = this.rates.get(latest.period);
     if (!schedule) {
-      throw new UnprocessableEntityException({ error: `Walang Rate Schedule para sa ${latest.period}`, period: latest.period });
+      throw new UnprocessableEntityException({ error: `There is no Rate Schedule for ${latest.period}`, period: latest.period });
     }
 
     const lines = costLines(latest.kwh, latest.billingDays, schedule);
@@ -73,7 +73,7 @@ export class AppliancesService {
 
     const estimates = stored.appliances.map(estimateAppliance);
     if (estimates.every((e) => e.kwhPerDay === 0)) {
-      throw new ConflictException({ error: "Lahat ng appliance ay walang oras ng gamit. Lagyan ng routine." });
+      throw new ConflictException({ error: "None of the appliances has any hours of use. Add a routine." });
     }
     const rows = calibrateToBill(estimates, stored.appliances, latest, perKwhCharges);
     return { bill: latest, schedule, perKwhCharges, fixedCharges, appliances: stored.appliances, estimates, rows };
@@ -106,7 +106,7 @@ export class AppliancesService {
       return {
         canPropose: false,
         hours: null,
-        reason: "Para lang sa traditional meter ang pagtatantya mula sa Bill History.",
+        reason: "Estimating from Bill History is only for traditional meters.",
         fallback: "routine",
       };
     }
@@ -116,7 +116,7 @@ export class AppliancesService {
       return {
         canPropose: false,
         hours: null,
-        reason: "Kailangan ng kahit 3 bills sa Bill History.",
+        reason: "At least 3 bills are needed in the Bill History.",
         fallback: "routine",
       };
     }
@@ -149,7 +149,7 @@ export class AppliancesService {
       return {
         canPropose: false,
         hours: null,
-        reason: "Hindi sapat o walang pagtaas sa init sa Bill History.",
+        reason: "The Bill History shows too little (or no) rise with the heat.",
         fallback: "routine",
       };
     }
@@ -160,11 +160,11 @@ export class AppliancesService {
       hours,
       coolingKwhPerDay,
       airconKw: Math.round(airconKw * 100) / 100,
-      prompt: `Mukhang mga ${hours} oras/araw bukas ang aircon mo. Tama ba?`,
+      prompt: `Your aircon seems to run about ${hours} hours a day. Is that right?`,
       options: [
-        { action: "confirm", label: "Oo", hours },
-        { action: "longer", label: "Mas matagal", hours: Math.min(24, hours + 2) },
-        { action: "shorter", label: "Mas maikli", hours: Math.max(1, hours - 2) },
+        { action: "confirm", label: "Yes", hours },
+        { action: "longer", label: "Longer", hours: Math.min(24, hours + 2) },
+        { action: "shorter", label: "Shorter", hours: Math.max(1, hours - 2) },
       ],
       fallback: "routine",
     };

@@ -25,7 +25,7 @@ export class ChargeChatService {
     const history = (await this.bills.bills(sin)).slice().sort((a, b) => a.period.localeCompare(b.period));
     const checks = await this.billChecks.checkForHousehold(sin).catch(() => null);
     const facts = chargeFactsFor(history, lineId, checks?.overall ?? "green");
-    if (!facts) throw new NotFoundException({ error: "Walang ganitong charge sa pinakabagong Bill." });
+    if (!facts) throw new NotFoundException({ error: "There is no such charge on the latest Bill." });
 
     const intent = classifyQuestion(question, facts);
     const summary = checks?.summary ?? null;

@@ -32,7 +32,7 @@ async function toReview() {
   await screen.findByRole("heading", { name: "Now scan your latest bill" });
   const input = document.querySelector('input[type="file"]')!;
   fireEvent.change(input, { target: { files: [new File(["x"], "bill.jpg", { type: "image/jpeg" })] } });
-  await screen.findByRole("heading", { name: "Tama ba?" });
+  await screen.findByRole("heading", { name: "Is this right?" });
 }
 
 describe("LinkFlow", () => {

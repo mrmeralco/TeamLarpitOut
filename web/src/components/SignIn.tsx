@@ -24,7 +24,7 @@ export function SignIn({ onLogin }: { onLogin: (session: LoginResult) => void })
       await api.startSignIn(email.trim());
       setStep("code"); setCode(""); setResendIn(RESEND_SECONDS);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Hindi maipadala ang code ngayon.");
+      setError(err instanceof Error ? err.message : "We couldn't send the code right now.");
     } finally { setBusy(false); }
   }
 
@@ -35,7 +35,7 @@ export function SignIn({ onLogin }: { onLogin: (session: LoginResult) => void })
       const households = await api.households(token);
       onLogin({ token, households });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Hindi makapag-sign in ngayon.");
+      setError(err instanceof Error ? err.message : "We couldn't sign you in right now.");
     } finally { setBusy(false); }
   }
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, chargeApi, type ChargeAnswer, type HomeChargeLine } from "../api/client";
 import { peso } from "../lib/format";
 
-const CHIPS = ["Bakit tumaas ito?", "Who sets this rate?", "Can I lower this?", "Is this correct?"];
+const CHIPS = ["Why did this go up?", "Who sets this rate?", "Can I lower this?", "Is this correct?"];
 
 /**
  * Bottom sheet for one charge line (mockup screen 7). Each question is answered on its own;
@@ -39,7 +39,7 @@ export function ChargeChat({ token, sin, line, previousMonth, onClose, onExpired
     } catch (err) {
       if (v !== version.current) return;
       if (err instanceof ApiError && err.status === 401) onExpired();
-      else setError(err instanceof Error ? err.message : "Hindi masagot ngayon. Subukan ulit.");
+      else setError(err instanceof Error ? err.message : "Couldn't answer right now. Please try again.");
     } finally {
       if (v === version.current) setBusy(false);
     }
@@ -64,17 +64,17 @@ export function ChargeChat({ token, sin, line, previousMonth, onClose, onExpired
         <dl className="sheet-facts">
           <div><dt>This bill</dt><dd>{peso(line.amount)}</dd></div>
           <div><dt>vs. {previousMonth ?? "last month"}</dt><dd className={line.change && line.change > 0 ? "up" : line.change && line.change < 0 ? "down" : ""}>{line.change === null ? "—" : peso(line.change, true)}</dd></div>
-          <div><dt>Goes to</dt><dd>{line.goesTo ?? "Hindi alam"}</dd></div>
+          <div><dt>Goes to</dt><dd>{line.goesTo ?? "Unknown"}</dd></div>
         </dl>
 
         <div className="sheet-thread" aria-live="polite">
           {asked && <p className="bubble me">{asked}</p>}
-          {busy && <p className="bubble them muted">Sumasagot…</p>}
+          {busy && <p className="bubble them muted">Answering…</p>}
           {answer && <div className="bubble them">
             <p>{answer.answer}</p>
             {answer.kind === "askMeralco" && answer.summary && <>
               <p className="small muted">{answer.summary}</p>
-              <button type="button" className="ghost wide" onClick={() => copy(answer.summary!)}>{copied ? "Nakopya na ✓" : "Kopyahin ang buod para kay Meralco"}</button>
+              <button type="button" className="ghost wide" onClick={() => copy(answer.summary!)}>{copied ? "Copied ✓" : "Copy the summary for Meralco"}</button>
             </>}
           </div>}
           {error && <p className="error" role="alert">{error}</p>}

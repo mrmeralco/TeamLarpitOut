@@ -96,10 +96,10 @@ describe("Verified Savings and Points (traditional)", () => {
     );
     expect(putRes.status).toBe(200);
 
-    // Household self-reports "tapos na" on a mission
+    // Household self-reports "done" on a mission
     const res = await api.post(
       `/api/households/${SIN}/usage-plan/self-report`,
-      { missionId: "aircon-timer-2h", status: "tapos na" },
+      { missionId: "aircon-timer-2h", status: "done" },
       token,
     );
 
@@ -107,7 +107,7 @@ describe("Verified Savings and Points (traditional)", () => {
     expect(res.body.awardedPoints).toBe(0);
     // Only the (locked) Welcome Points from finishing setup; the self-report added nothing.
     expect(res.body.balance).toBe(100);
-    expect(res.body.message).toContain("hindi sa self-report");
+    expect(res.body.message).toContain("not from self-reports");
 
     // Balance is still only the locked Welcome Points: nothing spendable
     const pointsRes = await api.get(`/api/households/${SIN}/points`, token);
@@ -143,7 +143,7 @@ describe("Verified Savings and Points (traditional)", () => {
       hasOutage: false,
       source: "bill_verified",
     });
-    expect(body.history[0].description).toContain("30 kWh natipid");
+    expect(body.history[0].description).toContain("30 kWh saved");
   });
 
   it("needs login and household ownership", async () => {
