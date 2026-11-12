@@ -8,13 +8,19 @@ Plan, glossary and decisions (ADR-0001, ADR-0002) live in `99lash/meralco-idol-2
 
 | Path | What |
 |---|---|
-| `server/` | Backend HTTP API (Hono). The one seam tests go through. |
+| `server/` | Backend HTTP API (**NestJS 12**, ESM). The one seam tests go through. |
 | `server/src/data/rate-schedules.json` | The one Rate Schedule table: Per-kWh and Fixed Charges per month. **Sample values: replace with real Bill lines.** |
 | `server/src/domain/rateSchedule.ts` | `cost(kWh, days, schedule)`, in integer centavos |
 | `server/src/domain/billChange.ts` | The Bill Change split (ADR-0001) |
 | `server/src/sources/` | Bill sources behind a `BillSource` interface |
-| `server/test/harness.ts` | API test harness: inject Rate Schedules and fake Bill sources |
+| `server/src/tokens.ts` | Injection tokens for every external source (`RATE_SCHEDULES`, `BILL_SOURCE`) |
+| `server/src/bakit-ganito/` | Controller + service for "Bakit ganito?" |
+| `server/test/harness.ts` | API test harness (Vitest + Supertest): boots the real `AppModule`, overrides providers with fakes |
 | `web/` | Vite + React PWA |
+
+## Stack
+
+TypeScript everywhere, pnpm workspace. Backend: NestJS 12, class-validator, Vitest (+ SWC for decorator metadata), Supertest. Frontend: React 19, Vite, hand-written PWA manifest + service worker.
 
 ## Run
 

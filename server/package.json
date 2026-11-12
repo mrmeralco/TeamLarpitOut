@@ -1,23 +1,33 @@
 {
   "name": "@kuryenteko/server",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
+    "dev": "nest start --watch",
+    "start": "nest start",
+    "build": "nest build",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@hono/node-server": "^2.1.7",
-    "hono": "^4.13.18",
-    "zod": "^4.6.7"
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
+    "@nestjs/cli": "^12.0.12",
+    "@nestjs/testing": "^12.4.2",
+    "@swc/core": "^1.16.22",
+    "@types/express": "^5.0.6",
     "@types/node": "^26.6.6",
-    "tsx": "^4.23.15",
-    "typescript": "^7.0.2",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.3.2",
+    "typescript": "~5.9.3",
+    "unplugin-swc": "^2.0.0",
     "vitest": "^5.1.0"
-  }
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.4.2",
+    "@nestjs/core": "^12.4.2",
+    "@nestjs/platform-express": "^12.4.2",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "type": "module"
 }
