@@ -667,6 +667,8 @@ export interface MissionPlan {
   outage?: { date: string | null; durationHours: number | null; description: string | null } | null;
   /** Points the whole plan is worth (noise band, goal cap and climate applied). */
   rewardPoints: number;
+  /** Total Points collected by this Household so far. */
+  pointsBalance?: number;
   /** This month's climate (PAGASA ENSO advisories) and its Points multiplier. */
   climate?: { phase: "elNino" | "laNina" | "neutral"; label: string; multiplier: number; source: string };
   points: string;
