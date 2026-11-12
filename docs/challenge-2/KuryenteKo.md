@@ -8,7 +8,7 @@
 
 **Merged plan.** This doc combines the two Challenge 2 ideas: **KuryenteKo** (bill audit, account history, plain-Tagalog answers) and **KilosWatt** (exact "why it changed" math, Missions). **KilosWatt** is the name of the usage-management part inside KuryenteKo: Target, Missions, Forecast, Points and Rewards. [`KilosWatt.md`](./KilosWatt.md) points here.
 
-Capitalised terms (Bill, Meter Type, Bill Check, Habit Effect, Verified Savings, Points…) are defined in [`GLOSSARY.md`](../../GLOSSARY.md). Decisions: [ADR-0001](../adr/0001-bill-change-by-recomputing-the-bill.md) (how the Bill Change is split), [ADR-0002](../adr/0002-no-dispute-filing-only-bill-checks.md) (why the app never files complaints).
+Capitalised terms (Bill, Meter Type, Bill Check, Habit Effect, Verified Savings, Points…) are defined in [`GLOSSARY.md`](../../GLOSSARY.md). Decisions: [ADR-0001](../adr/0001-bill-change-by-recomputing-the-bill.md) (how the Bill Change is split), [ADR-0002](../adr/0002-no-dispute-filing-only-bill-checks.md) (why the app never files complaints), [ADR-0003](../adr/0003-bill-only-verdict-stops-at-rate-and-days.md) (what a scan without login shows), [ADR-0004](../adr/0004-setup-earns-locked-welcome-points.md) (Welcome Points for Household Setup).
 
 **Diagrams:** [Happy-path user flow](#3-happy-path-user-flow) and [Architecture](#9-architecture) are Mermaid. To edit them in Excalidraw: *More tools → Mermaid to Excalidraw*, paste the code block.
 
@@ -19,7 +19,8 @@ Capitalised terms (Bill, Meter Type, Bill Check, Habit Effect, Verified Savings,
 | Topic | Decision |
 |---|---|
 | Name | **KuryenteKo**; KilosWatt = the usage-management part |
-| Login | **"Mag-login gamit ang My Meralco"** (mock, email + password like My Meralco). The mock Meralco API returns the Households already linked to that login. One owner per Household. **No login needed** to scan a bill and see "Bakit ganito?" (bill-only path); login is needed to **save** and to fetch the 12-bill history |
+| Login | **"Mag-login gamit ang My Meralco"** (mock, email + password like My Meralco). The mock Meralco API returns the Households already linked to that login. One owner per Household. **No login needed** to scan a bill, but without login you get only the **Bill-only Verdict** (below); login is needed for the full answer, to **save**, and to fetch the 12-bill history |
+| Bill-only Verdict (no login) | Only what one Bill can honestly answer: the Bill Change, its **Rate** and **Billing Days** Effects, Bill Checks 1 and 3, and the redrawn Bill. **Weather vs. Habit stays a ❓** ("Init ba o gamit ninyo? Mag-login para malaman"), because it needs the 12-bill Heat Sensitivity. No Appliances, Missions or Points. This is the hook into login and KilosWatt, not a full bill explainer ([ADR-0003](../adr/0003-bill-only-verdict-stops-at-rate-and-days.md)) |
 | Household | One **Service ID Number**. Appliances, Missions, readings and Points are saved **per Household**, not per login |
 | Two customer types | **Meter Type** comes from Meralco's record for the Household. **Traditional:** Bill upload + Bill History from the (mock) Meralco API. **Smart meter:** the (mock) smart meter API sends hourly / daily / weekly readings; Bills and history are auto-loaded |
 | Home | Pay-ready summary + three questions: **Bakit ganito? · Tama ba ito? · Ano ang gagawin ko?** |
@@ -59,8 +60,9 @@ Capitalised terms (Bill, Meter Type, Bill Check, Habit Effect, Verified Savings,
 
 | Feature | Traditional meter | Smart meter |
 |---|---|---|
-| **Getting the data** | Photo of the Bill → AI reads it → "Tama ba?" → quick verdict without login → **Login with My Meralco** → 12 Bills from the (mock) Meralco API | **Login with My Meralco** → Bills and 12 months of readings auto-loaded from the (mock) APIs; no upload |
+| **Getting the data** | Photo of the Bill → AI reads it → "Tama ba?" → **Bill-only Verdict** without login → "Alamin kung init o gamit mo" → **Login with My Meralco** → 12 Bills from the (mock) Meralco API | **Login with My Meralco** → Bills and 12 months of readings auto-loaded from the (mock) APIs; no upload |
 | **Home** | Amount due, due date, badge, one-sentence "Bakit ganito?", one action | Same, plus "Ngayong buwan hanggang ngayon: 210 kWh" |
+| **Bill-only Verdict** (no login) | Bill Change, Rate Effect, Billing Days Effect; the rest shown as one ❓ amount: "Init ba o gamit ninyo?" → login. Bill Checks 1 and 3 only | — (smart meter homes log in first) |
 | **Bakit ganito?** (hero) | Bill Change split into Rate, Billing Days, Weather, Habit Effects; lifeline / catch-up lines when they apply; credits and adjustments listed below; ✓ adds up to the real change | Same |
 | **Tama ba ito?** | 🟢 / 🟡 / 🔴 badge from Bill Checks and Usage Outlier (§2.4) | Same |
 | **Ano'ng laman ng bill ko?** | Redrawn Bill; tap a row → what it is, who gets the money (pass-through vs. Meralco's own), how it changed vs. last month | Same |
@@ -139,6 +141,7 @@ Missions marked "monthly only" are offered to smart meter homes too, verified at
 - **Traditional:** at the next Bill, `points = cost(baseline) − cost(actual)` if positive, with the Baseline adjusted for weather and billing days.
 - **Smart meter:** per Mission, daily: `(baseline_window_kWh − actual_window_kWh) × ₱/kWh`, for days the window condition is met.
 - **Never self-reported.** Tapping "tapos na" earns nothing.
+- **Welcome Points (ADR-0004):** finishing Household Setup grants 100 pts once per Household, shown at once but locked until the first Verified Savings. Setup is a checklist on Home; Missions stay locked behind it.
 - **Brownouts excluded:** days (smart meter) or periods (traditional, from Meralco's record) with a recorded outage don't count.
 - **Rewards:** a partner-funded catalog priced in points (e.g. ₱50 load = 500 pts, so rewards are a 10% top-up on money already saved). Demo items are labelled "sample rewards". Never a Meralco bill discount.
 
@@ -152,8 +155,8 @@ Traditional meter (Aling Rosa), with the smart meter branch.
 flowchart TD
     A([Open KuryenteKo]) --> B["Kuha ng Bill: photo of bill"]
     B --> C["AI reads bill. Tama ba? User confirms"]
-    C --> D["Quick verdict, no login: Bakit ganito? from this bill"]
-    D --> E["I-save at kunin ang 12 buwan? Login with My Meralco"]
+    C --> D["Bill-only Verdict, no login: Rate and Billing days effects. Rest is a question mark: init ba o gamit?"]
+    D --> E["Alamin kung init o gamit mo: Login with My Meralco"]
     E --> E2["Mock login returns linked Households. Pick the one on this bill"]
     E2 --> F{"Meter Type from Meralco record"}
     F -->|Traditional| G["Load 12 Bills from Meralco API"]
@@ -179,7 +182,7 @@ flowchart TD
     X --> Y([Done])
 ```
 
-**Off the happy path (not drawn):** 🟡 Usage Outlier → "May nagbago ba sa bahay?" → Missions. 🔴 Bill Check fails → show both figures → "Itanong kay Meralco" → copy summary. No My Meralco account (renter, unregistered) → bill-only path without saving: two uploaded Bills, survey-based weather, Bill Checks 1 and 3. Smart meter Households skip the bill photo: login first, everything loads.
+**Off the happy path (not drawn):** 🟡 Usage Outlier → "May nagbago ba sa bahay?" → Missions. 🔴 Bill Check fails → show both figures → "Itanong kay Meralco" → copy summary. No My Meralco account (renter, unregistered) → small "Wala akong My Meralco account" link under the login button → upload a second Bill + aircon survey to split Weather vs. Habit; nothing saved, no Missions or Points. Smart meter Households skip the bill photo: login first, everything loads.
 
 ---
 
@@ -204,6 +207,10 @@ weather_effect = cost(kwh_weather, days_now, sched_before) - cost(kwh_days_only,
 habit_effect   = cost(kwh_now, days_now, sched_before) - cost(kwh_weather, days_now, sched_before)
 check: rate + days + weather + habit == cost(now) - cost(before)          # exact by construction
 # lifeline / catch-up split out of habit_effect when they apply; credits and adjustments listed separately
+
+# Bill-only Verdict (no login): needs kwh_before, days_before from the Bill itself (see §16)
+#   show rate_effect, days_effect; show (weather_effect + habit_effect) as one "?" amount
+#   checks 1 and 3 only
 
 # ---------- Tama ba ito? ----------
 usage_outlier = kwh_now / days_now > predicted_kwh_per_day(cdd_per_day_now) * 1.30 and no household change
@@ -266,9 +273,9 @@ smart meter: for each mission, each day:
 
 ## 6. Edge cases
 
-- **Bill's Service ID Number not linked to the login:** show the quick verdict only; "Hindi naka-link ang account na ito sa My Meralco mo."
+- **Bill's Service ID Number not linked to the login:** show the Bill-only Verdict only; "Hindi naka-link ang account na ito sa My Meralco mo."
 - **Login has several Households:** pick one; each keeps its own appliances, Missions and Points.
-- **No record / renter:** bill-only path (two uploads, survey weather, Bill Checks 1 and 3).
+- **No record / renter:** "Wala akong My Meralco account" → second Bill upload + aircon survey for Weather vs. Habit; Bill Checks 1 and 3; nothing saved, no Missions or Points.
 - **Meter replaced / Bill missing:** compare serials; skip Bill Check 2 across gaps.
 - **Payment after bill date:** compare dates before failing Bill Check 4.
 - **Rounding, adjustments, back-billing:** tolerance of a few pesos; explain adjustment lines.
@@ -435,7 +442,7 @@ If time runs short, cut from the bottom of §7, never from items 1–5.
 |---|---|
 | 0:00–1:00 | Hold up the real bill: "Tumaas. Alam n'yo ba kung bakit?" |
 | 1:00–1:45 | Problem; existing tools stop at a general guide |
-| 1:45–4:30 | Traditional (real bill): scan → quick verdict → **Login with My Meralco** → Home 🟢 → **Bakit ganito?** adds up exactly → tap Init → "your heat sensitivity" → Laman (pass-through) |
+| 1:45–4:30 | Traditional (real bill): scan → Bill-only Verdict (Rate + Days, ❓ on the rest) → **Login with My Meralco** to answer the ❓ → Home 🟢 → **Bakit ganito?** adds up exactly → tap Init → "your heat sensitivity" → Laman (pass-through) |
 | 4:30–6:00 | Appliances: scan an aircon energy label live → "mga 8 oras/araw, tama ba?" → Saan napupunta → Target → Missions with peso values |
 | 6:00–7:15 | Switch to a smart meter account: usage chart → "Aircon ba ito?" → daily Mission verified → Points → redeem a sample reward |
 | 7:15–7:45 | Red case: previous reading mismatch → both figures → "Itanong kay Meralco." |
@@ -475,6 +482,7 @@ If time runs short, cut from the bottom of §7, never from items 1–5.
 
 - [ ] 2–3 consecutive real Bills from one teammate (account number covered)
 - [ ] Does the bill print the previous reading, estimated-reading marks, lifeline line?
+- [ ] Does one Bill print last month's kWh and billing days (consumption history)? The Bill-only Verdict needs both; if not, it shows only the redrawn Bill + Bill Checks 1 and 3
 - [ ] Does the bill print both a **Service ID Number (SIN)** and a **Customer Account Number (CAN)**? Which one does My Meralco link with? (Sources say SIN; the plan assumes SIN.)
 - [ ] Open the My Meralco app: confirm the login is email + password and what it shows per linked account
 - [ ] Exact charge lines for the demo months; any tiered charge?
