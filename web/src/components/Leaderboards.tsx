@@ -146,7 +146,7 @@ export function Leaderboards({
     {
       handle: `@${holder.nickname.replace(/\s+/g, "")}`,
       title: holder.title,
-      meter: household.meter_type === "smart" ? "Smart" : "Traditional",
+      meter: isSmart ? "Smart" : "Traditional",
       goalPct: userGoalPct,
       kwhSaved: userKwhSaved,
       pts: userPts,
@@ -159,7 +159,7 @@ export function Leaderboards({
     .sort((a, b) => b.pts - a.pts || b.kwhSaved - a.kwhSaved)
     .map((row, idx) => ({ ...row, rank: idx + 1 }));
 
-  const medalFor = (rank: number) => (rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`);
+  const medalFor = (rank: number) => `#${rank}`;
 
   return (
     <section className="dash leaderboard-dash" aria-labelledby="leaderboards-heading">
@@ -167,7 +167,7 @@ export function Leaderboards({
         <div className="hero mood-charged leaderboard-hero">
           <div className="hero-copy">
             <p className="hero-hello">
-              Bayanihan Grid League · {city} · {isSmart ? "⚡ Smart Meter Live" : "📟 Monthly Bill Sync"}
+              Bayanihan Grid League · {city}
             </p>
             <h2 id="leaderboards-heading">{userBrgy}</h2>
             <p className="hero-amount">
@@ -175,18 +175,8 @@ export function Leaderboards({
               <span className="hero-change down">▼ {myBrgy.cutPct}% peak load</span>
             </p>
             <p className="hero-line">
-              {myBrgy.kwhSaved.toLocaleString("en-PH")} kWh saved together by {myBrgy.homes} homes ·{" "}
-              {isSmart
-                ? "your smart meter feeds daily peak-cut points into your barangay shield"
-                : "keeping Meralco off pricey spot-market power"}
+              {myBrgy.kwhSaved.toLocaleString("en-PH")} kWh saved across {myBrgy.homes} homes
             </p>
-            <button
-              type="button"
-              className="hero-play"
-              onClick={() => setView((v) => (v === "barangay" ? "kapitbahay" : "barangay"))}
-            >
-              {view === "barangay" ? "🏡 See Kapitbahay savers" : "🏆 See Barangay league"}
-            </button>
           </div>
           <img className="hero-mascot" src="/mascot/eelio-hero.png" alt="Eelio cheering on your barangay" />
         </div>
@@ -198,7 +188,7 @@ export function Leaderboards({
             <div>
               <h3>Bayanihan Grid Shield</h3>
               <p className="muted small">
-                Collective target for {userBrgy}: <strong>{targetKwh.toLocaleString("en-PH")} kWh</strong> saved this billing cycle
+                Monthly target: <strong>{targetKwh.toLocaleString("en-PH")} kWh</strong>
               </p>
             </div>
             <span className="goal-reward">+{myBrgy.bonusPts} pts bonus</span>
@@ -220,23 +210,8 @@ export function Leaderboards({
             </span>
           </div>
 
-          <div className="bayanihan-impact-strip">
-            <div>
-              <span className="muted small">Feeder Peak Cut</span>
-              <strong>-{myBrgy.cutPct}% load</strong>
-            </div>
-            <div>
-              <span className="muted small">Spot Market Shield</span>
-              <strong>{myBrgy.gridStatus}</strong>
-            </div>
-            <div>
-              <span className="muted small">Active Homes</span>
-              <strong>{myBrgy.homes} bahay</strong>
-            </div>
-          </div>
-
-          <p className="bayanihan-note muted small">
-            💡 <strong>Why Bayanihan works:</strong> When your whole barangay trims peak use together, Meralco avoids buying extra electricity from expensive WESM spot-market plants — helping keep generation rates lower for every household.
+          <p className="muted small">
+            Trimming peak load together keeps Meralco off expensive spot-market power.
           </p>
         </div>
       </aside>
@@ -248,8 +223,8 @@ export function Leaderboards({
               <h3>{view === "barangay" ? `${city} Barangay League` : `Top Savers in ${userBrgy}`}</h3>
               <span className="muted small">
                 {view === "barangay"
-                  ? "Ranked by collective peak-load reduction and kWh saved across participating households"
-                  : `Anonymized households in ${userBrgy} ranked by % of personal goal achieved (${maskSin(household.sin)})`}
+                  ? "Ranked by collective peak-load reduction"
+                  : `Ranked by personal goal achieved (${maskSin(household.sin)})`}
               </span>
             </div>
             <div className="leaderboard-tabs" role="tablist" aria-label="Leaderboard scope">
@@ -260,7 +235,7 @@ export function Leaderboards({
                 className={`lb-tab${view === "barangay" ? " active" : ""}`}
                 onClick={() => setView("barangay")}
               >
-                🏘️ Per Barangay
+                Per Barangay
               </button>
               <button
                 type="button"
@@ -269,91 +244,53 @@ export function Leaderboards({
                 className={`lb-tab${view === "kapitbahay" ? " active" : ""}`}
                 onClick={() => setView("kapitbahay")}
               >
-                🏡 Per Household
+                Per Household
               </button>
             </div>
           </div>
 
           {view === "barangay" ? (
-            <>
-              <ul className="lb-podium" role="list" aria-label="Top 3 Barangays">
-                {brgyRows.slice(0, 3).map((b) => (
-                  <li key={b.rank} className={`lb-podium-card rank-${b.rank}${b.isYours ? " is-yours" : ""}`}>
-                    <div className="lb-podium-top">
-                      <span className="lb-medal">{medalFor(b.rank)}</span>
+            <ol className="lb-list">
+              {brgyRows.map((b) => (
+                <li key={b.rank} className={`lb-row${b.isYours ? " is-yours" : ""}`}>
+                  <span className={`lb-rank rank-${b.rank}`}>{medalFor(b.rank)}</span>
+                  <div className="lb-row-main">
+                    <div className="lb-row-title">
+                      <strong>{b.name}</strong>
                       {b.isYours && <span className="lb-you-pill">Your Barangay</span>}
                     </div>
-                    <strong className="lb-podium-name">{b.name}</strong>
-                    <span className="lb-podium-stat">-{b.cutPct}% peak cut</span>
-                    <span className="muted small">{b.kwhSaved.toLocaleString("en-PH")} kWh saved · {b.homes} homes</span>
-                    <span className="mission-quest-pts">+{b.bonusPts} pts / home</span>
-                  </li>
-                ))}
-              </ul>
-
-              <ol className="lb-list">
-                {brgyRows.map((b) => (
-                  <li key={b.rank} className={`lb-row${b.isYours ? " is-yours" : ""}`}>
-                    <span className={`lb-rank rank-${b.rank}`}>{medalFor(b.rank)}</span>
-                    <div className="lb-row-main">
-                      <div className="lb-row-title">
-                        <strong>{b.name}</strong>
-                        {b.isYours && <span className="lb-you-pill">Your Barangay</span>}
-                        <span className="lb-status-chip">{b.gridStatus}</span>
-                      </div>
-                      <div className="lb-bar-track" aria-hidden="true">
-                        <span style={{ width: `${Math.min(100, (b.cutPct / 8) * 100)}%` }} />
-                      </div>
-                      <span className="muted small">{b.homes} participating households · {b.kwhSaved.toLocaleString("en-PH")} kWh saved together</span>
-                    </div>
-                    <div className="lb-row-side">
-                      <strong className="lb-cut">-{b.cutPct}%</strong>
-                      <span className="mission-quest-pts">+{b.bonusPts} pts</span>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </>
+                    <span className="muted small">
+                      {b.homes} homes · {b.kwhSaved.toLocaleString("en-PH")} kWh saved
+                    </span>
+                  </div>
+                  <div className="lb-row-side">
+                    <strong className="lb-cut">-{b.cutPct}%</strong>
+                    <span className="mission-quest-pts">+{b.bonusPts} pts</span>
+                  </div>
+                </li>
+              ))}
+            </ol>
           ) : (
-            <>
-              <ul className="lb-podium" role="list" aria-label="Top 3 Households in Barangay">
-                {kapitbahayRows.slice(0, 3).map((k) => (
-                  <li key={k.rank} className={`lb-podium-card rank-${k.rank}${k.isYou ? " is-yours" : ""}`}>
-                    <div className="lb-podium-top">
-                      <span className="lb-medal">{medalFor(k.rank)}</span>
+            <ol className="lb-list">
+              {kapitbahayRows.map((k) => (
+                <li key={k.rank} className={`lb-row${k.isYou ? " is-yours" : ""}`}>
+                  <span className={`lb-rank rank-${k.rank}`}>{medalFor(k.rank)}</span>
+                  <div className="lb-row-main">
+                    <div className="lb-row-title">
+                      <strong>{k.handle}</strong>
                       {k.isYou && <span className="lb-you-pill">You</span>}
                     </div>
-                    <strong className="lb-podium-name">{k.handle}</strong>
-                    <span className="lb-podium-stat">{k.goalPct}% goal hit</span>
-                    <span className="muted small">{k.title} · {k.kwhSaved} kWh saved</span>
+                    <span className="muted small">
+                      {k.meter} meter · {k.kwhSaved} kWh saved
+                    </span>
+                  </div>
+                  <div className="lb-row-side">
+                    <strong className="lb-cut">{k.goalPct}% goal</strong>
                     <span className="mission-quest-pts">+{k.pts} pts</span>
-                  </li>
-                ))}
-              </ul>
-
-              <ol className="lb-list">
-                {kapitbahayRows.map((k) => (
-                  <li key={k.rank} className={`lb-row${k.isYou ? " is-yours" : ""}`}>
-                    <span className={`lb-rank rank-${k.rank}`}>{medalFor(k.rank)}</span>
-                    <div className="lb-row-main">
-                      <div className="lb-row-title">
-                        <strong>{k.handle}</strong>
-                        {k.isYou && <span className="lb-you-pill">You · {maskSin(household.sin)}</span>}
-                        <span className="lb-status-chip">{k.title}</span>
-                      </div>
-                      <div className="lb-bar-track" aria-hidden="true">
-                        <span style={{ width: `${k.goalPct}%` }} />
-                      </div>
-                      <span className="muted small">{k.meter} meter · {k.kwhSaved} kWh saved toward barangay shield</span>
-                    </div>
-                    <div className="lb-row-side">
-                      <strong className="lb-cut">{k.goalPct}% goal</strong>
-                      <span className="mission-quest-pts">+{k.pts} pts</span>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </>
+                  </div>
+                </li>
+              ))}
+            </ol>
           )}
         </section>
       </div>
