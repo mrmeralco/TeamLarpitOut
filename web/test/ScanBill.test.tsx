@@ -85,8 +85,42 @@ describe("demo fallback", () => {
     canMasked = "55•• ••• 678";
     await scan();
     expect(screen.getByText("Demo account")).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toMatch(/sample Caloocan City household/);
+    expect(screen.getByRole("status").textContent).toMatch(/explains this bill as your latest bill.*sample Caloocan City values/);
+    // Corrections from "Does this look right?" go along with the confirmation.
+    fireEvent.change(screen.getByLabelText("Usage (kWh)"), { target: { value: "615" } });
+    fireEvent.change(screen.getByLabelText("Total due"), { target: { value: "₱6,900" } });
+    fireEvent.change(screen.getByLabelText("Billing days"), { target: { value: "abc" } });
     fireEvent.click(screen.getByRole("button", { name: "Yes, explain my bill" }));
     await waitFor(() => expect(onLinked).toHaveBeenCalledWith("1234567890"));
+    const call = fetchMock.mock.calls.find(([url]) => url === "/api/households/link/confirm")!;
+    expect(JSON.parse(String(call[1]!.body))).toEqual({ scanToken: "a".repeat(43), kwh: 615, totalAmount: 6900 });
+  });
+
+  it("demo mode asks for the billing days the scan missed before it can explain the bill", async () => {
+    account = { status: "found", demo: true, canMasked: "55•• ••• 678", area: "Caloocan City", meterType: "traditional", billsOnRecord: 12, firstPeriod: "2025-11", lastPeriod: "2026-10" };
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
+      if (input !== "/api/bills/scan") return original(input, init);
+      const body = await (await original(input, init)).json();
+      return response({ ...body, now: { ...body.now, billingDays: undefined }, missing: ["billingDays"] });
+    });
+    await scan();
+    const confirm = screen.getByRole("button", { name: "Yes, explain my bill" }) as HTMLButtonElement;
+    expect(confirm.disabled).toBe(true);
+    expect(screen.getByText(/couldn't read the billing days/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Billing days"), { target: { value: "31" } });
+    expect(confirm.disabled).toBe(false);
+    fireEvent.click(confirm);
+    await waitFor(() => expect(onLinked).toHaveBeenCalled());
+    const call = fetchMock.mock.calls.find(([url]) => url === "/api/households/link/confirm")!;
+    expect(JSON.parse(String(call[1]!.body))).toEqual({ scanToken: "a".repeat(43), billingDays: 31 });
+  });
+
+  it("an already-linked demo account is confirmed again, so a newer scan becomes the latest bill", async () => {
+    account = { status: "alreadyLinked", householdSin: "8512345678", demo: true, canMasked: "55•• ••• 678", area: "Caloocan City", meterType: "traditional", billsOnRecord: 12, firstPeriod: "2025-11", lastPeriod: "2026-10" };
+    await scan();
+    fireEvent.click(screen.getByRole("button", { name: "Yes, explain my bill" }));
+    await waitFor(() => expect(onLinked).toHaveBeenCalled());
+    expect(fetchMock.mock.calls.some(([url]) => url === "/api/households/link/confirm")).toBe(true);
   });
 });

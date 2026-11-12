@@ -115,6 +115,10 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+/** The Home tab asked for this Household's Bill History (it drives the explanation and checks). */
+const historyFetched = (sin: string, times = 1) => waitFor(() =>
+  expect(fetchMock.mock.calls.filter(([url]) => url === `/api/households/${sin}/bills`).length).toBeGreaterThanOrEqual(times));
+
 /** Returning user: Sign up screen → "Sign in" → Gmail address + password. */
 async function signIn(password = "rosa2026x") {
   fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
@@ -162,7 +166,7 @@ describe("My Meralco PWA", () => {
   it("loads smart readings and Bills without uploading and clears usage on traditional selection", async () => {
     render(<App />); await login(); await select(households[1]!.sin);
     await screen.findByText("12.345 kWh");
-    expect(screen.getByRole("cell", { name: "370" })).toBeTruthy();
+    await historyFetched(households[1]!.sin);
     expect(await screen.findByRole("button", { name: /Your plan: use 5% less electricity/ })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan")).toBe(false);
     await goTab("Missions");
@@ -171,7 +175,7 @@ describe("My Meralco PWA", () => {
     expect(fetchMock.mock.calls.some(([url]) => url === `/api/households/${households[1]!.sin}/forecast`)).toBe(false);
     await select(households[0]!.sin);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
-    await screen.findByRole("cell", { name: "230" });
+    await historyFetched(households[0]!.sin);
     await goTab("Missions");
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
     await goTab("Account");
@@ -183,12 +187,12 @@ describe("My Meralco PWA", () => {
     readingsRequest = async () => response({ error: "Readings unavailable" }, 502);
     render(<App />); await login(); await select(households[1]!.sin);
     await screen.findByText("Readings unavailable");
-    expect(screen.getByRole("cell", { name: "370" })).toBeTruthy();
+    expect(screen.getAllByText("Bill verified").length).toBeGreaterThan(0);
     readingsRequest = async () => expired();
     fireEvent.click(screen.getByRole("button", { name: "Retry readings" }));
     await screen.findByText(/Your session expired/);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
-    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByText("Bill verified")).toBeNull();
   });
 
   it.each(["traditional", "logout"])('ignores late readings after %s', async (action) => {
@@ -210,9 +214,9 @@ describe("My Meralco PWA", () => {
     expect(screen.getByRole("option", { name: /Caloocan.*Traditional meter/ }).textContent).toContain("••••••7890");
     expect(document.body.textContent).not.toContain("1234567890");
     await select(households[0]!.sin);
-    const table = await screen.findByRole("table");
-    expect(within(table).getByRole("cell", { name: "230" })).toBeTruthy();
-    expect(screen.getByText(/This is not real Bill History/)).toBeTruthy();
+    await historyFetched(households[0]!.sin);
+    // The month-by-month Bill History table is no longer shown on Home.
+    expect(screen.queryByRole("table")).toBeNull();
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
     expect(fetchMock.mock.calls.some(([url]) => url.includes("/readings"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url, init]) => url.includes("/households/") && new Headers(init?.headers).get("authorization") === "Bearer test-session")).toBe(true);
@@ -224,10 +228,10 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[0]!.sin);
     await waitFor(() => expect(resolveFirst).toBeTypeOf("function"));
     await select(households[1]!.sin);
-    await screen.findByRole("cell", { name: "370" });
-    await act(async () => resolveFirst(response(history(230))));
-    expect(screen.queryByRole("cell", { name: "230" })).toBeNull();
-    expect(screen.getByRole("heading", { name: /Bill History/ }).textContent).toContain("••••••3210");
+    await historyFetched(households[1]!.sin);
+    // A late two-Bill History for the old Household must not start its explanation or checks.
+    await act(async () => resolveFirst(response([{ ...history(200)[0], period: "2026-09" }, ...history(230)])));
+    expect(fetchMock.mock.calls.some(([url]) => url.startsWith(`/api/households/${households[0]!.sin}/`) && /bakit-ganito|check$/.test(url))).toBe(false);
   });
 
   it("clears protected data on logout and ignores a history response arriving afterward", async () => {
@@ -253,7 +257,7 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[0]!.sin);
     await waitFor(() => expect(resolveExplanation).toBeTypeOf("function"));
     await select(households[1]!.sin);
-    await screen.findByRole("cell", { name: "370" });
+    await historyFetched(households[1]!.sin);
     await act(async () => resolveExplanation(response(verdictResponse(11111))));
     expect(screen.queryByText("₱111.11")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Why this bill?" })).toBeNull();
@@ -296,14 +300,15 @@ describe("My Meralco PWA", () => {
     expect(screen.queryByRole("table")).toBeNull();
     failHistory = false;
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
-    await screen.findByRole("cell", { name: "230" });
+    await historyFetched(households[0]!.sin, 2);
+    await waitFor(() => expect(screen.queryByText("We couldn't get the Bill History. Please try again.")).toBeNull());
   });
 
 
   it("switches tabs by hash route and highlights the current tab", async () => {
     render(<App />); await login();
     expect(window.location.hash).toBe("#/home");
-    await screen.findByRole("cell", { name: "230" });
+    await historyFetched(households[0]!.sin);
     await goTab("Missions");
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();

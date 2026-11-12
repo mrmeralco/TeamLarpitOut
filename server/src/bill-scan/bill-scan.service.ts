@@ -108,7 +108,7 @@ export class BillScanService {
     const result = toScanResult(raw);
     if (result.status !== "read") return { result, can: null };
     return {
-      result: { ...result, scanToken: this.contexts.create(raw.customerAccountNumber) },
+      result: { ...result, scanToken: this.contexts.create(raw.customerAccountNumber, result.now) },
       can: tenDigits(raw.customerAccountNumber),
     };
   }

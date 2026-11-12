@@ -110,7 +110,7 @@ describe("Account Linking from the scanned Bill (no CAN screen)", () => {
 });
 
 describe("demo fallback (AUTH_FIXED_CODE set)", () => {
-  it("an unknown CAN opens the sample Household, labelled as demo, and several logins can share it", async () => {
+  it("an unknown CAN gets a demo Household: the scanned Bill is the latest Bill, sample months fill the rest", async () => {
     const { vi } = await import("vitest");
     vi.stubEnv("AUTH_FIXED_CODE", "123456");
     try {
@@ -119,15 +119,45 @@ describe("demo fallback (AUTH_FIXED_CODE set)", () => {
       const first = await api.login("first@example.test");
       const scan = await api.upload("/api/bills/scan", undefined, undefined, first);
       expect(scan.body.account).toMatchObject({ status: "found", demo: true, canMasked: "55•• ••• 678", area: "City A", billsOnRecord: 12 });
-      const linked = await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken }, first);
-      expect(linked.body).toMatchObject({ status: "active", householdSin: A.sin, demo: true });
-      expect((await api.get(`/api/households/${A.sin}/bills`, first)).body).toHaveLength(12);
+      // The kWh corrected on "Does this look right?" is what gets explained.
+      const linked = await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken, kwh: 250 }, first);
+      expect(linked.body).toMatchObject({ status: "active", householdSin: "8512345678", demo: true });
+      const sin = linked.body.householdSin;
+      const history = (await api.get(`/api/households/${sin}/bills`, first)).body;
+      expect(history).toHaveLength(12);
+      expect(history.at(-1)).toMatchObject({ period: "2026-10", kwh: 250, billingDays: 30, provenance: { kind: "scanned" } });
+      expect(history[0].period).toBe("2025-11");
+      expect((await api.get(`/api/households/${sin}/home`, first)).body.bill.period).toBe("2026-10");
+      // The sample Household itself is untouched.
+      expect((await api.get(`/api/households`, first)).body.map((h: { sin: string }) => h.sin)).toEqual([sin]);
 
+      // Another login scanning the same Bill shares the demo Household.
       const second = await api.login("second@example.test");
       const again = await api.upload("/api/bills/scan", undefined, undefined, second);
-      expect(again.body.account.status).toBe("found");
-      expect((await api.post("/api/households/link/confirm", { scanToken: again.body.scanToken }, second)).status).toBe(200);
-      expect((await api.get(`/api/households/${A.sin}/bills`, second)).status).toBe(200);
+      expect(again.body.account).toMatchObject({ status: "found", demo: true });
+      expect((await api.post("/api/households/link/confirm", { scanToken: again.body.scanToken }, second)).body.householdSin).toBe(sin);
+      expect((await api.get(`/api/households/${sin}/bills`, second)).status).toBe(200);
+
+      // Re-confirming as the first login keeps the same Household and rebuilds it from the new scan.
+      const rescan = await api.upload("/api/bills/scan", undefined, undefined, first);
+      expect(rescan.body.account).toMatchObject({ status: "alreadyLinked", householdSin: sin, demo: true });
+      await api.post("/api/households/link/confirm", { scanToken: rescan.body.scanToken }, first);
+      expect((await api.get(`/api/households/${sin}/bills`, first)).body.at(-1).kwh).toBe(213);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("corrections are validated", async () => {
+    const { vi } = await import("vitest");
+    vi.stubEnv("AUTH_FIXED_CODE", "123456");
+    try {
+      const api = await harness({ links: {}, bills: { [A.sin]: twelve }, vision: switchableVision("5512345678") });
+      const token = await api.login(NEW);
+      const scan = await api.upload("/api/bills/scan", undefined, undefined, token);
+      for (const bad of [{ kwh: -1 }, { billingDays: 0 }, { billingDays: 2.5 }, { totalAmount: "lots" }]) {
+        expect((await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken, ...bad }, token)).status).toBe(400);
+      }
     } finally {
       vi.unstubAllEnvs();
     }
