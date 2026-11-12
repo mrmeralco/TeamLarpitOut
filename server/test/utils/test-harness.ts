@@ -13,9 +13,11 @@ import { configureApp } from "../../src/app.setup.js";
 import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
-import { AUTH_CLOCK, BILL_SOURCE, MY_MERALCO_SOURCE, RATE_SCHEDULES, READING_SOURCE, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
+import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, MY_MERALCO_SOURCE, RATE_SCHEDULES, READING_SOURCE, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
 import { inMemoryReadingSource, type ReadingSource } from "../../src/smart-meter/reading-source.interface.js";
 import type { HourlyReading } from "../../src/domain/meter-reading.js";
+import type { CoachProvider } from "../../src/coach/coach-provider.interface.js";
+import { TemplateCoachProvider } from "../../src/coach/template-coach.provider.js";
 import type { AuthClock } from "../../src/auth/auth.service.js";
 import { mockMyMeralcoSource, type MockMeralcoLogin, type MyMeralcoSource } from "../../src/bills/myMeralcoSource.js";
 import type { RawBillReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
@@ -77,6 +79,8 @@ export interface HarnessOptions {
   vision?: RawBillReading | VisionProvider;
   /** Fake weather observations or a custom weather provider. */
   weather?: WeatherProvider | Record<string, number>;
+  /** The AI Coach; defaults to the deterministic template so tests never call an AI. */
+  coach?: CoachProvider;
 }
 
 /** Fake vision provider: returns a fixed reading and records the images it got. */
@@ -122,6 +126,8 @@ export async function harness(opts: HarnessOptions = {}) {
         ? opts.weather
         : new FakeWeatherProvider(opts.weather as Record<string, number> | undefined),
     )
+    .overrideProvider(COACH_PROVIDER)
+    .useValue(opts.coach ?? new TemplateCoachProvider())
     .compile();
 
   const app = configureApp(moduleRef.createNestApplication());
@@ -138,6 +144,12 @@ export async function harness(opts: HarnessOptions = {}) {
     },
     async post(path: string, body: unknown, token?: string) {
       const req = request(server).post(path);
+      if (token !== undefined) req.set("Authorization", `Bearer ${token}`);
+      const res = await req.send(body as object);
+      return { status: res.status, body: res.body as any };
+    },
+    async put(path: string, body: unknown, token?: string) {
+      const req = request(server).put(path);
       if (token !== undefined) req.set("Authorization", `Bearer ${token}`);
       const res = await req.send(body as object);
       return { status: res.status, body: res.body as any };

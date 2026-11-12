@@ -10,5 +10,6 @@ import { BillChangeService } from "./bill-change.service.js";
   imports: [RateSchedulesModule, BillsModule, HouseholdsModule, WeatherModule],
   controllers: [BillChangeController],
   providers: [BillChangeService],
+  exports: [BillChangeService],
 })
 export class BillChangeModule {}

@@ -57,6 +57,7 @@ export class BillChangeService {
     if (cddBefore !== null && cddNow !== null) {
       const fallbackSensitivity: HeatSensitivityResult = {
         heatSensitivity: DEFAULT_COOLING_SENSITIVITY,
+        baseKwhPerDay: 0,
         source: "cooling_appliance_estimate",
         label: "Cooling Appliance estimate",
         hotDayKwh: DEFAULT_COOLING_SENSITIVITY,

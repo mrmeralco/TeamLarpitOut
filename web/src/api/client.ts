@@ -1,6 +1,12 @@
 export interface ChargeLine {
   label: string;
   amount: number;
+  rate?: number;
+}
+
+export interface PaymentRecord {
+  date: string;
+  amount: number;
 }
 
 export interface BillInput {
@@ -8,17 +14,61 @@ export interface BillInput {
   kwh: number;
   billingDays: number;
   chargeLines: ChargeLine[];
+  totalAmount?: number;
+  billDate?: string;
   dueDate?: string;
+  meterSerialNumber?: string;
   previousReading?: number;
   presentReading?: number;
+  payments?: PaymentRecord[];
+  paymentsCredited?: number;
   estimated?: boolean;
   lifelineEligible?: boolean;
+}
+
+export interface DisagreeingFigures {
+  labelA: string;
+  valueA: string | number;
+  labelB: string;
+  valueB: string | number;
+}
+
+export interface SingleCheckResult {
+  key: "lineSum" | "readingContinuity" | "rateSchedule" | "paymentReflection";
+  title: string;
+  status: "pass" | "fail" | "skipped";
+  message: string;
+  discrepancy?: DisagreeingFigures;
+}
+
+export interface OutlierEvaluation {
+  isOutlier: boolean;
+  dailyKwh: number;
+  predictedDailyKwh: number;
+  thresholdDailyKwh: number;
+  ratio: number;
+  hasHouseholdChange: boolean;
+}
+
+export interface BillChecksResult {
+  overall: "green" | "yellow" | "red";
+  checks: SingleCheckResult[];
+  failedChecks: SingleCheckResult[];
+  summary: string;
+  outlier?: OutlierEvaluation;
+}
+
+export interface HouseholdChange {
+  reason: string;
+  period?: string;
+  recordedAt?: string;
 }
 
 export interface Household {
   sin: string;
   masked_address: string;
   meter_type: "traditional" | "smart";
+  changes?: HouseholdChange[];
 }
 export interface LoginResult { token: string; households: Household[] }
 export type ReadingInterval = "hour" | "day" | "week";
@@ -94,7 +144,10 @@ export interface BakitGanito {
 
 async function json<T>(res: Response): Promise<T> {
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, body.error ?? (Array.isArray(body.message) ? body.message.join(" ") : body.message) ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    const base = body.error ?? (Array.isArray(body.message) ? body.message.join(" ") : body.message) ?? `HTTP ${res.status}`;
+    throw new ApiError(res.status, Array.isArray(body.issues) && body.issues.length ? `${base} ${body.issues.join("; ")}` : base);
+  }
   return body as T;
 }
 
@@ -128,6 +181,28 @@ export const api = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ before, now }),
     }).then((r) => json<BakitGanito>(r)),
+  billChecks: (
+    now: BillInput,
+    before?: BillInput,
+    options?: { tolerancePesos?: number; payments?: PaymentRecord[] },
+  ) =>
+    fetch("/api/bills/check", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ now, before, ...options }),
+    }).then((r) => json<BillChecksResult>(r)),
+  householdBillChecks: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/check`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal,
+    }).then((r) => json<BillChecksResult>(r)),
+  recordHouseholdChange: (token: string, sin: string, reason: string, period?: string) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/changes`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ reason, period }),
+    }).then((r) => json<{ ok: boolean; change: HouseholdChange }>(r)),
 };
 
 export interface DraftBill {
@@ -194,3 +269,129 @@ export const fetchBillBreakdown = (now: BillInput, before: BillInput) =>
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ now, before }),
   }).then((r) => json<BillBreakdown>(r));
+
+export type RoutineKind = "alwaysOn" | "timeRanges" | "usesPerWeek";
+export interface TimeRange { start: string; end: string; days: "everyday" | "weekdays" | "weekends" }
+export interface CatalogAppliance {
+  type: string;
+  label: string;
+  routine: RoutineKind;
+  questions: { key: string; label: string; options: { value: string; label: string }[] }[];
+}
+export interface ApplianceInput {
+  type: string;
+  quantity?: number;
+  answers?: Record<string, string>;
+  timeRanges?: TimeRange[];
+  usesPerWeek?: number;
+}
+export interface SavedAppliance extends ApplianceInput {
+  label: string;
+  routine: RoutineKind;
+  source: "answers" | "default";
+  sourceLabel: string;
+  hoursPerDay: number | null;
+  estimatedKwhPerDay: number;
+}
+export interface HouseholdAppliances { saved: boolean; updatedAt: string | null; appliances: SavedAppliance[] }
+/** Amounts in centavos; row kWh add up exactly to the Bill's kWh. */
+export interface ApplianceBreakdown {
+  bill: { period: string; kwh: number; billingDays: number };
+  rows: { index: number; type: string; label: string; quantity: number; source: string; sourceLabel: string; kwh: number; pesos: number; share: number }[];
+  totals: { kwh: number; perKwhCharges: number; fixedCharges: number };
+}
+
+const authed = (token: string, signal?: AbortSignal): RequestInit => ({
+  headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
+});
+const householdPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/appliances`;
+
+export const appliancesApi = {
+  catalog: (signal?: AbortSignal) =>
+    fetch("/api/appliances/catalog", { signal }).then((r) => json<{ appliances: CatalogAppliance[] }>(r)),
+  list: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(householdPath(sin), authed(token, signal)).then((r) => json<HouseholdAppliances>(r)),
+  save: (token: string, sin: string, appliances: ApplianceInput[]) =>
+    fetch(householdPath(sin), {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ appliances }),
+    }).then((r) => json<HouseholdAppliances>(r)),
+  breakdown: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`${householdPath(sin)}/breakdown`, authed(token, signal)).then((r) => json<ApplianceBreakdown>(r)),
+};
+
+/** Amounts in centavos. */
+export interface TargetResult {
+  period: string;
+  billingDays: number;
+  rateSchedulePeriod: string;
+  baseline: {
+    kwh: number;
+    kwhPerDay: number;
+    pesos: number;
+    weatherAdjusted: boolean;
+    weatherKwhPerDay: number;
+    heatSensitivity: { value: number; source: string; label: string };
+  };
+  options: { cut: 5 | 10 | 15; kwh: number; pesos: number; savings: number }[];
+}
+export interface Mission {
+  id: string;
+  title: string;
+  appliance: string;
+  basis: "physics" | "assumption";
+  assumptions: { key: string; label: string; value: number }[];
+  kwhSaved: number;
+  pesoValue: number;
+  /** Worded by the Coach; numbers shown in the app come from kwhSaved and pesoValue. */
+  message: string;
+}
+export interface UsagePlan {
+  period: string;
+  cut: 5 | 10 | 15;
+  targetKwh: number;
+  targetPesos: number;
+  airconSetting: number | null;
+  missions: { id: string; title: string; kwhSaved: number; pesoValue: number }[];
+  createdAt: string;
+}
+
+const planPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}`;
+
+export const usagePlanApi = {
+  target: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`${planPath(sin)}/target`, authed(token, signal)).then((r) => json<TargetResult>(r)),
+  missions: (token: string, sin: string, airconSetting?: number, signal?: AbortSignal) =>
+    fetch(`${planPath(sin)}/missions${airconSetting ? `?airconSetting=${airconSetting}` : ""}`, authed(token, signal)).then((r) =>
+      json<{ period: string; perKwhRate: number; missions: Mission[] }>(r),
+    ),
+  plan: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`${planPath(sin)}/usage-plan`, authed(token, signal)).then((r) => json<{ active: boolean; plan: UsagePlan | null }>(r)),
+  save: (token: string, sin: string, body: { cut: number; missionIds: string[]; airconSetting?: number }) =>
+    fetch(`${planPath(sin)}/usage-plan`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => json<{ active: boolean; plan: UsagePlan }>(r)),
+};
+
+export type HomeBadge = "green" | "yellow" | "red";
+/** Amounts in centavos. Each card names the section ("screen") it links to. */
+export interface HomeSummary {
+  meterType: "traditional" | "smart";
+  bill: { period: string; amountDue: number | null; dueDate: string | null; billDate: string | null };
+  badge: { status: HomeBadge; label: string };
+  bakitGanito: { sentence: string; total: number; screen: "bakit-ganito" } | null;
+  bakitGanitoUnavailable: string | null;
+  tamaBa: { status: HomeBadge; label: string; failedChecks: number; summary: string; screen: "tama-ba" };
+  action:
+    | { kind: "missions" | "householdChange"; label: string; screen: "missions" }
+    | { kind: "askMeralco"; label: string; screen: "tama-ba"; summary: string };
+  smartMeter: { monthToDateKwh: number | null } | null;
+}
+
+export const homeApi = {
+  summary: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/home`, authed(token, signal)).then((r) => json<HomeSummary>(r)),
+};

@@ -7,6 +7,7 @@ import {
   type LoginResult,
   type BakitGanito,
   type BillBreakdown as BillBreakdownData,
+  type BillChecksResult,
   type BillInput,
   type ChargeLine,
   type DraftBill,
@@ -17,8 +18,12 @@ import { MyMeralcoLogin } from "./components/MyMeralcoLogin";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
+import { Appliances } from "./components/Appliances";
+import { UsagePlan } from "./components/UsagePlan";
+import { Home } from "./components/Home";
 import { ScanLinkageNotice } from "./components/ScanLinkageNotice";
 import { BillBreakdown } from "./components/BillBreakdown";
+import { BillChecks } from "./components/BillChecks";
 import { peso, monthLabel } from "./lib/format";
 
 const EFFECT_HINT: Record<string, string> = {
@@ -359,6 +364,8 @@ const noScan: ScanState = { pending: false, serviceIdMasked: null, note: null, p
 export function App() {
   const [session, setSession] = useState<LoginResult | null>(null);
   const [selectedSin, setSelectedSin] = useState("");
+  /** Bumped when appliances are saved so Missions are recomputed. */
+  const [applianceVersion, setApplianceVersion] = useState(0);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const selected = session?.households.find((h) => h.sin === selectedSin);
   const onExpired = useCallback(() => {
@@ -376,6 +383,7 @@ export function App() {
   const [scanning, setScanning] = useState<Slot | null>(null);
   const [result, setResult] = useState<BakitGanito | null>(null);
   const [breakdown, setBreakdown] = useState<BillBreakdownData | null>(null);
+  const [checks, setChecks] = useState<BillChecksResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const scanVersion = useRef(0);
@@ -398,6 +406,7 @@ export function App() {
     setScanning(slot);
     setResult(null);
     setBreakdown(null);
+    setChecks(null);
     setScan((st) => ({ ...st, pending: true, references: { ...st.references, [slot]: undefined }, problem: null }));
     const out: ScanOutcome = await scanBill(photo);
     if (version !== scanVersion.current) return;
@@ -436,6 +445,7 @@ export function App() {
     set(b);
     setResult(null);
     setBreakdown(null);
+    setChecks(null);
   };
 
   const b = toInput(before);
@@ -449,18 +459,21 @@ export function App() {
     setBusy(true);
     setError(null);
     try {
-      const [r, l] = await Promise.all([
+      const [r, l, c] = await Promise.all([
         api.bakitGanito(b, n),
         n.chargeLines.length ? fetchBillBreakdown(n, b) : Promise.resolve(null),
+        api.billChecks(n, b).catch(() => null),
       ]);
       if (version === verdictVersion.current) {
         setResult(r);
         setBreakdown(l);
+        setChecks(c);
       }
     } catch (err) {
       if (version === verdictVersion.current) {
         setResult(null);
         setBreakdown(null);
+        setChecks(null);
         setError((err as Error).message);
       }
     } finally {
@@ -483,8 +496,11 @@ export function App() {
           if (!(err instanceof ApiError && err.status === 401)) setSessionNotice("Hindi makumpirma ang logout sa server. Na-clear na ang session sa device na ito; mag-e-expire ang token sa loob ng isang oras.");
         });
       }} /> : <MyMeralcoLogin onLogin={(next) => { setSession(next); setSelectedSin(""); setSessionNotice(null); }} />}
+      {session && selected && <Home key={`home:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />}
       {session && selected && <BillHistory key={`${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <Result r={r} />} />}
       {session && selected?.meter_type === "smart" && <SmartMeterUsage key={`usage:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />}
+      {session && selected && <Appliances key={`appliances:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} onSaved={() => setApplianceVersion((v) => v + 1)} />}
+      {session && selected && selected.meter_type === "traditional" && <UsagePlan key={`plan:${session.token}:${selected.sin}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />}
 
       <section className="card hero-scan">
         <h2>Quick verdict · walang login</h2>
@@ -556,6 +572,7 @@ export function App() {
       {error && <p className="error">{error}</p>}
       {result && <Result r={result} />}
       {result && <BillBreakdown data={breakdown} missingLines={!n?.chargeLines.length} />}
+      {result && <BillChecks data={checks} />}
       {session && !scan.pending && scanning === null && (scan.references.now || scan.references.before) &&
         <ScanLinkageNotice key={`${session.token}:${scan.references.now}:${scan.references.before}`} token={session.token}
           now={scan.references.now} before={scan.references.before} onExpired={onExpired} onSelect={setSelectedSin} />}

@@ -20,16 +20,16 @@ function UsageChart({ data }: { data: UsageReadings }) {
     ...(data.interval === "hour" ? { hour: "numeric", minute: "2-digit" } as const : { month: "short", day: "numeric" } as const),
   });
   const labelEvery = Math.max(1, Math.ceil(data.readings.length / 4));
-  return <figure className="usage-chart">
+  return <figure className="meter-usage-chart">
     <figcaption>{views[data.interval].title} usage · kWh{data.interval === "week" && " · linggo mula Lunes"}</figcaption>
     <svg viewBox="0 0 360 200" role="img" aria-label={`${views[data.interval].title} usage chart in kWh. Exact values are in the readings table.`}>
       {[0, 0.5, 1].map((fraction) => <g key={fraction}>
-        <line x1="42" x2="342" y1={160 - fraction * 140} y2={160 - fraction * 140} className="usage-grid" />
+        <line x1="42" x2="342" y1={160 - fraction * 140} y2={160 - fraction * 140} className="meter-usage-grid" />
         <text x="36" y={164 - fraction * 140} textAnchor="end">{kwh(max * fraction)}</text>
       </g>)}
       {data.readings.map((row, i) => <g key={row.from}>
         <rect x={42 + i * width + width * 0.15} y={160 - row.kwh / max * 140}
-          width={width * 0.7} height={row.kwh / max * 140} className={row.partial ? "usage-bar partial" : "usage-bar"} />
+          width={width * 0.7} height={row.kwh / max * 140} className={row.partial ? "meter-usage-bar partial" : "meter-usage-bar"} />
         {i % labelEvery === 0 && <text x={42 + (i + 0.5) * width} y="181" textAnchor="middle">{labels.format(new Date(row.from))}</text>}
       </g>)}
     </svg>
@@ -41,10 +41,10 @@ function UsageData({ data }: { data: UsageReadings }) {
   const total = data.readings.reduce((sum, row) => sum + Math.round(row.kwh * 1000), 0) / 1000;
   return <>
     <p className="notice">Synthetic demo data · Hindi ito totoong meter readings. {data.provenance.note}</p>
-    {data.available && <p className="muted usage-window">Simulation: {date(data.available.from, data.timeZone)} – {date(data.available.to, data.timeZone)} (end exclusive).</p>}
-    {data.range && <p className="muted usage-window">Ipinapakitang saklaw: {date(data.range.from, data.timeZone)} – {date(data.range.to, data.timeZone)} (end exclusive). Lahat ng oras: {data.timeZone}.</p>}
+    {data.available && <p className="muted meter-usage-window">Simulation: {date(data.available.from, data.timeZone)} – {date(data.available.to, data.timeZone)} (end exclusive).</p>}
+    {data.range && <p className="muted meter-usage-window">Ipinapakitang saklaw: {date(data.range.from, data.timeZone)} – {date(data.range.to, data.timeZone)} (end exclusive). Lahat ng oras: {data.timeZone}.</p>}
     {!data.readings.length ? <p>Wala pang usage readings sa saklaw na ito.</p> : <>
-      <p className="usage-total"><strong>{kwh(total)} kWh</strong> · kabuuan ng available readings</p>
+      <p className="meter-usage-total"><strong>{kwh(total)} kWh</strong> · kabuuan ng available readings</p>
       <UsageChart data={data} />
       {data.readings.some((row) => row.partial) && <p className="muted">Partial: kulang ang oras o bahagi lang ng buong interval ang sakop. Hindi ito buong {views[data.interval].period}.</p>}
       <details>
@@ -90,9 +90,9 @@ function IntervalReadings({ token, sin, interval, onExpired }: { token: string; 
 /** Parent mounts only for smart meters, keyed by session and SIN. */
 export function SmartMeterUsage({ token, household, onExpired }: { token: string; household: Household; onExpired: () => void }) {
   const [interval, setInterval] = useState<ReadingInterval>("day");
-  return <section className="card usage" aria-label="Smart meter usage">
+  return <section className="card smart-meter-usage" aria-label="Smart meter usage">
     <h2>Smart meter usage · {maskSin(household.sin)}</h2>
-    <div className="usage-intervals" role="group" aria-label="Usage interval">
+    <div className="meter-usage-intervals" role="group" aria-label="Usage interval">
       {(["hour", "day", "week"] as const).map((value) => <button key={value} type="button"
         aria-pressed={interval === value} onClick={() => setInterval(value)}>{views[value].label}</button>)}
     </div>

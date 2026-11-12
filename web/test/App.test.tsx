@@ -42,9 +42,51 @@ beforeEach(() => {
     if (match) return failHistory ? response({ error: "Hindi makuha ang Bill History. Subukan ulit." }, 502) : historyRequest(match[1]!);
     const readingsMatch = /^\/api\/households\/([^/]+)\/readings\?interval=(hour|day|week)$/.exec(input);
     if (readingsMatch) return readingsRequest(readingsMatch[1]!);
+    if (input === "/api/appliances/catalog") return response({ appliances: [] });
+    if (/^\/api\/households\/[^/]+\/appliances$/.test(input)) return response({ saved: false, updatedAt: null, appliances: [] });
+    if (/^\/api\/households\/[^/]+\/home$/.test(input)) return response({
+      meterType: input.includes(households[0]!.sin) ? "traditional" : "smart",
+      bill: { period: "2026-10", amountDue: 10000, dueDate: null, billDate: null },
+      badge: { status: "green", label: "Tugma ang bill" }, bakitGanito: null, bakitGanitoUnavailable: "Kailangan ng dalawang Bill para maikumpara.",
+      tamaBa: { status: "green", label: "Tugma ang bill", failedChecks: 0, summary: "OK", screen: "tama-ba" },
+      action: { kind: "missions", label: "Tingnan ang Missions", screen: "missions" }, smartMeter: null,
+    });
+    if (/^\/api\/households\/[^/]+\/target$/.test(input)) return response({
+      period: "2026-11", billingDays: 30, rateSchedulePeriod: "2026-11",
+      baseline: { kwh: 230, kwhPerDay: 230 / 30, pesos: 230000, weatherAdjusted: false, weatherKwhPerDay: 0, heatSensitivity: { value: 1, source: "cooling_appliance_estimate", label: "Estimate" } },
+      options: [{ cut: 10, kwh: 207, pesos: 207000, savings: 23000 }],
+    });
+    if (/^\/api\/households\/[^/]+\/usage-plan$/.test(input)) return response({ active: false, plan: null });
+    if (/^\/api\/households\/[^/]+\/missions$/.test(input)) return response({ error: "Ilista muna ang mga appliance." }, 409);
     if (input === "/api/bills/scan") return response({ status: "read", now: { period: "2026-10", kwh: 200, billingDays: 31 }, before: { period: "2026-09", kwh: 150, billingDays: 30 }, missing: [], estimated: [], serviceIdMasked: "••••••7890", scanToken: "a".repeat(43) });
     if (input === "/api/bills/scan-linkage") return response(linkage);
     if (input === "/api/bakit-ganito") return response(verdictResponse());
+    if (input === "/api/bills/check") {
+      return response({
+        overall: "green",
+        checks: [
+          { key: "lineSum", title: "Lines sum", status: "pass", message: "OK" },
+          { key: "readingContinuity", title: "Readings", status: "pass", message: "OK" },
+          { key: "rateSchedule", title: "Rates", status: "pass", message: "OK" },
+          { key: "paymentReflection", title: "Payments", status: "pass", message: "OK" },
+        ],
+        failedChecks: [],
+        summary: "Lahat ng nasuring Meralco figures ay nagtutugma.",
+      });
+    }
+    if (/^\/api\/households\/[^/]+\/check$/.test(input)) {
+      return response({
+        overall: "green",
+        checks: [
+          { key: "lineSum", title: "Lines sum", status: "pass", message: "OK" },
+          { key: "readingContinuity", title: "Readings", status: "pass", message: "OK" },
+          { key: "rateSchedule", title: "Rates", status: "pass", message: "OK" },
+          { key: "paymentReflection", title: "Payments", status: "pass", message: "OK" },
+        ],
+        failedChecks: [],
+        summary: "Lahat ng nasuring Meralco figures ay nagtutugma.",
+      });
+    }
     throw new Error(`Unexpected request: ${input} ${init?.method ?? "GET"}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -91,10 +133,14 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); select(households[1]!.sin);
     await screen.findByText("12.345 kWh");
     expect(screen.getByRole("cell", { name: "370" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Mga appliance sa bahay" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Ano ang gagawin ko/ })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Target at Missions" })).toBeNull();
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan")).toBe(false);
     select(households[0]!.sin);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
     await screen.findByRole("cell", { name: "230" });
+    expect(screen.getByRole("heading", { name: "Target at Missions" })).toBeTruthy();
     expect(fetchMock.mock.calls.filter(([url]) => url.includes("/readings"))).toHaveLength(1);
   });
 
@@ -283,6 +329,7 @@ describe("merged bill breakdown and scan linkage", () => {
   });
 
   it("taps Weather Effect in 'Bakit ganito?' to reveal bawat mas mainit na araw", async () => {
+    const originalFetch = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (input, init) => {
       if (input === "/api/bakit-ganito") {
         return response({
@@ -315,12 +362,13 @@ describe("merged bill breakdown and scan linkage", () => {
         });
       }
       if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10"] });
-      throw new Error(`Unexpected request: ${input}`);
+      return originalFetch(input, init);
     });
 
     render(<App />);
     await scanAndConfirm();
-    fireEvent.click(screen.getByRole("button", { name: "Bakit ganito?" }));
+    const decodeBtn = await screen.findByRole("button", { name: /Bakit ganito/ });
+    fireEvent.click(decodeBtn);
     await screen.findByRole("heading", { name: "Bakit ganito?" });
 
     const weatherRow = screen.getByRole("button", { name: /Weather Effect/ });
