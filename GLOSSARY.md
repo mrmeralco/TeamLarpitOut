@@ -116,11 +116,11 @@ Up to five Missions, mixed across appliances, that together reach about the 5% T
 _Avoid_: Mission list, recommendations
 
 **Verified Savings**:
-kWh below the weather- and billing-days-adjusted Baseline, measured from a Bill or from smart meter readings, never from the household's own report. Periods with a brownout are excluded.
+kWh below the weather- and billing-days-adjusted Baseline, measured from a Bill (traditional meter) or from a complete day of smart meter readings against that day's expected use (smart meter, ADR-0008), never from the household's own report. Periods (traditional) or days (smart meter) with a brownout are excluded.
 _Avoid_: Self-reported savings, completed mission
 
 **Points**:
-The household's reward balance, earned from Verified Savings, plus one grant of Welcome Points that stays locked until the first Verified Savings.
+The household's reward balance, earned from Verified Savings (at each Bill on a traditional meter, every day on a smart meter), plus one grant of Welcome Points that stays locked until the first Verified Savings.
 _Avoid_: Credits, coins, score
 
 **Household Setup**:

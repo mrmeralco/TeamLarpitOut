@@ -10,7 +10,7 @@ import { ScanBill } from "./components/ScanBill";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
 import { Appliances } from "./components/Appliances";
-import { MissionPlan, PlanSummaryCard } from "./components/MissionPlan";
+import { clearPlanCache, MissionPlan, PlanSummaryCard } from "./components/MissionPlan";
 import { EelioLoader } from "./components/EelioLoader";
 import { clearHomeCache, Home } from "./components/Home";
 import { Rewards } from "./components/Rewards";
@@ -51,6 +51,7 @@ export function App() {
   const end = useCallback((notice: string | null) => {
     setSession(null); setSelectedSin(""); setLinking(false); setAsking(null); setSessionNotice(notice);
     clearHomeCache();
+    clearPlanCache();
     stored.set("token", null); stored.set("household", null);
   }, []);
   const onExpired = useCallback(() => end(EXPIRED), [end]);

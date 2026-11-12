@@ -186,6 +186,28 @@ describe("locked Welcome Points", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...mockCatalog, balance: 100, lockedPoints: 100, spendable: 0 }), { status: 200 })));
     render(<Rewards token="t" household={household} onExpired={() => {}} />);
     expect(await screen.findByText(/100 Points/)).toBeTruthy();
-    expect(screen.getByTestId("locked-points").textContent).toMatch(/100 Welcome Points are locked until your first Verified Savings/);
+    expect(screen.getByTestId("locked-points").textContent).toMatch(/100 Welcome Points unlock with your first savings on a coming Bill/);
+  });
+});
+
+describe("smart meter daily Points (ADR-0008)", () => {
+  const smart: Household = { sin: "9876543210", masked_address: "••• City B", meter_type: "smart" };
+  const day = (date: string, points: number, extra: Partial<RewardsCatalogResult["redemptions"][number]> = {}) => ({
+    id: `day-${smart.sin}-${date}`, period: date.slice(0, 7), day: date, points, savedPesos: points * 100, savedKwh: 0.9,
+    baselineKwh: 11, actualKwh: 10.1, source: "meter_verified", hasOutage: false, excludedReason: null,
+    description: `Verified Savings on ${date}`, createdAt: `${date}T16:00:00.000Z`, ...extra,
+  });
+
+  it("lists each day's Points and says they are verified daily", async () => {
+    const earned = [
+      day("2026-11-13", 10),
+      day("2026-11-12", 0, { hasOutage: true, excludedReason: "An outage/brownout was recorded on this day, so it does not qualify for Points.", description: "A brownout/outage was recorded on November 12, 2026" }),
+    ];
+    vi.stubGlobal("fetch", vi.fn(async () => response({ ...mockCatalog, sin: smart.sin, earned })));
+    render(<Rewards token="t" household={smart} onExpired={() => {}} />);
+    const list = await screen.findByTestId("earned-history");
+    expect(within(list).getByText("+10 pts")).toBeTruthy();
+    expect(within(list).getByText(/does not qualify for Points/)).toBeTruthy();
+    expect(screen.getByTestId("rewards-balance").textContent).toMatch(/each day your smart meter reads/);
   });
 });

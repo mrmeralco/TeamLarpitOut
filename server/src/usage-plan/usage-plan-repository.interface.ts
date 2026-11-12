@@ -11,6 +11,11 @@ export interface UsagePlan {
   airconSetting: number | null;
   missions: { id: string; title: string; kwhSaved: number; pesoValue: number }[];
   createdAt: string;
+  /**
+   * When the Household first started Missions; kept across shuffles, swaps and new periods.
+   * Smart meter daily Points count from the next day, against the days before it (ADR-0008).
+   */
+  startedAt?: string;
   /** Mission Plan (ADR-0007): who picked it, the AI's wording, and every set shown so far (for shuffle). */
   source?: "ai" | "fallback" | "manual";
   wording?: Record<string, { title: string; why: string }>;

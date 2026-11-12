@@ -63,7 +63,7 @@ export function SignUp({ onCodeSent, onSignIn }: { onCodeSent: (email: string, s
     <ul className="features">
       <li><span className="feature-icon"><Icon d={ICON.receipt} size={16} width={2.2} /></span>Every charge explained in plain words</li>
       <li><span className="feature-icon"><Icon d={ICON.chart} size={16} width={2.2} /></span>Scan one bill, get 12 months of history</li>
-      <li><span className="feature-icon"><Icon d={ICON.star} size={16} width={2.2} /></span>Points for verified savings</li>
+      <li><span className="feature-icon"><Icon d={ICON.star} size={16} width={2.2} /></span>Points for real savings on your bill</li>
     </ul>
     <div className="screen-bottom">
       <label className="field-label" htmlFor="signup-email">Email address</label>
