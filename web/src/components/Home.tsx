@@ -4,7 +4,9 @@ import {
   type ApplianceBreakdown, type HomeChargeLine, type Household, type HomeSummary, type MissionPlan, type SetupStatus, type UsageMonth,
 } from "../api/client";
 import { peso } from "../lib/format";
+import { EelioLoader } from "./EelioLoader";
 import { greeting, HomeWrapped, month, plainPeso } from "./HomeWrapped";
+import { SmartMeterUsage } from "./SmartMeterUsage";
 
 /** Eelio's gamified states (docs/mascot/mascot-branding-eelio.md). Always active and helpful; never low battery. */
 type Mood = "charged" | "detective";
@@ -214,7 +216,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   onExpired: () => void;
   /** Opens the charge chat for one line (#50). */
   onAskCharge?: (line: HomeChargeLine, summary: HomeSummary) => void;
-  /** "Want to save on your next bill?" → rewards onboarding (#51). */
+  /** "Want to save on your next bill?" in the bill's Wrapped → Eelio's onboarding in Missions (#51). */
   onSave?: () => void;
   /** Replaces the save card once Household Setup is done (Mission Plan summary). */
   saveCard?: ReactNode;
@@ -229,6 +231,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   const [plan, setPlan] = useState<MissionPlan | null>(cached?.plan ?? null);
   const [appliances, setAppliances] = useState<ApplianceBreakdown | null>(cached?.appliances ?? null);
   const [playing, setPlaying] = useState(false);
+  const smart = household.meter_type === "smart";
   const planReady = !!setup?.complete;
   const appliancesReady = !!setup?.steps.find((st) => st.key === "appliances")?.done;
 
@@ -241,8 +244,11 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
       else if (!homeCache.get(cacheKey)?.data) setError(err instanceof Error ? err.message : "Couldn't load Home.");
     };
     homeApi.summary(token, household.sin, controller.signal).then((d) => { remember(cacheKey, { data: d }); setData(d); }).catch(fail);
-    homeApi.usage(token, household.sin, controller.signal).then((u) => { remember(cacheKey, { usage: u }); setUsage(u); })
-      .catch(() => { if (!controller.signal.aborted && !homeCache.get(cacheKey)?.usage) setUsage([]); });
+    // A smart meter Household's usage card reads the meter instead of the last 12 Bills.
+    if (!smart) {
+      homeApi.usage(token, household.sin, controller.signal).then((u) => { remember(cacheKey, { usage: u }); setUsage(u); })
+        .catch(() => { if (!controller.signal.aborted && !homeCache.get(cacheKey)?.usage) setUsage([]); });
+    }
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, household.sin]);
@@ -264,7 +270,20 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   }, [token, household.sin, appliancesReady]);
 
   if (error) return <section className="card home"><p className="error" role="alert">{error}</p></section>;
-  if (!data) return <section className="dash loading" aria-busy="true"><p className="muted">Eelio is reading your bill…</p></section>;
+  if (!data) {
+    const loadedCount = (usage ? 1 : 0) + (plan ? 1 : 0) + (appliances ? 1 : 0);
+    return (
+      <section className="dash loading" aria-busy="true">
+        <EelioLoader
+          variant="bill"
+          badge="Know Your Bill"
+          title="Eelio is reading your bill…"
+          progress={32 + loadedCount * 22}
+          activeStep={Math.min(2, loadedCount)}
+        />
+      </section>
+    );
+  }
 
   const change = data.bakitGanito;
   const mood = moodFor(data, setup ?? null);
@@ -308,18 +327,13 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
       </div>
 
       <aside className="dash-side" aria-label="Your usage and savings">
-        {saveCard ?? (
-          <button type="button" className="save-card" onClick={onSave}>
-            <span><strong>Want to save on your next bill?</strong>
-              <span>{change && change.habit > 0 ? `${plainPeso(change.habit)} came from usage. Cut it and earn points.` : "Use a little less and earn points on your next bill."}</span>
-            </span>
-            <span aria-hidden="true">→</span>
-          </button>
-        )}
-        <div className="card usage-card">
-          <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh · last 12 bills</span></div>
-          {usage === null ? <p className="muted small">Loading…</p> : <UsageBars months={usage} />}
-        </div>
+        {saveCard}
+        {smart
+          ? <SmartMeterUsage token={token} household={household} onExpired={onExpired} />
+          : <div className="card usage-card">
+            <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh · last 12 bills</span></div>
+            {usage === null ? <p className="muted small">Loading…</p> : <UsageBars months={usage} />}
+          </div>}
       </aside>
 
       <div className="dash-wide">

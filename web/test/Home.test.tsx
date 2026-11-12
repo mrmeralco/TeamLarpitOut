@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clearPlanCache } from "../src/components/MissionPlan";
 import { clearHomeCache, Home } from "../src/components/Home";
 import type { ApplianceBreakdown, HomeChargeLine, HomeSummary, MissionPlan, SetupStatus } from "../src/api/client";
 
@@ -43,10 +44,10 @@ const setupStatus = (done: boolean[]): SetupStatus => ({
 });
 const plan: MissionPlan = {
   period: "2026-11", goal: { cut: 5, kwh: 31, pesos: 34100, baselineKwh: 620, targetKwh: 589, targetPesos: 600000 }, covered: 1, coveredPercent: 5,
-  source: "fallback", points: "",
+  source: "fallback", points: "", rewardPoints: 341,
   missions: [
-    { id: "aircon-off-1h", title: "Turn off the aircon 1 hour earlier", why: "", how: [], appliance: "aircon", kwhSaved: 18.6, pesoValue: 20800, percent: 3, share: 0.6, effort: "Easy", basis: "physics", assumptions: [] },
-    { id: "unplug", title: "Unplug chargers at night", why: "", how: [], appliance: "other", kwhSaved: 12.4, pesoValue: 13300, percent: 2, share: 0.4, effort: "Easy", basis: "physics", assumptions: [] },
+    { id: "aircon-off-1h", title: "Turn off the aircon 1 hour earlier", why: "", how: [], appliance: "aircon", kwhSaved: 18.6, pesoValue: 20800, percent: 3, share: 0.6, rewardPoints: 208, effort: "Easy", basis: "physics", assumptions: [] },
+    { id: "unplug", title: "Unplug chargers at night", why: "", how: [], appliance: "other", kwhSaved: 12.4, pesoValue: 13300, percent: 2, share: 0.4, rewardPoints: 133, effort: "Easy", basis: "physics", assumptions: [] },
   ],
 };
 const usage = [
@@ -63,21 +64,30 @@ const breakdown: ApplianceBreakdown = {
   ],
   totals: { kwh: 610, perKwhCharges: 0, fixedCharges: 0 },
 };
+const readings = {
+  sin: "9876543210", interval: "day", timeZone: "Asia/Manila",
+  range: { from: "2026-11-01T16:00:00.000Z", to: "2026-11-02T16:00:00.000Z" }, available: null,
+  provenance: { kind: "synthetic", note: "Test simulation." },
+  readings: [{ from: "2026-11-01T16:00:00.000Z", to: "2026-11-02T16:00:00.000Z", kwh: 12.5, partial: false }],
+};
 let home: HomeSummary;
 const fetchMock = vi.fn(async (input: string) => {
   if (input.endsWith("/home")) return new Response(JSON.stringify(home));
   if (input.endsWith("/bills")) return new Response(JSON.stringify(usage));
   if (input.endsWith("/missions/plan")) return new Response(JSON.stringify(plan));
   if (input.endsWith("/appliances/breakdown")) return new Response(JSON.stringify(breakdown));
+  if (input.includes("/readings?")) return new Response(JSON.stringify(readings));
   throw new Error(`Unexpected ${input}`);
 });
 
 beforeEach(() => { home = summary(); fetchMock.mockClear(); vi.stubGlobal("fetch", fetchMock); });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearHomeCache(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearPlanCache(); clearHomeCache(); });
 
 describe("Home: gamified with Eelio", () => {
   it("coming back to Home shows the last bill at once and refreshes it in the background", async () => {
     const first = render(<Home token="t" household={household} onExpired={() => {}} />);
+    expect(screen.getByText(/Eelio is reading your bill/)).toBeTruthy();
+    expect(first.container.querySelector('.eelio-loader img[src="/mascot/eelio-swim-1.png"]')).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "Your October bill" })).toBeTruthy();
     first.unmount();
     const calls = fetchMock.mock.calls.length;
@@ -155,6 +165,28 @@ describe("Home: gamified with Eelio", () => {
     expect(side.getByRole("heading", { name: "Your usage" })).toBeTruthy();
   });
 
+  it("a traditional meter's usage card shows the last 12 bills and never reads a smart meter", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    const side = within(await screen.findByRole("complementary", { name: "Your usage and savings" }));
+    expect(await side.findByText("kWh · last 12 bills")).toBeTruthy();
+    expect(side.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("/readings"))).toBe(false);
+  });
+
+  it("a smart meter's usage card is the Hour / Day / Week meter chart instead of the 12 bills", async () => {
+    const smart = { sin: "9876543210", masked_address: "••• Quezon City", meter_type: "smart" as const };
+    home = summary({ meterType: "smart", area: "Quezon City" });
+    render(<Home token="t" household={smart} onExpired={() => {}} />);
+    const side = within(await screen.findByRole("complementary", { name: "Your usage and savings" }));
+    const card = within(side.getByRole("region", { name: "Smart meter usage" }));
+    expect(card.getByRole("heading", { name: "Your usage" })).toBeTruthy();
+    expect(card.getByText(/kWh · smart meter/)).toBeTruthy();
+    for (const label of ["Hour", "Day", "Week"]) expect(card.getByRole("button", { name: label })).toBeTruthy();
+    expect(await card.findByRole("img", { name: "Mon, Nov 2, 2026: 12.5 kWh, complete" })).toBeTruthy();
+    expect(side.queryByText("kWh · last 12 bills")).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/bills"))).toBe(false);
+  });
+
   it("groups the charge tiles by 4 for swiping on phones, with a pager", async () => {
     const more = [...lines, line("supply", "Supply", 15200, 700, "Meralco"), line("metering", "Metering", 9600, null, "Meralco")];
     home = summary({ chargeLines: { featured: more.slice(0, 4), all: more } });
@@ -170,12 +202,10 @@ describe("Home: gamified with Eelio", () => {
     expect(onAsk.mock.calls[0]![0].id).toBe("metering");
   });
 
-  it("before setup: the save card starts onboarding and there is no appliances card", async () => {
-    const onSave = vi.fn();
-    render(<Home token="t" household={household} onExpired={() => {}} onSave={onSave} setup={setupStatus([true, false, false])} />);
+  it("before setup: no 'Want to save?' card and no appliances card", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} onSave={() => {}} setup={setupStatus([true, false, false])} />);
     await screen.findByRole("heading", { name: "Your October bill" });
-    fireEvent.click(screen.getByRole("button", { name: /Want to save on your next bill\?.*₱577\.00 came from usage/ }));
-    expect(onSave).toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Want to save on your next bill/ })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Your appliances" })).toBeNull();
     expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/appliances/breakdown") || url.endsWith("/missions/plan"))).toBe(false);
   });

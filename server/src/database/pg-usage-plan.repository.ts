@@ -1,6 +1,7 @@
 import type { TargetCut } from "../domain/baseline.js";
 import type { UsagePlan, UsagePlanRepository } from "../usage-plan/usage-plan-repository.interface.js";
 import type { Sql } from "./database.module.js";
+import { TtlCache } from "./ttl-cache.js";
 
 interface PlanRow {
   period: string;
@@ -12,6 +13,7 @@ interface PlanRow {
   wording: UsagePlan["wording"] | null;
   shown: UsagePlan["shown"] | null;
   created_at: Date;
+  started_at: Date | null;
 }
 
 interface MissionRow {
@@ -26,11 +28,17 @@ interface MissionRow {
  * Household per period. `find` returns the latest period's plan, as the in-memory version kept only the last one.
  */
 export class PgUsagePlanRepository implements UsagePlanRepository {
+  private readonly cache = new TtlCache<UsagePlan | null>(60_000);
+
   constructor(private readonly sql: Sql) {}
 
-  async find(sin: string): Promise<UsagePlan | null> {
+  find(sin: string): Promise<UsagePlan | null> {
+    return this.cache.get(sin, () => this.load(sin));
+  }
+
+  private async load(sin: string): Promise<UsagePlan | null> {
     const [plan] = await this.sql<PlanRow[]>`
-      select period, cut, target_kwh, target_centavos, aircon_setting, source, wording, shown, created_at
+      select period, cut, target_kwh, target_centavos, aircon_setting, source, wording, shown, created_at, started_at
       from public.usage_plans where sin = ${sin} order by period desc, created_at desc limit 1`;
     if (!plan) return null;
     const missions = await this.sql<MissionRow[]>`
@@ -48,6 +56,7 @@ export class PgUsagePlanRepository implements UsagePlanRepository {
     if (plan.source !== null) result.source = plan.source;
     if (plan.wording !== null) result.wording = plan.wording;
     if (plan.shown !== null) result.shown = plan.shown;
+    if (plan.started_at !== null) result.startedAt = new Date(plan.started_at).toISOString();
     return result;
   }
 
@@ -64,6 +73,8 @@ export class PgUsagePlanRepository implements UsagePlanRepository {
         wording: plan.wording ? tx.json(plan.wording as never) : null,
         shown: plan.shown ? tx.json(plan.shown as never) : null,
         created_at: new Date(plan.createdAt),
+        // When the Household first started Missions (ADR-0008); kept across saves.
+        started_at: plan.startedAt ? new Date(plan.startedAt) : null,
       };
       await tx`
         insert into public.usage_plans ${tx(row)}
@@ -75,7 +86,8 @@ export class PgUsagePlanRepository implements UsagePlanRepository {
           source = excluded.source,
           wording = excluded.wording,
           shown = excluded.shown,
-          created_at = excluded.created_at`;
+          created_at = excluded.created_at,
+          started_at = coalesce(public.usage_plans.started_at, excluded.started_at)`;
       await tx`delete from public.usage_plan_missions where sin = ${sin} and period = ${plan.period}`;
       if (plan.missions.length > 0) {
         const missions = plan.missions.map((m, position) => ({
@@ -90,6 +102,8 @@ export class PgUsagePlanRepository implements UsagePlanRepository {
         await tx`insert into public.usage_plan_missions ${tx(missions)}`;
       }
     });
+    // find() returns the latest period's plan: drop the cached one so it's re-read after any save.
+    this.cache.delete(sin);
     return structuredClone(plan);
   }
 }

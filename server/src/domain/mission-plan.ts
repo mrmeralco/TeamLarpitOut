@@ -4,10 +4,12 @@ import type { ApplianceUsage, Assumption, RankedMission } from "./mission-catalo
 /**
  * The 5% Mission Plan (ADR-0007). Code computes every candidate the household's
  * appliances and routine allow, each with its kWh, pesos and share of the goal;
- * the AI may pick up to five ids and word them, but never supplies a figure.
+ * the AI picks three to five ids and words them, but never supplies a figure.
  * A plan with unknown ids or invented figures is rejected for a greedy pick.
  */
 export const MAX_PLAN = 5;
+/** A plan has at least this many Missions whenever the home's appliances allow it. */
+export const MIN_PLAN = 3;
 
 export interface Candidate extends RankedMission {
   /** Share of the 5% goal, 0–1+. */
@@ -38,10 +40,13 @@ export interface Plan {
 const GROUP: Record<string, string> = {
   "aircon-timer-2h": "aircon-hours", "aircon-off-1h": "aircon-hours", "fan-first-hour": "aircon-hours",
   "aircon-25c": "aircon-setting",
+  "ref-medium": "ref-setting",
 };
 const EFFORT: Record<string, Candidate["effort"]> = {
   "aircon-25c": "Easy", "aircon-off-1h": "Easy", "aircon-timer-2h": "Medium", "fan-first-hour": "Medium", "unplug-standby": "Easy",
   "lights-off": "Easy", "iron-batch": "Medium", "washing-full-loads": "Medium", "ref-medium": "Easy", "tv-hour-less": "Medium",
+  "aircon-clean-filter": "Medium", "tv-eco-mode": "Easy", "ref-door": "Easy", "computer-sleep": "Easy", "fan-off-empty": "Easy",
+  "rice-unplug-warm": "Easy", "wifi-off-night": "Medium",
 };
 const HOW: Record<string, string[]> = {
   "aircon-25c": ["Set the aircon to 25°C instead of colder.", "Use the electric fan to keep air moving."],
@@ -54,6 +59,13 @@ const HOW: Record<string, string[]> = {
   "washing-full-loads": ["Wait until the machine is full before washing.", "Combine small loads into one."],
   "ref-medium": ["Turn the ref dial to the middle setting.", "Keep the door closed and let food cool before storing."],
   "tv-hour-less": ["Pick one hour a day with the TV off, e.g. during dinner."],
+  "aircon-clean-filter": ["Slide out the filter behind the front panel every 2 weeks.", "Rinse it with water, let it dry fully, then put it back."],
+  "tv-eco-mode": ["Open the TV's picture settings.", "Choose Eco, Energy saving or Auto brightness instead of Vivid or Dynamic."],
+  "ref-door": ["Decide what you need before opening the ref.", "Take everything out in one go and close the door right away."],
+  "computer-sleep": ["Set the computer to sleep after 10 minutes of no use.", "Shut it down at night instead of leaving it on."],
+  "fan-off-empty": ["Switch off the fan when you leave a room.", "Point one fan at where everyone is instead of running several."],
+  "rice-unplug-warm": ["Cook rice close to mealtime.", "Unplug the rice cooker once it's done and keep the lid closed to hold the heat."],
+  "wifi-off-night": ["Plug the router into a timer, or switch it off before sleeping.", "Turn it back on in the morning."],
 };
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
@@ -75,6 +87,10 @@ function whyText(m: RankedMission, usage: ApplianceUsage[]): string {
     case "refrigerator": return `The ref runs all day, every day. This ${save}.`;
     case "flat_iron": return `Each time the iron heats up it uses power before you start. This ${save}.`;
     case "washing_machine": return `Half loads use almost as much power as full ones. This ${save}.`;
+    case "computer": return `Your computer is on about ${hours("computer")} hours a day; asleep it uses almost nothing. This ${save}.`;
+    case "electric_fan": return `Your fans run about ${hours("electric_fan")} hours a day. This ${save}.`;
+    case "rice_cooker": return `Keep Warm keeps heating for hours after the rice is done. This ${save}.`;
+    case "wifi": return `The router runs all night even when no one is online. This ${save}.`;
     default: return `This ${save}.`;
   }
 }
@@ -98,7 +114,7 @@ const compatible = (missions: Candidate[]) => new Set(missions.map((m) => m.grou
 /**
  * Deterministic pick: largest savings first, mixed across appliances (no single Mission over 3/4 of
  * the goal at first), then any habit not yet used, until the goal is covered or five are chosen;
- * then trims Missions that aren't needed to stay ≥ 5%.
+ * tops up to three Missions when more habits exist, then trims extras that aren't needed to stay ≥ 5%.
  * `exclude` drops ids (for shuffle), `keep` forces ids (for swap).
  */
 export function greedyPlan(candidates: Candidate[], opts: { exclude?: string[]; keep?: string[] } = {}): Candidate[] {
@@ -120,8 +136,15 @@ export function greedyPlan(candidates: Candidate[], opts: { exclude?: string[]; 
     const closes = options.filter((c) => c.share >= gap - 1e-9).sort((a, b) => a.kwhSaved - b.kwhSaved)[0];
     picked.push(closes ?? options[0]!);
   }
-  // Drop the smallest non-kept Missions while the plan still reaches the goal.
+  // Pass 3 tops the plan up to three Missions (other appliances first) so there is always a choice.
+  while (picked.length < MIN_PLAN) {
+    const options = pool.filter(usable);
+    if (!options.length) break;
+    picked.push(options.find((c) => !picked.some((p) => p.appliance === c.appliance)) ?? options[0]!);
+  }
+  // Drop the smallest non-kept Missions while the plan still reaches the goal and keeps three.
   for (const c of [...picked].sort((a, b) => a.kwhSaved - b.kwhSaved)) {
+    if (picked.length <= MIN_PLAN) break;
     if (opts.keep?.includes(c.id)) continue;
     const without = picked.filter((p) => p.id !== c.id);
     if (coverage(without) >= 1) picked.splice(picked.indexOf(c), 1);
@@ -149,8 +172,8 @@ export function wordingIsFactual(text: string, c: Candidate): boolean {
 
 /**
  * Accepts the AI's plan only if every id is a candidate (no repeats, no two from one
- * habit group, at most five), every figure in its wording is the Mission's own, it isn't
- * a set the caller asked to avoid, and it reaches the goal whenever the candidates can.
+ * habit group, three to five, or as many as the home allows), every figure in its wording is the
+ * Mission's own, it isn't a set the caller asked to avoid, and it reaches the goal whenever the candidates can.
  */
 export function validateAiPlan(
   picked: PlannedMission[] | null | undefined,
@@ -171,6 +194,7 @@ export function validateAiPlan(
     wording[c.id] = { title, why };
   }
   if (!compatible(missions)) return null;
+  if (missions.length < Math.min(MIN_PLAN, greedyPlan(candidates).length)) return null;
   const key = missions.map((m) => m.id).sort().join(",");
   if (opts.avoid?.some((a) => [...a].sort().join(",") === key)) return null;
   const covered = coverage(missions);
@@ -182,6 +206,29 @@ export function validateAiPlan(
 export function fallbackPlan(candidates: Candidate[], opts: { exclude?: string[]; keep?: string[] } = {}): Plan {
   const missions = greedyPlan(candidates, opts);
   return { missions, wording: Object.fromEntries(missions.map((m) => [m.id, { title: m.title, why: m.why }])), covered: coverage(missions), source: "fallback" };
+}
+
+/**
+ * Today's Missions for a smart meter home (its points are counted every day): `count` Missions from
+ * the candidates, one per habit group, a different set each day. One slot always holds one of the
+ * three biggest savings (they take turns), so a day's set can beat the 1% noise band and earn points;
+ * the other slots go round every other habit the home allows, so each one comes up in turn.
+ */
+export function dailyMissions(candidates: Candidate[], date: string, count = MIN_PLAN): Candidate[] {
+  const byGroup = new Map<string, Candidate>();
+  for (const c of [...candidates].sort((a, b) => b.pesoValue - a.pesoValue || a.id.localeCompare(b.id))) {
+    if (!byGroup.has(c.group)) byGroup.set(c.group, c);
+  }
+  const pool = [...byGroup.values()];
+  if (pool.length <= count) return pool;
+  const day = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
+  const turn = (n: number) => ((day % n) + n) % n;
+  const big = pool.slice(0, Math.min(3, pool.length));
+  const lead = big[turn(big.length)]!;
+  const rest = pool.filter((c) => c !== lead);
+  const start = turn(rest.length);
+  const others = Array.from({ length: count - 1 }, (_, i) => rest[(start + i) % rest.length]!);
+  return [lead, ...others].sort((a, b) => b.pesoValue - a.pesoValue);
 }
 
 export { coverage as planCoverage };

@@ -1,9 +1,15 @@
 import { useEffect, useState } from "react";
 import { ApiError, missionPlanApi, type Household, type MissionPlan as Plan, type PlanMission } from "../api/client";
+import { EelioLoader } from "./EelioLoader";
 import { greeting, month, wholePeso } from "./HomeWrapped";
 
-const reminderKey = (sin: string, id: string) => `kuryenteko.reminder.${sin}.${id}`;
 const pesoAmount = (centavos: number) => wholePeso(centavos, false);
+
+/** The last plan per session and Household: the Missions tab and Home's plan card show it at once while a fresh copy loads. */
+const planCache = new Map<string, Plan>();
+const planKey = (token: string, sin: string) => `${token}:${sin}`;
+/** Forgets every cached plan, e.g. when the session ends. */
+export const clearPlanCache = () => planCache.clear();
 
 /** Eelio's three gamified states, identical to Home module (docs/mascot/mascot-branding-eelio.md). */
 type Mood = "charged" | "detective" | "sleepy";
@@ -26,6 +32,22 @@ const ICON = {
   sun: "M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z",
   target: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
   play: "M8 5v14l11-7z",
+  rewards: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z",
+};
+
+/** One icon per appliance a Mission is about. */
+const APPLIANCE_ICON: Record<string, string> = {
+  aircon: "M3 5h18v8H3zM7 17l-1 3M12 17v3M17 17l1 3M7 9h10",
+  electric_fan: "M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M12 10c0-4 2-7 5-6s1 5-3 6M14 12c4 0 7 2 6 5s-5 1-6-3M10 12c-4 0-7-2-6-5s5-1 6 3M12 14v7",
+  tv: "M3 6h18v11H3zM8 21h8M12 17v4",
+  lights: "M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z",
+  refrigerator: "M6 2h12v20H6zM6 10h12M9 5v2M9 13v3",
+  flat_iron: "M3 17h18l-2-7a4 4 0 0 0-4-3H9M3 17l2-4h8M7 20h10",
+  washing_machine: "M5 3h14v18H5zM5 8h14M12 15m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0",
+  computer: "M3 4h18v12H3zM8 20h8M12 16v4",
+  rice_cooker: "M4 10h16v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3zM6 10a6 4 0 0 1 12 0M12 4v2",
+  wifi: "M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a15 15 0 0 1 20 0M12 20h.01",
+  other: "M12 5v14M5 12h14",
 };
 const Svg = ({ d }: { d: string }) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -33,23 +55,26 @@ const Svg = ({ d }: { d: string }) => (
   </svg>
 );
 
-const SWATCH_GROUPS = ["meralco", "passthrough", "government", "subsidy", "other"];
-
 /**
- * Missions tab, mirroring the gamified design of the Home module:
- * A hero card with Eelio's mood and charge, three energy skills, a charges-style breakdown
- * with split-bar and interactive charge-rows, and an appliances-style goal coverage card.
+ * Missions tab, laid out like Home: a compact Eelio card showing collected Points and a "Check rewards"
+ * button alongside a gamified goal meter on top, then the Missions as quest cards below.
  */
-export function MissionPlan({ token, household, missionId, onOpen, onBack, onExpired }: {
+export function MissionPlan({ token, household, missionId, onOpen, onBack, onRewards, onExpired }: {
   token: string;
   household: Household;
   /** The open Mission detail, from `#/missions/m/<id>`. */
   missionId?: string;
   onOpen: (id: string) => void;
   onBack: () => void;
+  onRewards?: () => void;
   onExpired: () => void;
 }) {
-  const [plan, setPlan] = useState<Plan | null>(null);
+  const [plan, setPlanState] = useState<Plan | null>(() => planCache.get(planKey(token, household.sin)) ?? null);
+  const setPlan = (next: Plan | null | ((p: Plan | null) => Plan | null)) => setPlanState((prev) => {
+    const value = typeof next === "function" ? next(prev) : next;
+    if (value) planCache.set(planKey(token, household.sin), value);
+    return value;
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -62,20 +87,12 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
   useEffect(() => {
     const controller = new AbortController();
     missionPlanApi.get(token, household.sin, controller.signal).then(setPlan).catch((err) => {
-      if (!controller.signal.aborted) fail(err, "Couldn't get the Missions.");
+      // A failed background refresh keeps the cached plan on screen.
+      if (!controller.signal.aborted && !planCache.has(planKey(token, household.sin))) fail(err, "Couldn't get the Missions.");
     });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, household.sin]);
-
-  async function shuffle() {
-    setBusy(true); setError(null); setNote(null);
-    try {
-      const next = await missionPlanApi.shuffle(token, household.sin);
-      setPlan(next);
-      if (next.changed === false) setNote("This is the only plan that fits your home right now.");
-    } catch (err) { fail(err, "Couldn't shuffle right now."); } finally { setBusy(false); }
-  }
 
   async function swap(id: string) {
     setBusy(true); setError(null);
@@ -89,150 +106,185 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
   }
 
   if (error && !plan) return <section className="card"><p className="error" role="alert">{error}</p></section>;
-  if (!plan) return <section className="dash loading" aria-busy="true"><p className="muted">Eelio is picking your missions…</p></section>;
+  if (!plan) {
+    return (
+      <section className="dash loading" aria-busy="true">
+        <EelioLoader
+          variant="missions"
+          badge="5% Mission Plan"
+          title="Eelio is picking your missions…"
+        />
+      </section>
+    );
+  }
 
-  const open = missionId ? plan.missions.find((m) => m.id === missionId) : undefined;
-  if (open) return <MissionDetail plan={plan} mission={open} sin={household.sin} busy={busy} error={error} onBack={onBack} onSwap={() => void swap(open.id)} />;
+  const daily = plan.daily;
+  // Smart meter homes see today's Missions (they change daily); others see the month's plan.
+  const shownMissions = daily?.missions ?? plan.missions;
+  const open = missionId ? shownMissions.find((m) => m.id === missionId) : undefined;
+  async function remind(id: string) {
+    setError(null);
+    try {
+      const out = await missionPlanApi.remind(token, household.sin, id);
+      setPlan((p) => (p ? { ...p, reminders: out.reminders } : p));
+    } catch (err) { fail(err, "Couldn't set the reminder right now."); }
+  }
 
-  const pct = Math.min(100, Math.round(plan.covered * 100));
-  const isGoalReached = plan.covered >= 1;
-  const mood: Mood = isGoalReached ? "charged" : "detective";
+  if (open) return <MissionDetail plan={daily ? { ...plan, missions: daily.missions } : plan} mission={open} daily={Boolean(daily)} busy={busy} error={error} onBack={onBack} onSwap={() => void swap(open.id)} onRemind={() => void remind(open.id)} />;
+
   const areaLabel = household.masked_address || "Your home";
+  const totalPoints = plan.rewardPoints ?? plan.missions.reduce((s, m) => s + (m.rewardPoints ?? 0), 0);
+  const collectedPoints = plan.pointsBalance ?? 0;
+  // The goal meter follows what's shown: today's Missions against today's goal for smart meter homes.
+  const shareOf = (m: PlanMission) => (daily ? (daily.goal.pesos > 0 ? (m.pesoValue / daily.goal.pesos) * 100 : 0) : (m.percent / plan.goal.cut) * 100);
+  const meterMissions = daily ? daily.missions : plan.missions;
+  const fill = meterMissions.reduce((s, m) => s + shareOf(m), 0);
+  const scale = Math.max(100, fill);
+  const pct = daily ? Math.min(100, Math.round(fill)) : Math.min(100, Math.round(plan.covered * 100));
+  const isGoalReached = daily ? fill >= 100 : plan.covered >= 1;
+  const coveredPercent = daily ? (fill / 100) * plan.goal.cut : plan.coveredPercent;
+  const legendPercent = (m: PlanMission) => (daily ? (shareOf(m) / 100) * plan.goal.cut : m.percent);
+  const mood: Mood = isGoalReached ? "charged" : "detective";
 
   return (
-    <section className="dash" aria-labelledby="mission-plan-title">
+    <section className="dash mission-dash" aria-labelledby="mission-plan-title">
       <div className="dash-main">
-        {/* Gamified Hero Card with Eelio (identical to Home module's hero) */}
         <div className={`hero mood-${mood}`}>
           <div className="hero-copy">
             <p className="hero-hello">{greeting()} · {areaLabel}</p>
-            <h2 id="mission-plan-title">Use {plan.goal.cut}% less electricity</h2>
+            <h2 id="mission-plan-title">{daily ? `Today: use ${plan.goal.cut}% less` : `Use ${plan.goal.cut}% less electricity`}</h2>
             <p className="hero-amount">
-              ~{pesoAmount(plan.goal.pesos)}
-              <span className="hero-change down">
-                About {Math.round(plan.goal.kwh)} kWh, or ~{pesoAmount(plan.goal.pesos)} off your bill
-              </span>
+              {collectedPoints.toLocaleString("en-PH")} pts
+              <span className="hero-change down">Points collected</span>
             </p>
-            <div className="hero-title">
-              <span className="hero-title-icon"><Svg d={ICON.bolt} /></span>
-              <span><span className="small">Eelio says you're</span><strong>{MOOD[mood].title}</strong></span>
-            </div>
-            <div className="charge-meter" role="meter" aria-label="Eelio's charge" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-              <span className="charge-track"><span style={{ width: `${pct}%` }} /></span>
-              <span className="small">{pct}% charged</span>
-            </div>
-            <div className="plan-bar" role="progressbar" aria-label="How much of the goal the plan covers" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-              <span style={{ width: `${pct}%` }} />
-            </div>
-            <p className="hero-line">Your plan covers {Math.min(plan.coveredPercent, 99.9).toFixed(1)}%{plan.covered >= 1 ? " · Goal reached" : ` of ${plan.goal.cut}%`}</p>
-            <button type="button" className="hero-play" disabled={busy} onClick={() => void shuffle()}>
-              <Svg d={ICON.play} /> Shuffle
+            <p className="hero-line">
+              {daily
+                ? `About ${daily.goal.kwh.toFixed(1)} kWh today · new missions every day`
+                : `About ${Math.round(plan.goal.kwh)} kWh, or ~${pesoAmount(plan.goal.pesos)} off your bill`}
+            </p>
+            <button type="button" className="hero-play" onClick={() => { if (onRewards) onRewards(); else window.location.hash = "/rewards"; }}>
+              <Svg d={ICON.rewards} /> Check rewards
             </button>
           </div>
           <img className="hero-mascot" src={MOOD[mood].img} alt={`Eelio, ${MOOD[mood].title}`} />
         </div>
+      </div>
 
-        {/* Missions Breakdown Card (mirroring Home module's ChargesBreakdown) */}
-        <div className="card charges-card">
-          <div className="charges-head">
-            <h3>Your plan, picked for your home</h3>
-            <span className="muted small">Tap a mission to see how to do it</span>
+      <aside className="dash-side" aria-label="Goal coverage">
+        <div className={`card goal-meter${isGoalReached ? " reached" : ""}`}>
+          <div className="goal-head">
+            <div>
+              <h3>{daily ? "Today's goal" : "Goal coverage"}</h3>
+              <span className="muted small">{daily
+                ? `${new Date(`${daily.date}T00:00:00`).toLocaleDateString("en-PH", { weekday: "long", month: "short", day: "numeric" })} · ${daily.goal.kwh.toFixed(1)} kWh to save`
+                : `${month(plan.period)} plan · ${Math.round(plan.goal.kwh)} kWh to save`}</span>
+            </div>
+            <span className="goal-reward" title={daily ? "Points if you finish today's missions" : "Points if you finish every mission"}><span className="coin" aria-hidden="true">★</span>+{daily ? daily.rewardPoints : totalPoints} pts</span>
           </div>
-          {note && <p className="muted small" role="status" style={{ margin: "4px 0 8px" }}>{note}</p>}
-          {error && <p className="error" role="alert">{error}</p>}
-          <div className="split-bar" role="img" aria-label={plan.missions.map((m) => `${m.title} ${m.percent.toFixed(1)}%`).join(", ")}>
-            {plan.missions.map((m, i) => (
-              <span key={m.id} className={`seg g-${SWATCH_GROUPS[i % SWATCH_GROUPS.length]}`} style={{ width: `${(m.percent / plan.goal.cut) * 100}%` }} />
-            ))}
+          {daily && (
+            <div className="daily-score">
+              <span className={`daily-streak${daily.streak > 0 ? " on" : ""}`}><span aria-hidden="true">🔥</span> {daily.streak}-day streak</span>
+              <span className="daily-yesterday">{daily.yesterday
+                ? daily.yesterday.hasOutage
+                  ? "Yesterday: brownout · 0 pts"
+                  : `Yesterday: +${daily.yesterday.points} pts · ${daily.yesterday.savedKwh.toFixed(1)} kWh saved`
+                : "Yesterday's result shows after your first full day"}</span>
+            </div>
+          )}
+          {plan.climate && (
+            <div className={`climate-chip ${plan.climate.phase}`} title={plan.climate.source}>
+              <span aria-hidden="true">{plan.climate.phase === "elNino" ? "🔥" : plan.climate.phase === "laNina" ? "🌧" : "🌤"}</span>
+              <span><span className="climate-kicker">This month's climate (PAGASA)</span> <strong>{plan.climate.label}</strong> · points ×{plan.climate.multiplier}</span>
+              {plan.outage ? (
+                <span className="climate-brownout recorded">
+                  <span aria-hidden="true">⚡</span> Brownout on Meralco's record{plan.outage.date ? ` · ${new Date(`${plan.outage.date}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}` : ""}
+                  {plan.outage.durationHours ? ` · ${plan.outage.durationHours} h` : ""} · {household.meter_type === "smart" ? "no points that day" : "no points this month"}
+                </span>
+              ) : (
+                <span className="climate-brownout"><span aria-hidden="true">⚡</span> {household.meter_type === "smart" ? "Brownout day = 0 pts" : "Brownout month = 0 pts"}</span>
+              )}
+            </div>
+          )}
+          <div className="goal-track-wrap">
+            <div className="goal-track" role="progressbar" aria-label="How much of the goal the plan covers" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+              {meterMissions.map((m, i) => (
+                <span key={m.id} className={`goal-seg tone-${i % 5}`} style={{ width: `${(shareOf(m) / scale) * 100}%`, animationDelay: `${i * 120}ms` }} title={`${m.title}: ${legendPercent(m).toFixed(1)}%`} />
+              ))}
+            </div>
+            <span className="goal-flag" style={{ left: `${(100 / scale) * 100}%` }} aria-hidden="true"><span>🏁</span><b>{plan.goal.cut}%</b></span>
           </div>
-          <ul className="split-legend">
-            {plan.missions.map((m, i) => (
-              <li key={m.id} title={m.why}>
-                <span className={`swatch g-${SWATCH_GROUPS[i % SWATCH_GROUPS.length]}`} aria-hidden="true" />
-                <span>{m.title}</span>
-                <strong>~{pesoAmount(m.pesoValue)}</strong>
-                <span className="muted">{m.percent.toFixed(1)}%</span>
+          <p className="goal-status">
+            {isGoalReached && <span className="goal-trophy" aria-hidden="true">🏆</span>}
+            {daily ? "Today's missions cover" : "Your plan covers"} {Math.min(coveredPercent, 99.9).toFixed(1)}%{isGoalReached ? " · Goal reached" : ` of ${plan.goal.cut}%`}
+          </p>
+          <ul className="goal-legend">
+            {meterMissions.map((m, i) => (
+              <li key={m.id}>
+                <span className={`goal-dot tone-${i % 5}`} aria-hidden="true" />
+                <span className="goal-legend-name">{m.title}</span>
+                <strong>{legendPercent(m).toFixed(1)}%</strong>
               </li>
             ))}
           </ul>
-          <ul className="charge-list plan-list">
-            {plan.missions.map((m, i) => (
-              <li key={m.id}>
-                <button type="button" className="charge-row plan-item" onClick={() => onOpen(m.id)}>
-                  <span className={`swatch g-${SWATCH_GROUPS[i % SWATCH_GROUPS.length]}`} aria-hidden="true" />
-                  <span className="charge-row-name">
-                    <strong>{m.title}</strong>
-                    <span>{m.why}</span>
+        </div>
+      </aside>
+
+      <div className="dash-wide">
+        <div className="card quests-card">
+          <div className="quests-card-head">
+            <div>
+              <h3>{daily ? "Today's missions" : "Your missions"}</h3>
+              <span className="muted small">{daily
+                ? `${shownMissions.length} missions for today · new ones at midnight · tap one to see how`
+                : `${plan.missions.length} missions picked for your home · tap one to see how`}</span>
+            </div>
+          </div>
+          {note && <p className="muted small" role="status">{note}</p>}
+          {error && <p className="error" role="alert">{error}</p>}
+          <ul className="mission-quests">
+            {shownMissions.map((m, i) => (
+              <li key={m.id} style={{ animationDelay: `${i * 60}ms` }}>
+                <button type="button" className="mission-quest" onClick={() => onOpen(m.id)}>
+                  <span className={`mission-quest-icon tone-${i % 5}`} aria-hidden="true"><Svg d={APPLIANCE_ICON[m.appliance] ?? ICON.bolt} /></span>
+                  <span className="mission-quest-body">
+                    <span className="mission-quest-n">Mission {i + 1} · <span className={`mission-effort ${m.effort.toLowerCase()}`}>{m.effort === "Easy" ? "⚡" : "⚡⚡"} {m.effort}</span></span>
+                    <strong className="mission-quest-title">{m.title}</strong>
+                    <span className="mission-quest-why">{m.why}</span>
                   </span>
-                  <span className="charge-row-amount">
-                    <strong>~{pesoAmount(m.pesoValue)}</strong>
-                    <span className="down">−{m.percent.toFixed(1)}% · ~{pesoAmount(m.pesoValue)}</span>
+                  <span className="mission-quest-side">
+                    <span className="mission-quest-pts"><span className="coin" aria-hidden="true">★</span>+{m.rewardPoints ?? Math.max(1, Math.round(m.pesoValue / 100))} pts</span>
+                    <span className="mission-quest-save">{daily ? `~${pesoAmount(m.pesoValue)} today` : `−${m.percent.toFixed(1)}% · ~${pesoAmount(m.pesoValue)}`}</span>
                   </span>
+                  <span className="mission-quest-arrow" aria-hidden="true">›</span>
                 </button>
               </li>
             ))}
           </ul>
-          <p className="muted small" style={{ margin: "14px 0 0" }}>
+          <p className="muted small quests-note">
             {plan.source === "ai" ? "AI picks and words the missions for your appliances and routine." : "Missions picked for your appliances and routine."}{" "}
-            Every peso value is computed from your bill. Points come only from savings verified on your next bill.
+            Every peso value is computed from your bill.{" "}
+            {household.meter_type === "smart"
+              ? "Points follow what your smart meter reads each day: 1 point per ₱2 saved, after the normal 1% change."
+              : "Points follow your next bill: 1 point per ₱2 saved, after the normal 1% month-to-month change."}
           </p>
         </div>
       </div>
-
-      {/* Side Column (mirroring Home module's dash-side with save-card & appliances-bars) */}
-      <aside className="dash-side" aria-label="Missions breakdown">
-        <div className="save-card" style={{ cursor: "default" }}>
-          <span>
-            <strong>Verified Savings · 1 pt per ₱1 saved</strong>
-            <span>Save about ~{pesoAmount(plan.goal.pesos)} on next month's bill and unlock points automatically.</span>
-          </span>
-          <span aria-hidden="true">→</span>
-        </div>
-
-        <div className="card appliances-card">
-          <div className="usage-head">
-            <h3>Goal coverage by mission</h3>
-            <span className="muted small">{month(plan.period)} plan · {Math.round(plan.goal.kwh)} kWh</span>
-          </div>
-          <ul className="appliance-bars">
-            {plan.missions.map((m) => (
-              <li key={m.id}>
-                <span className="appliance-name">
-                  <strong>{m.title}</strong>
-                  <span>Effort: {m.effort}</span>
-                </span>
-                <span className="appliance-track" aria-hidden="true">
-                  <span style={{ width: `${Math.min(100, (m.percent / plan.goal.cut) * 100)}%` }} />
-                </span>
-                <span className="appliance-amount">
-                  <strong>{m.percent.toFixed(1)}%</strong>
-                  <span>~{pesoAmount(m.pesoValue)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="muted small">Estimates from your appliances and routine; each mission covers a share of your 5% goal.</p>
-        </div>
-      </aside>
     </section>
   );
 }
 
-function MissionDetail({ plan, mission, sin, busy, error, onBack, onSwap }: {
-  plan: Plan; mission: PlanMission; sin: string; busy: boolean; error: string | null; onBack: () => void; onSwap: () => void;
+function MissionDetail({ plan, mission, daily = false, busy, error, onBack, onSwap, onRemind }: {
+  plan: Plan; mission: PlanMission; daily?: boolean; busy: boolean; error: string | null; onBack: () => void; onSwap: () => void; onRemind: () => void;
 }) {
   const index = plan.missions.indexOf(mission);
-  const [reminded, setReminded] = useState(() => { try { return window.localStorage.getItem(reminderKey(sin, mission.id)) === "1"; } catch { return false; } });
-  const remind = () => {
-    try { window.localStorage.setItem(reminderKey(sin, mission.id), "1"); } catch { /* reminder is a convenience only */ }
-    setReminded(true);
-  };
+  // Saved on the server, so the reminder shows on every device.
+  const reminded = plan.reminders?.includes(mission.id) ?? false;
 
   return (
     <section className="flow mission-detail" aria-labelledby="mission-detail-title">
       <div className="card-head">
         <button type="button" className="back" aria-label="Back to plan" onClick={onBack}>‹</button>
-        <span className="muted small">Mission {index + 1} of {plan.missions.length} in your plan</span>
+        <span className="muted small">Mission {index + 1} of {plan.missions.length} {daily ? "for today" : "in your plan"}</span>
       </div>
 
       <h2 id="mission-detail-title">{mission.title}</h2>
@@ -243,12 +295,16 @@ function MissionDetail({ plan, mission, sin, busy, error, onBack, onSwap }: {
           <dd>{mission.percent.toFixed(1)}%</dd>
         </div>
         <div>
-          <dt>Could save</dt>
+          <dt>{daily ? "Could save today" : "Could save"}</dt>
           <dd>~{pesoAmount(mission.pesoValue)}</dd>
         </div>
         <div>
           <dt>Effort</dt>
           <dd>{mission.effort}</dd>
+        </div>
+        <div>
+          <dt>Worth</dt>
+          <dd>+{mission.rewardPoints ?? Math.max(1, Math.round(mission.pesoValue / 100))} pts</dd>
         </div>
       </dl>
 
@@ -281,18 +337,18 @@ function MissionDetail({ plan, mission, sin, busy, error, onBack, onSwap }: {
 
       <p className="small muted">{plan.source === "ai" ? "Suggested by AI for your home. " : ""}The kWh and peso values are estimates from your appliances, routine and bill history.</p>
       {error && <p className="error" role="alert">{error}</p>}
-      <button type="button" className="primary" disabled={reminded} onClick={remind}>{reminded ? "Reminder set ✓" : "Remind me tonight"}</button>
-      <button type="button" className="ghost wide" disabled={busy} onClick={onSwap}>Swap for a different mission</button>
+      <button type="button" className="primary" disabled={reminded} onClick={onRemind}>{reminded ? "Reminder set ✓" : "Remind me tonight"}</button>
+      {!daily && <button type="button" className="ghost wide" disabled={busy} onClick={onSwap}>Swap for a different mission</button>}
     </section>
   );
 }
 
 /** Home's card once setup is done: the Mission Plan in one line. */
 export function PlanSummaryCard({ token, sin, onOpen }: { token: string; sin: string; onOpen: () => void }) {
-  const [plan, setPlan] = useState<Plan | null>(null);
+  const [plan, setPlan] = useState<Plan | null>(() => planCache.get(planKey(token, sin)) ?? null);
   useEffect(() => {
     const controller = new AbortController();
-    missionPlanApi.get(token, sin, controller.signal).then(setPlan).catch(() => {});
+    missionPlanApi.get(token, sin, controller.signal).then((p) => { planCache.set(planKey(token, sin), p); setPlan(p); }).catch(() => {});
     return () => controller.abort();
   }, [token, sin]);
   return (

@@ -30,23 +30,27 @@ describe("smart meter usage", () => {
     expect(init?.headers).toEqual({ Authorization: "Bearer session" });
     expect(init?.cache).toBe("no-store");
     expect(init?.signal).toBeInstanceOf(AbortSignal);
-    expect(screen.getByText(/Synthetic demo data/).textContent).toContain("Fixed test simulation.");
-    expect(screen.getByRole("img", { name: /Daily usage chart in kWh/ })).toBeTruthy();
-    fireEvent.click(screen.getByText("See the readings table"));
-    const table = screen.getByRole("table");
-    expect(within(table).getByRole("cell", { name: "12.345" })).toBeTruthy();
-    expect(within(table).getByRole("cell", { name: "Partial" })).toBeTruthy();
-    expect(within(table).getByRole("rowheader", { name: /Nov 2, 2026, 12:00 AM/ })).toBeTruthy();
-    expect(screen.getByText(/Partial: some hours are missing/)).toBeTruthy();
+    expect(screen.getByText("Synthetic demo data, not real meter readings").getAttribute("title")).toBe("Fixed test simulation.");
+    const chart = screen.getByRole("group", { name: /Daily usage chart in kWh/ });
+    // No readings table: every bar names its exact value, shown visually as a tooltip.
+    expect(screen.queryByRole("table")).toBeNull();
+    expect(screen.queryByText("See the readings table")).toBeNull();
+    expect(within(chart).getByRole("img", { name: "Mon, Nov 2, 2026: 12.345 kWh, complete" })).toBeTruthy();
+    expect(within(chart).getByRole("img", { name: "Tue, Nov 3, 2026: 0.333 kWh, partial: some hours missing" })).toBeTruthy();
+    expect(screen.getByText(/Striped: partial day, some hours are missing/)).toBeTruthy();
+    // The shown window stays available on the caption without taking a line of its own.
+    expect(screen.getByText(/last 30 days available/).closest("figcaption")!.getAttribute("title"))
+      .toBe("Showing Nov 2, 2026, 12:00 AM – Nov 4, 2026, 12:00 AM of the simulation (Nov 2, 2026, 12:00 AM – Nov 4, 2026, 12:00 AM), Asia/Manila time.");
   });
 
   it.each([null, range])("handles empty readings with available=%j", async (available) => {
     fetchMock.mockResolvedValue(response(fixture({ available, range: available, readings: [] })));
     mount();
     await screen.findByText("No usage readings in this range yet.");
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.queryByRole("group", { name: /usage chart/ })).toBeNull();
     expect(screen.queryByText(/total of the available/)).toBeNull();
     expect(screen.getByText(/Synthetic demo data/)).toBeTruthy();
+    expect(screen.queryByText(/days available/)).toBeNull();
   });
 
   it("shows a loading state, then retries after a source error", async () => {
@@ -71,7 +75,7 @@ describe("smart meter usage", () => {
     fetchMock.mockResolvedValue(response({ error: "Expired" }, 401));
     mount();
     await waitFor(() => expect(expired).toHaveBeenCalledOnce());
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.queryByRole("group", { name: /usage chart/ })).toBeNull();
   });
 
   it("aborts on unmount and ignores a delayed 401", async () => {
@@ -86,18 +90,18 @@ describe("smart meter usage", () => {
   });
 
   it.each([
-    { label: "Hour", interval: "hour", title: "Hourly", window: "24 hours", from: "2026-11-01T16:00:00Z", to: "2026-11-01T17:00:00Z", tick: "12:00 AM" },
-    { label: "Day", interval: "day", title: "Daily", window: "30 days", from: "2026-11-01T16:00:00Z", to: "2026-11-02T16:00:00Z", tick: "Nov 2" },
-    { label: "Week", interval: "week", title: "Weekly", window: "12 weeks", from: "2026-11-01T16:00:00Z", to: "2026-11-08T16:00:00Z", tick: "Nov 2" },
-  ] as const)("requests the $interval preset and displays Manila labels and values", async ({ label, interval, title, window, from, to, tick }) => {
+    { label: "Hour", interval: "hour", title: "Hourly", window: "24 hours", from: "2026-11-01T16:00:00Z", to: "2026-11-01T17:00:00Z", tick: "12 AM", period: "Nov 2, 2026, 12:00 AM – 1:00 AM" },
+    { label: "Day", interval: "day", title: "Daily", window: "30 days", from: "2026-11-01T16:00:00Z", to: "2026-11-02T16:00:00Z", tick: "Nov 2", period: "Mon, Nov 2, 2026" },
+    { label: "Week", interval: "week", title: "Weekly", window: "12 weeks", from: "2026-11-01T16:00:00Z", to: "2026-11-08T16:00:00Z", tick: "Nov 2", period: "Nov 2 – Nov 8, 2026" },
+  ] as const)("requests the $interval preset and displays Manila labels and values", async ({ label, interval, title, window, from, to, tick, period }) => {
     fetchMock.mockImplementation(async (url) => {
       const requested = new URL(url, "http://localhost").searchParams.get("interval");
       return response(fixture({ interval: requested as UsageReadings["interval"], readings: [{ from, to, kwh: 0.123, partial: false }] }));
     });
     mount();
-    await screen.findByRole("img");
+    await screen.findByRole("group", { name: /usage chart/ });
     fireEvent.click(screen.getByRole("button", { name: label }));
-    const chart = await screen.findByRole("img", { name: new RegExp(`${title} usage chart`) });
+    const chart = await screen.findByRole("group", { name: new RegExp(`${title} usage chart`) });
     expect(chart.textContent).toContain(tick);
     expect(screen.getByText(new RegExp(window))).toBeTruthy();
     expect(screen.getByRole("button", { name: label }).getAttribute("aria-pressed")).toBe("true");
@@ -105,9 +109,9 @@ describe("smart meter usage", () => {
     // The server contract selects bounded windows from its advertised dates; never use the browser clock.
     expect(new URL(url, "http://localhost").searchParams.toString()).toBe(`interval=${interval}`);
     expect(screen.getByText("0.123 kWh")).toBeTruthy();
-    fireEvent.click(screen.getByText("See the readings table"));
-    expect(screen.getByRole("rowheader").textContent).toContain("Nov 2, 2026, 12:00 AM");
-    expect(screen.getByRole("cell", { name: "0.123" })).toBeTruthy();
+    fireEvent.mouseEnter(within(chart).getByRole("img", { name: `${period}: 0.123 kWh, complete` }));
+    const tip = screen.getByRole("tooltip", { hidden: true });
+    expect(tip.textContent).toBe(`${period}0.123 kWhComplete`);
   });
 
   it("ignores out-of-order intervals, including a stale 401, even when fetch ignores cancellation", async () => {
@@ -120,12 +124,12 @@ describe("smart meter usage", () => {
     expect(pending[0]!.signal.aborted).toBe(true);
     expect(pending[1]!.signal.aborted).toBe(true);
     await act(async () => pending[2]!.resolve(response(fixture({ interval: "week" }))));
-    await screen.findByRole("img", { name: /Weekly/ });
+    await screen.findByRole("group", { name: /Weekly/ });
     await act(async () => {
       pending[0]!.resolve(response(fixture()));
       pending[1]!.resolve(response({ error: "Old session expired" }, 401));
     });
-    expect(screen.getByRole("img", { name: /Weekly/ })).toBeTruthy();
+    expect(screen.getByRole("group", { name: /Weekly/ })).toBeTruthy();
     expect(expired).not.toHaveBeenCalled();
   });
 
@@ -135,12 +139,12 @@ describe("smart meter usage", () => {
     let resolve!: (r: Response) => void;
     fetchMock.mockImplementationOnce(() => new Promise((r) => { resolve = r; }));
     fireEvent.click(screen.getByRole("button", { name: "Week" }));
-    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.queryByRole("group", { name: /usage chart/ })).toBeNull();
     expect(screen.queryByText("12.678 kWh")).toBeNull();
     await act(async () => resolve(response({ error: "Try again" }, 502)));
     fetchMock.mockResolvedValue(response(fixture({ interval: "week" })));
     fireEvent.click(screen.getByRole("button", { name: "Retry readings" }));
-    await screen.findByRole("img", { name: /Weekly/ });
+    await screen.findByRole("group", { name: /Weekly/ });
     expect(fetchMock.mock.calls.at(-1)![0]).toContain("interval=week");
     expect(screen.getByRole("button", { name: "Week" }).getAttribute("aria-pressed")).toBe("true");
   });
@@ -152,13 +156,46 @@ describe("smart meter usage", () => {
     })));
     mount();
     fireEvent.click(screen.getByRole("button", { name: "Week" }));
-    const chart = await screen.findByRole("img", { name: /Weekly/ });
-    expect(chart.querySelectorAll("rect")).toHaveLength(1);
+    const chart = await screen.findByRole("group", { name: /Weekly/ });
+    expect(chart.querySelectorAll(".meter-usage-bar")).toHaveLength(1);
     expect(chart.innerHTML).not.toMatch(/NaN|Infinity/);
     expect(screen.getByText(`${value} kWh`)).toBeTruthy();
-    expect(screen.getByText(/Not a full week/)).toBeTruthy();
-    fireEvent.click(screen.getByText("See the readings table"));
-    expect(screen.getAllByRole("row")).toHaveLength(2);
-    expect(screen.getByRole("cell", { name: String(value) })).toBeTruthy();
+    expect(screen.getByText(/Striped: partial week/)).toBeTruthy();
+    fireEvent.click(within(chart).getByRole("img"));
+    const tip = screen.getByRole("tooltip", { hidden: true });
+    expect(tip.textContent).toContain(`${value} kWh`);
+    expect(tip.textContent).toContain("Partial: some hours missing");
+  });
+  it("shows the tooltip on hover, tap and keyboard focus; arrow keys move between bars and Esc hides it", async () => {
+    mount();
+    const chart = await screen.findByRole("group", { name: /Daily usage chart/ });
+    const [first, second] = within(chart).getAllByRole("img");
+    expect(screen.queryByRole("tooltip", { hidden: true })).toBeNull();
+    // One tab stop for the whole chart.
+    expect(first!.getAttribute("tabindex")).toBe("0");
+    expect(second!.getAttribute("tabindex")).toBe("-1");
+
+    fireEvent.mouseEnter(second!);
+    expect(screen.getByRole("tooltip", { hidden: true }).textContent).toContain("0.333 kWh");
+    fireEvent.mouseLeave(chart);
+    expect(screen.queryByRole("tooltip", { hidden: true })).toBeNull();
+
+    fireEvent.click(first!);
+    expect(screen.getByRole("tooltip", { hidden: true }).textContent).toContain("12.345 kWh");
+
+    act(() => first!.focus());
+    fireEvent.keyDown(first!, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(second);
+    expect(second!.getAttribute("tabindex")).toBe("0");
+    expect(screen.getByRole("tooltip", { hidden: true }).textContent).toContain("0.333 kWh");
+    fireEvent.keyDown(second!, { key: "ArrowRight" }); // stays on the last bar
+    expect(document.activeElement).toBe(second);
+    fireEvent.keyDown(second!, { key: "Home" });
+    expect(document.activeElement).toBe(first);
+    // Leaving with the mouse keeps the focused bar's tooltip.
+    fireEvent.mouseLeave(chart);
+    expect(screen.getByRole("tooltip", { hidden: true }).textContent).toContain("12.345 kWh");
+    fireEvent.keyDown(first!, { key: "Escape" });
+    expect(screen.queryByRole("tooltip", { hidden: true })).toBeNull();
   });
 });

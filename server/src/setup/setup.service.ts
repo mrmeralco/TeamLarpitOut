@@ -6,7 +6,7 @@ import { findAppliance, UNKNOWN } from "../domain/appliance-catalog.js";
 import type { Household } from "../domain/household.js";
 import { appliancesFromGrid, GRID_TYPES, gridCatalog, MAX_PER_TYPE, routineHours, type GridType } from "../domain/routine-presets.js";
 import { VisionUnavailableError, type BillImage, type VisionProvider } from "../vision/vision-provider.interface.js";
-import { WELCOME_POINTS } from "../domain/welcome-points.js";
+import { hasVerifiedSavings, WELCOME_POINTS } from "../domain/welcome-points.js";
 import type { PointsRepository } from "../usage-plan/points-repository.interface.js";
 import type { AirconPattern, HomePattern, SetupRecord, SetupRepository } from "./setup-repository.js";
 
@@ -36,8 +36,8 @@ export class SetupService {
   }
 
   async status(sin: string) {
-    const record = await this.repository.find(sin);
-    const appliances = await this.hasAppliances(sin);
+    // Independent reads go out together (each is a round trip to the database).
+    const [record, appliances, firstEntries] = await Promise.all([this.repository.find(sin), this.hasAppliances(sin), this.points.getEntries(sin)]);
     const done: Record<(typeof SETUP_STEPS)[number]["key"], boolean> = {
       household: record.household !== undefined,
       appliances: appliances.saved,
@@ -46,10 +46,13 @@ export class SetupService {
     const steps = SETUP_STEPS.map((s) => ({ ...s, done: done[s.key] }));
     const doneCount = steps.filter((s) => s.done).length;
     const complete = record.completedAt !== undefined || doneCount === steps.length;
-    if (complete && !record.completedAt) await this.complete(sin, record);
-    const entries = await this.points.getEntries(sin);
+    let entries = firstEntries;
+    if (complete && !record.completedAt) {
+      await this.complete(sin, record);
+      entries = await this.points.getEntries(sin); // now with the Welcome Points
+    }
     const welcome = entries.find((e) => e.source === "welcome");
-    const unlocked = entries.some((e) => e.source === "bill_verified" && e.points > 0);
+    const unlocked = hasVerifiedSavings(entries);
     return {
       steps,
       doneCount,
@@ -61,7 +64,15 @@ export class SetupService {
       grid: record.grid ?? null,
       gridCatalog: gridCatalog(record.airconPhoto?.kwhPerHour),
       welcomePoints: { points: WELCOME_POINTS, granted: Boolean(welcome), locked: Boolean(welcome) && !unlocked },
+      /** Eelio's Missions onboarding was already shown for this Household (on any device). */
+      onboardingSeen: record.onboardingSeenAt !== undefined,
     };
+  }
+
+  async markOnboardingSeen(sin: string) {
+    const record = await this.repository.find(sin);
+    if (!record.onboardingSeenAt) await this.repository.save(sin, { ...record, onboardingSeenAt: new Date().toISOString() });
+    return this.status(sin);
   }
 
   async isComplete(sin: string): Promise<boolean> {

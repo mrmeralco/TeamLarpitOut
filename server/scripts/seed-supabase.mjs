@@ -1,6 +1,7 @@
 // Loads the demo data into Supabase: `pnpm --filter @kuryenteko/server db:seed` (builds first).
 // Needs DATABASE_URL (server/.env) and the migrations in supabase/migrations applied.
 // With LOCAL_SEED_FILE set, the real-Bill Household gets its real CAN from that git-ignored file.
+// `--fresh` (`pnpm db:reseed`) first deletes every login and all app data, leaving only the seed.
 import { existsSync } from "node:fs";
 import { connect } from "../dist/database/database.module.js";
 import { buildSeed, seedDatabase } from "../dist/database/seed.js";
@@ -13,8 +14,11 @@ if (!url) {
 }
 const sql = connect(url, 1);
 try {
-  const done = await seedDatabase(sql, await buildSeed());
+  const fresh = process.argv.includes("--fresh");
+  const done = await seedDatabase(sql, await buildSeed(), { fresh });
+  if (fresh) console.log(`Fresh: removed ${done.removedLogins} login(s) and every Household's Setup, appliances, Mission Plans and Points.`);
   console.log(`Seeded ${done.households} Households (${done.bills} Bills), ${done.accounts} test logins, ${done.links} link(s).`);
+  console.log(`Reference data: ${done.readings} smart meter readings, ${done.outages} outages, ${done.rateSchedules} Rate Schedules, ${done.weatherDays} weather days, ${done.rewards} Rewards.`);
 } finally {
   await sql.end({ timeout: 5 });
 }

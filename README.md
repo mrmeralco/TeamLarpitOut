@@ -129,21 +129,21 @@ Scanning and `POST /api/bakit-ganito` remain public. A scan grants no access to 
 
 1. Apply `supabase/migrations/*.sql` (Supabase SQL editor, or `supabase db push`).
 2. Set `DATABASE_URL` in `server/.env` (Transaction pooler, port 6543, `?sslmode=require`).
-3. `pnpm --filter @kuryenteko/server db:seed`: loads the three Households and the test logins (safe to re-run).
+3. `pnpm --filter @kuryenteko/server db:seed`: loads the three Households and the two test logins (safe to re-run; other sign-ups are left alone).
+4. `pnpm --filter @kuryenteko/server db:reseed`: the same, but first **deletes every login** (with sessions and links), every Household's Setup, appliances, Mission Plans, typed readings and Points, and every Meralco Household that is not seeded. Use it to get back to just the two test logins with a fresh onboarding.
 
 **Real-Bill Household** (`server/src/data/meralco-real-bill-seed.json`): one real September 2026 Meralco Bill, used with the account holder's consent. Every amount, rate, reading and date is transcribed; the name, street address, CAN, Service ID Number, meter number and invoice numbers are **not** in git (placeholders: CAN `0900000273`, SIN `090000027300`). The 11 earlier Bills are rebuilt from what the real Bill prints: kWh from its chart, readings counted back, and May–August totals equal to "What you've paid". `pnpm --filter @kuryenteko/server data:real-bill` regenerates `meralco-real-bill.json` and rebuilds `rate-schedules.json` on the real September rates (each month's `_note` says real, reconstructed or sample), then regenerates the older demo histories.
 
 To scan the paper Bill live, copy `server/seed.local.example.json` to `server/seed.local.json` (git-ignored), fill in the real CAN (and SIN), and set `LOCAL_SEED_FILE=seed.local.json`. Both the in-memory mock and `db:seed` use it.
 
-**Test logins** (password `eelio-demo-2026`; created at startup in memory, or by `db:seed`):
+**Test logins** (password `eelio-demo-2026`; created at startup in memory, or by `db:seed`). One per meter type, each holding its own Household:
 
-| Login | State | Shows |
+| Login | Household | Shows |
 |---|---|---|
-| `bill-owner@example.com` | linked to the real-Bill Household | Home, Bill History, "Bakit ganito?" (Aug → Sep 2026: −₱236.86), Bill Checks all green |
-| `new-user@example.com` | not linked | scanning the Bill while someone holds it → "already linked to another login" |
-| `other-user@example.com` | not linked | the same, from a second login |
+| `traditional@example.com` | real-Bill Household (traditional meter, Caloocan City) | Home with the last 12 Bills, Bill History, "Bakit ganito?" (Aug → Sep 2026: −₱236.86), Bill Checks all green, a monthly Mission Plan |
+| `smart-meter@example.com` | smart sample Household (`9876543210`, CAN `3901567213`, Quezon City) | Home with the Hour / Day / Week meter chart, daily Missions and Points |
 
-To show linking live, start with `DEMO_OWNER_LINKED=false` (and re-run `db:seed` when using Supabase): nobody holds the real-Bill Household, so the first login that scans the Bill gets "found" → "Yes, explain my bill", and every later login gets "already linked". Scanning the paper Bill needs its real CAN in the local seed. Re-running `db:seed` resets who holds it.
+To show linking live, start with `DEMO_OWNER_LINKED=false` (and re-run `db:seed` when using Supabase): `traditional@` starts without a Household, so scanning the real Bill gets "found" → "Yes, explain my bill". Scanning the paper Bill needs its real CAN in the local seed. Re-running `db:seed` resets who holds both seeded Households.
 
 ### Mock smart meter readings and usage chart (issue #10)
 
@@ -175,9 +175,9 @@ The sample above illustrates the response shape; the kWh value and shortened not
 
 For a logged-in demo session, `GET /api/households/9876543210/readings` returns the default daily window. `GET /api/households/9876543210/readings?interval=hour` returns hourly usage. Explicit example: `GET /api/households/9876543210/readings?from=2026-11-02T00:00:00%2B08:00&to=2026-11-03T00:00:00%2B08:00&interval=day`.
 
-Log in with `demo@example.com` / `kuryenteko-demo`, then choose the **Smart meter** Household. Bill History and daily usage load automatically; no Bill upload is needed. Traditional Households load Bills without requesting or displaying interval usage.
+Link the smart sample Household (CAN `3901567213`: **Simulate bill data** on the scan screen, or `POST /api/bills/simulate` `{ "meterType": "smart" }` then confirm), then choose it. On Home, a smart meter Household's **Your usage** card is the meter chart below instead of the last 12 Bills; a traditional Household keeps the 12-Bill bars and never requests interval usage.
 
-The **Hour / Day / Week** buttons show the latest 24 hours / 30 days / 12 weeks available from the source, with Day selected initially. The frontend omits date bounds and lets the API choose these windows from its metadata; they are simulation dates, not a live rolling window. Charts and expandable readings tables use `Asia/Manila`, kWh per interval, exact start/end times, and partial coverage indicators. Weeks begin Monday. Totals include only returned readings; missing hours are not zero-filled. Synthetic usage is independent of the demo Bills and need not match their consumption totals.
+The **Hour / Day / Week** buttons show the latest 24 hours / 30 days / 12 weeks available from the source, with Day selected initially. The frontend omits date bounds and lets the API choose these windows from its metadata; they are simulation dates, not a live rolling window. The chart uses `Asia/Manila`, kWh per interval and partial coverage indicators; each bar's exact period, kWh and coverage show in a tooltip on hover, tap or keyboard focus (the chart is one tab stop, arrow keys / Home / End move between bars, Esc hides the tooltip), and each bar carries the same text as its accessible name. Weeks begin Monday. Totals include only returned readings; missing hours are not zero-filled. Synthetic usage is independent of the demo Bills and need not match their consumption totals.
 
 Switching intervals cancels the previous load and clears its chart. Switching Household, clearing selection, logout, and session expiry clear protected usage immediately. Reading errors have their own retry and leave Bills usable; a protected `401` returns the app to login. Retry keeps the selected interval; choosing a different Household resets to Day.
 

@@ -76,14 +76,19 @@ describe("the real-Bill Household (one real September 2026 Bill)", () => {
 });
 
 describe("test logins", () => {
-  it("are verified accounts with the demo password; only the owner is linked", async () => {
+  it("are two verified accounts with the demo password, one per meter type, each holding its own Household", async () => {
     const accounts = await demoAccounts();
+    expect(accounts.map((a) => a.email)).toEqual(["traditional@example.com", "smart-meter@example.com"]);
     expect(accounts.map((a) => a.email)).toEqual(DEMO_LOGINS.map((l) => l.email));
+    expect(new Set(accounts.map((a) => a.phone)).size).toBe(accounts.length);
     for (const a of accounts) expect(a.phoneVerified && (await verifyPassword(DEMO_PASSWORD, a.passwordHash!))).toBe(true);
+    const smart = { ownerId: ownerIdForEmail("smart-meter@example.com"), sin: "9876543210", can: "3901567213", status: "active" };
     expect(demoLinks({ can: "0900000273", sin: "090000027300" })).toEqual([
-      { ownerId: ownerIdForEmail("bill-owner@example.com"), sin: "090000027300", can: "0900000273", status: "active" },
+      { ownerId: ownerIdForEmail("traditional@example.com"), sin: "090000027300", can: "0900000273", status: "active" },
+      smart,
     ]);
-    expect(demoLinks({ can: "0900000273", sin: "090000027300" }, false)).toEqual([]);
+    // DEMO_OWNER_LINKED=false: the traditional login links the real Bill live; the smart login keeps its Household.
+    expect(demoLinks({ can: "0900000273", sin: "090000027300" }, false)).toEqual([smart]);
   });
 });
 

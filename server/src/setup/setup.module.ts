@@ -24,6 +24,13 @@ export class SetupController {
     return this.setup.status(sin);
   }
 
+  @Post("onboarding-seen")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  onboardingSeen(@Param("sin") sin: string) {
+    return this.setup.markOnboardingSeen(sin);
+  }
+
   @Put("household")
   @Header("Cache-Control", "no-store")
   household(@Param("sin") sin: string, @Body() body: SetupHouseholdDto) {

@@ -6,6 +6,7 @@ import {
   type Household,
   type RewardsCatalogResult,
 } from "../api/client";
+import { EelioLoader } from "./EelioLoader";
 
 interface RewardsProps {
   token: string;
@@ -77,6 +78,18 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
     }
   };
 
+  if (loading && !data) {
+    return (
+      <section className="dash loading" id="rewards" aria-busy="true" aria-label="Rewards">
+        <EelioLoader
+          variant="rewards"
+          badge="Rewards Vault"
+          title="Loading the Rewards catalog…"
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="card rewards-card anchor" id="rewards" aria-labelledby="rewards-heading">
       <div className="rewards-header">
@@ -89,7 +102,14 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
         </p>
       </div>
 
-      {loading && <p className="muted">Loading the Rewards catalog…</p>}
+      {loading && (
+        <EelioLoader
+          compact
+          variant="rewards"
+          badge="Rewards Vault"
+          title="Loading the Rewards catalog…"
+        />
+      )}
       {error && <p className="error">{error}</p>}
 
       {feedback && (
@@ -107,11 +127,12 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
             </div>
             {(data.lockedPoints ?? 0) > 0 && (
               <p className="small" data-testid="locked-points">
-                🔒 {data.lockedPoints} Welcome Points are locked until your first Verified Savings on a coming Bill.
+                🔒 {data.lockedPoints} Welcome Points unlock with your first savings
+                {household.meter_type === "smart" ? " on a coming day." : " on a coming Bill."}
               </p>
             )}
             <p className="muted">
-              1 Point for every ₱1 of Verified Savings. Use them on sample rewards from our partners.
+              1 point for every ₱2 you save {household.meter_type === "smart" ? "each day your smart meter reads" : "on your bill"}, more in hot El Niño months; none when there's a brownout. Use them on sample rewards from our partners.
             </p>
           </div>
 
@@ -199,6 +220,23 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
               </div>
             ))}
           </div>
+
+          {data.earned && data.earned.length > 0 && (
+            <div className="redemptions-history" data-testid="earned-history">
+              <h3>Points earned</h3>
+              <ul className="redemptions-list">
+                {data.earned.map((e) => (
+                  <li key={e.id} className="redemption-entry">
+                    <div className="row" style={{ justifyContent: "space-between" }}>
+                      <span>{e.description}</span>
+                      <strong>{e.points > 0 ? `+${e.points}` : e.points} pts</strong>
+                    </div>
+                    {e.excludedReason && <small className="muted">{e.excludedReason}</small>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {data.redemptions && data.redemptions.length > 0 && (
             <div className="redemptions-history" data-testid="redemptions-history">
