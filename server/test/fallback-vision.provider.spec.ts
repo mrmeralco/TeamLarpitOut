@@ -8,7 +8,7 @@ const fromMl: RawBillReading = { readable: true, period: "2026-09", kwh: 381, bi
 
 /** A reader that answers, fails or hangs, and counts its calls. */
 function reader(behaviour: RawBillReading | Error | "hang") {
-  const calls = { bill: 0, label: 0, aircon: 0 };
+  const calls = { bill: 0, label: 0, appliance: 0 };
   const provider: VisionProvider = {
     async readBill() {
       calls.bill++;
@@ -17,7 +17,7 @@ function reader(behaviour: RawBillReading | Error | "hang") {
       return behaviour;
     },
     async readEnergyLabel() { calls.label++; return { readable: false }; },
-    async readAirconPhoto() { calls.aircon++; return { readable: false }; },
+    async readAppliancePhoto() { calls.appliance++; return { readable: false }; },
   };
   return Object.assign(provider, { calls });
 }
@@ -74,12 +74,12 @@ describe("FallbackVisionProvider: Gemini reads the Bill, the ML service is the f
     await expect(p.readBill(photo)).rejects.toBe(mlError);
   });
 
-  it("reads energy labels and aircon photos with Gemini only", async () => {
+  it("reads energy labels and appliance photos with Gemini only", async () => {
     const gemini = reader(fromGemini);
     const ml = reader(fromMl);
     const p = new FallbackVisionProvider(gemini, ml);
     await p.readEnergyLabel(photo);
-    await p.readAirconPhoto(photo);
-    expect([gemini.calls.label, gemini.calls.aircon, ml.calls.label, ml.calls.aircon]).toEqual([1, 1, 0, 0]);
+    await p.readAppliancePhoto(photo);
+    expect([gemini.calls.label, gemini.calls.appliance, ml.calls.label, ml.calls.appliance]).toEqual([1, 1, 0, 0]);
   });
 });

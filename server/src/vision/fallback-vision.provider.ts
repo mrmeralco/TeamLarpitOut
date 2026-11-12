@@ -1,4 +1,4 @@
-import type { BillImage, RawAirconPhotoReading, RawBillReading, RawEnergyLabelReading, VisionProvider } from "./vision-provider.interface.js";
+import type { BillImage, RawAppliancePhotoReading, RawBillReading, RawEnergyLabelReading, VisionProvider } from "./vision-provider.interface.js";
 import { VisionUnavailableError } from "./vision-provider.interface.js";
 
 /** Gemini usually answers in 2-4 s; past this the fallback reads the photo instead. */
@@ -22,7 +22,7 @@ const reason = (err: unknown) => {
 /**
  * Reads the Bill with `primary` (Gemini). When it fails (no key, quota used up, error or timeout),
  * reads the same photo with `fallback` (the ML service's local OCR). An unreadable answer from the
- * primary is final: the customer retakes the photo. Energy labels and aircon photos use the primary only.
+ * primary is final: the customer retakes the photo. Energy labels and appliance photos use the primary only.
  */
 export class FallbackVisionProvider implements VisionProvider {
   constructor(
@@ -53,8 +53,8 @@ export class FallbackVisionProvider implements VisionProvider {
     return this.primary.readEnergyLabel(image);
   }
 
-  readAirconPhoto(image: BillImage): Promise<RawAirconPhotoReading> {
-    if (!this.primary.readAirconPhoto) throw new VisionUnavailableError("Aircon photos are not supported");
-    return this.primary.readAirconPhoto(image);
+  readAppliancePhoto(image: BillImage): Promise<RawAppliancePhotoReading> {
+    if (!this.primary.readAppliancePhoto) throw new VisionUnavailableError("Appliance photos are not supported");
+    return this.primary.readAppliancePhoto(image);
   }
 }

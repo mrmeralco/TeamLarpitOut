@@ -825,6 +825,10 @@ export interface SetupStatus {
   onboardingSeen?: boolean;
 }
 export interface GridTile { type: string; label: string; kwh: number; unit: string; tag: "Typical value" | "Estimated from photo" }
+/** What a photo of one appliance gave: its tap-grid type and, when the photo showed enough, a closer rating. */
+export interface AppliancePhoto {
+  type: string; label: string; answers: Record<string, string>; kwh: number; unit: string; tag: GridTile["tag"];
+}
 export interface AirconCheck {
   source: "bills" | "smartMeter"; available: boolean; chosenHours: number;
   estimatedHours?: number; agrees?: boolean; message?: string; reason?: string;
@@ -844,11 +848,12 @@ export const setupApi = {
     fetch(`${setupPath(sin)}/appliances`, {
       method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ counts }),
     }).then((r) => json<SetupStatus>(r)),
-  airconPhoto: (token: string, sin: string, photo: File) => {
+  /** "Snap an appliance": recognises any tap-grid appliance and estimates its rating. */
+  appliancePhoto: (token: string, sin: string, photo: File) => {
     const form = new FormData();
     form.append("photo", photo);
-    return fetch(`${setupPath(sin)}/aircon-photo`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form })
-      .then((r) => json<{ answers: Record<string, string>; kwhPerHour: number; tag: "Estimated from photo" }>(r));
+    return fetch(`${setupPath(sin)}/appliance-photo`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form })
+      .then((r) => json<AppliancePhoto>(r));
   },
   airconCheck: (token: string, sin: string, aircon: AirconPattern, signal?: AbortSignal) =>
     fetch(`${setupPath(sin)}/aircon-check?aircon=${aircon}`, authed(token, signal)).then((r) => json<AirconCheck>(r)),

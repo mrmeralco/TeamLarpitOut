@@ -11,7 +11,7 @@ import type { VisionProvider } from "./vision-provider.interface.js";
  *                        the ML service (local OCR at ML_SERVICE_URL) reads the same photo.
  *   gemini:              Gemini only.
  *   ml:                  the ML service only (the photo never leaves this machine).
- * Energy label and aircon photos always use Gemini.
+ * Energy label and appliance photos always use Gemini.
  */
 export function visionProvider(choice = process.env.VISION_PROVIDER): VisionProvider {
   const gemini = new GeminiVisionProvider();

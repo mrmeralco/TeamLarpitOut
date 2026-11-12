@@ -49,16 +49,16 @@ export class SetupController {
     return this.setup.airconCheck(sin, req.household, query.aircon);
   }
 
-  @Post("aircon-photo")
+  @Post("appliance-photo")
   @HttpCode(200)
   @Header("Cache-Control", "no-store")
   @UseInterceptors(FileInterceptor("photo", { limits: { fileSize: 10 * 1024 * 1024 } }))
-  airconPhoto(@Param("sin") sin: string, @UploadedFile() photo?: Express.Multer.File) {
+  appliancePhoto(@Param("sin") sin: string, @UploadedFile() photo?: Express.Multer.File) {
     if (!photo) throw new BadRequestException({ error: "No photo (field: photo)" });
     if (!["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(photo.mimetype)) {
       throw new BadRequestException({ error: "This image type is not accepted." });
     }
-    return this.setup.airconPhoto(sin, { mimeType: photo.mimetype, data: photo.buffer });
+    return this.setup.appliancePhoto(sin, { mimeType: photo.mimetype, data: photo.buffer });
   }
 
   @Put("routine")

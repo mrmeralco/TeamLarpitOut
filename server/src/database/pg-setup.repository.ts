@@ -8,7 +8,9 @@ interface SetupRow {
   aircon_pattern: string | null;
   grid: SetupRecord["grid"] | null;
   grid_written_at: Date | null;
-  aircon_photo: SetupRecord["airconPhoto"] | null;
+  /** Written by older clients: the aircon's photo estimate only. */
+  aircon_photo: { answers: Record<string, string>; kwhPerHour: number } | null;
+  appliance_photos: SetupRecord["photos"] | null;
   completed_at: Date | null;
   onboarding_seen_at: Date | null;
 }
@@ -25,7 +27,7 @@ export class PgSetupRepository implements SetupRepository {
 
   private async load(sin: string): Promise<SetupRecord> {
     const [row] = await this.sql<SetupRow[]>`
-      select size, home_pattern, aircon_pattern, grid, grid_written_at, aircon_photo, completed_at, onboarding_seen_at
+      select size, home_pattern, aircon_pattern, grid, grid_written_at, aircon_photo, appliance_photos, completed_at, onboarding_seen_at
       from public.household_setup where sin = ${sin}`;
     if (!row) return {};
     const record: SetupRecord = {};
@@ -35,7 +37,8 @@ export class PgSetupRepository implements SetupRepository {
     }
     if (row.grid !== null) record.grid = row.grid;
     if (row.grid_written_at !== null) record.gridWrittenAt = new Date(row.grid_written_at).toISOString();
-    if (row.aircon_photo !== null) record.airconPhoto = row.aircon_photo;
+    if (row.appliance_photos !== null) record.photos = row.appliance_photos;
+    else if (row.aircon_photo !== null) record.photos = { aircon: { answers: row.aircon_photo.answers, kwh: row.aircon_photo.kwhPerHour } };
     if (row.completed_at !== null) record.completedAt = new Date(row.completed_at).toISOString();
     if (row.onboarding_seen_at !== null) record.onboardingSeenAt = new Date(row.onboarding_seen_at).toISOString();
     return record;
@@ -49,7 +52,11 @@ export class PgSetupRepository implements SetupRepository {
       aircon_pattern: record.routine?.aircon ?? null,
       grid: record.grid ? this.sql.json(record.grid as never) : null,
       grid_written_at: record.gridWrittenAt ? new Date(record.gridWrittenAt) : null,
-      aircon_photo: record.airconPhoto ? this.sql.json(record.airconPhoto as never) : null,
+      appliance_photos: record.photos ? this.sql.json(record.photos as never) : null,
+      // Kept in step for older clients that read only the aircon's estimate.
+      aircon_photo: record.photos?.aircon
+        ? this.sql.json({ answers: record.photos.aircon.answers, kwhPerHour: record.photos.aircon.kwh } as never)
+        : null,
       completed_at: record.completedAt ? new Date(record.completedAt) : null,
       onboarding_seen_at: record.onboardingSeenAt ? new Date(record.onboardingSeenAt) : null,
     };
@@ -62,6 +69,7 @@ export class PgSetupRepository implements SetupRepository {
         grid = excluded.grid,
         grid_written_at = excluded.grid_written_at,
         aircon_photo = excluded.aircon_photo,
+        appliance_photos = excluded.appliance_photos,
         completed_at = excluded.completed_at,
         onboarding_seen_at = excluded.onboarding_seen_at`;
     this.cache.set(sin, record);

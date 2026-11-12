@@ -15,11 +15,13 @@ const status = (over: Partial<SetupStatus> = {}): SetupStatus => ({
 });
 const response = (body: unknown, code = 200) => new Response(JSON.stringify(body), { status: code, headers: { "content-type": "application/json" } });
 let fetchMock: Mock<(input: string, init?: RequestInit) => Promise<Response>>;
+let photoReply: unknown;
 
 beforeEach(() => {
+  photoReply = { type: "aircon", label: "Aircon", answers: { mount: "split", inverter: "yes", room: "large" }, kwh: 1.12, unit: "kWh per hour", tag: "Estimated from photo" };
   fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     if (input.endsWith("/setup/appliances")) return response(status({ grid: JSON.parse(String(init!.body)).counts }));
-    if (input.endsWith("/setup/aircon-photo")) return response({ answers: { mount: "split", inverter: "yes", room: "large" }, kwhPerHour: 1.12, tag: "Estimated from photo" });
+    if (input.endsWith("/setup/appliance-photo")) return response(photoReply);
     if (input.includes("/setup/aircon-check")) return response({ source: "bills", available: true, chosenHours: 8, estimatedHours: 8, agrees: true, message: "Your 12 bills agree: about 8 hours a day." });
     if (input.endsWith("/setup/routine")) return response(status({ complete: true }));
     throw new Error(`Unexpected ${input}`);
@@ -60,13 +62,45 @@ describe("Setup tap grid", () => {
     expect(screen.getByRole("button", { name: /^tv\. Tap to add/ })).toBeTruthy();
   });
 
-  it("'Snap your aircon' tags the aircon tile 'Estimated from photo'", async () => {
+  const snap = () => fireEvent.change(document.querySelector('input[type="file"]')!, {
+    target: { files: [new File(["x"], "photo.jpg", { type: "image/jpeg" })] },
+  });
+
+  it("'Snap an appliance' recognises an aircon, adds it and tags its tile 'Estimated from photo'", async () => {
     render(<SetupAppliances token="t" sin="1234567890" status={status()} onSaved={() => {}} onBack={() => {}} onExpired={() => {}} />);
-    const input = document.querySelector('input[type="file"]')!;
-    fireEvent.change(input, { target: { files: [new File(["x"], "ac.jpg", { type: "image/jpeg" })] } });
-    expect(await screen.findByText("About 1.12 kWh per hour · Estimated from photo")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /snap an appliance/i })).toBeTruthy();
+    snap();
+    expect(await screen.findByText("Aircon: about 1.12 kWh per hour · Estimated from photo")).toBeTruthy();
     expect(screen.getByText("Estimated from photo")).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Aircon, 1\./ })).toBeTruthy();
+  });
+
+  it("works for any appliance: a photo of a TV adds the TV with its estimate", async () => {
+    photoReply = { type: "tv", label: "TV", answers: { size: "large" }, kwh: 0.12, unit: "kWh per hour", tag: "Estimated from photo" };
+    render(<SetupAppliances token="t" sin="1234567890" status={status({ grid: { tv: 2 } })} onSaved={() => {}} onBack={() => {}} onExpired={() => {}} />);
+    snap();
+    expect(await screen.findByText("TV: about 0.12 kWh per hour · Estimated from photo")).toBeTruthy();
+    // An appliance already counted keeps its count; the tile shows the estimate.
+    const tv = screen.getByRole("button", { name: /^tv, 2\./ });
+    expect(tv.textContent).toContain("0.12");
+    expect(tv.textContent).toContain("Estimated from photo");
+    expect(screen.queryByRole("button", { name: /^Aircon, 1\./ })).toBeNull();
+  });
+
+  it("a recognised appliance without size clues is added with the typical value", async () => {
+    photoReply = { type: "rice_cooker", label: "Rice cooker", answers: {}, kwh: 0.35, unit: "kWh per use", tag: "Typical value" };
+    render(<SetupAppliances token="t" sin="1234567890" status={status()} onSaved={() => {}} onBack={() => {}} onExpired={() => {}} />);
+    snap();
+    expect(await screen.findByText(/Rice cooker added · the photo didn't show its size/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^rice_cooker, 1\./ }).textContent).toContain("Typical value");
+  });
+
+  it("an unrecognised photo shows the server's message and adds nothing", async () => {
+    fetchMock.mockImplementationOnce(async () => response({ error: "We couldn't recognise an appliance in the photo. Retake it or tap the appliance instead." }, 422));
+    render(<SetupAppliances token="t" sin="1234567890" status={status()} onSaved={() => {}} onBack={() => {}} onExpired={() => {}} />);
+    snap();
+    expect(await screen.findByText(/couldn't recognise an appliance/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Continue · 0 appliances/ })).toBeTruthy();
   });
 });
 

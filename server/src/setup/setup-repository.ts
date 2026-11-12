@@ -1,4 +1,4 @@
-import type { AirconPattern, GridType, HomePattern } from "../domain/routine-presets.js";
+import type { AirconPattern, GridType, HomePattern, PhotoEstimate } from "../domain/routine-presets.js";
 export type { AirconPattern, HomePattern };
 
 /** Household Setup progress for one Household (ADR-0004, ADR-0006). Only what the computations use. */
@@ -9,8 +9,8 @@ export interface SetupRecord {
   grid?: Partial<Record<GridType, number>>;
   /** updatedAt of the appliance list the grid last wrote; a later detailed edit is never overwritten. */
   gridWrittenAt?: string;
-  /** Aircon visual answers estimated from a photo, with its kWh per hour. */
-  airconPhoto?: { answers: Record<string, string>; kwhPerHour: number };
+  /** Visual answers estimated from photos, per tap-grid appliance, with the rating they select. */
+  photos?: Partial<Record<GridType, PhotoEstimate>>;
   completedAt?: string;
   /** When Eelio's Missions onboarding was shown and closed. */
   onboardingSeenAt?: string;

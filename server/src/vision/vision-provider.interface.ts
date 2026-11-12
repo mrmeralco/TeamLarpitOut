@@ -39,20 +39,21 @@ export interface RawEnergyLabelReading {
   referenceHoursPerDay?: number | null;
 }
 
-/** What a photo of an aircon unit shows; the visual answers the catalog already asks. */
-export interface RawAirconPhotoReading {
+/**
+ * What a photo of one appliance shows: which appliance it is (a tap-grid type) and the answers
+ * to that type's visual questions in the appliance catalog. Unchecked; code validates both.
+ */
+export interface RawAppliancePhotoReading {
   readable: boolean;
-  mount?: "split" | "window" | null;
-  inverter?: "yes" | "no" | null;
-  /** Unit size as a room-size class (small ≈ 0.75–1 HP, medium ≈ 1.5 HP, large ≈ 2 HP+). */
-  room?: "small" | "medium" | "large" | null;
+  type?: string | null;
+  answers?: Record<string, string | null> | null;
 }
 
 export interface VisionProvider {
   readBill(image: BillImage): Promise<RawBillReading>;
   readEnergyLabel(image: BillImage): Promise<RawEnergyLabelReading>;
-  /** Optional shortcut in Household Setup: estimate the aircon's size from a photo. */
-  readAirconPhoto?(image: BillImage): Promise<RawAirconPhotoReading>;
+  /** Optional shortcut in Household Setup: recognise any appliance in a photo and estimate its size. */
+  readAppliancePhoto?(image: BillImage): Promise<RawAppliancePhotoReading>;
 }
 
 /** Thrown when no vision model is configured (e.g. no API key). */

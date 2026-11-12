@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bill, fakeVision, harness } from "./utils/test-harness.js";
+import type { RawAppliancePhotoReading } from "../src/vision/vision-provider.interface.js";
 
 const SIN = "1234567890";
 const SMART = "9876543210";
@@ -83,24 +84,71 @@ describe("Household Setup: tap grid and one routine", () => {
     expect((await api.upload(`/api/households/${SIN}/appliances/scan-label`, undefined, undefined, token, { type: "aircon" })).status).not.toBe(404);
   });
 
-  it("'Snap your aircon' estimates its size from a photo, tagged 'Estimated from photo'", async () => {
-    const vision = Object.assign(fakeVision({ readable: false }), {
-      async readAirconPhoto() { return { readable: true, mount: "split" as const, inverter: "yes" as const, room: "large" as const }; },
-    });
+  /** A vision fake whose appliance photo answers come from a queue, one per upload. */
+  const photoVision = (...readings: RawAppliancePhotoReading[]) => Object.assign(fakeVision({ readable: false }), {
+    async readAppliancePhoto() { return readings.shift() ?? { readable: false }; },
+  });
+
+  it("'Snap an appliance' recognises an aircon and estimates its size, tagged 'Estimated from photo'", async () => {
+    const vision = photoVision({ readable: true, type: "aircon", answers: { mount: "split", inverter: "yes", room: "large" } });
     const { api, token } = await start({ vision });
     await api.put(`${setup}/appliances`, { counts: { aircon: 1 } }, token);
-    const photo = await api.upload(`${setup}/aircon-photo`, undefined, undefined, token);
+    const photo = await api.upload(`${setup}/appliance-photo`, undefined, undefined, token);
     expect(photo.status).toBe(200);
-    expect(photo.body).toEqual({ answers: { mount: "split", inverter: "yes", room: "large" }, kwhPerHour: 1.12, tag: "Estimated from photo" });
+    expect(photo.body).toEqual({
+      type: "aircon", label: "Aircon", answers: { mount: "split", inverter: "yes", room: "large" },
+      kwh: 1.12, unit: "kWh per hour", tag: "Estimated from photo",
+    });
     const status = (await api.get(setup, token)).body;
     expect(status.gridCatalog.find((t: { type: string }) => t.type === "aircon")).toMatchObject({ kwh: 1.12, tag: "Estimated from photo" });
     const aircon = (await api.get(`/api/households/${SIN}/appliances`, token)).body.appliances.find((a: { type: string }) => a.type === "aircon");
     expect(aircon.answers).toEqual({ mount: "split", inverter: "yes", room: "large" });
   });
 
+  it("works for any appliance, not only the aircon: each type keeps its own estimate", async () => {
+    const vision = photoVision(
+      { readable: true, type: "tv", answers: { size: "large", mount: "split" } }, // another type's key is ignored
+      { readable: true, type: "refrigerator", answers: { inverter: "yes", size: "huge" } }, // not an option → I don't know
+      { readable: true, type: "rice_cooker", answers: {} }, // no questions: recognised, typical value
+    );
+    const { api, token } = await start({ vision });
+    await api.put(`${setup}/appliances`, { counts: { tv: 1, refrigerator: 1, rice_cooker: 1 } }, token);
+
+    const tv = await api.upload(`${setup}/appliance-photo`, undefined, undefined, token);
+    expect(tv.body).toEqual({ type: "tv", label: "TV", answers: { size: "large" }, kwh: 0.12, unit: "kWh per hour", tag: "Estimated from photo" });
+    const ref = await api.upload(`${setup}/appliance-photo`, undefined, undefined, token);
+    expect(ref.body).toMatchObject({ type: "refrigerator", answers: { inverter: "yes", size: "unknown" }, kwh: 0.715, unit: "kWh per day", tag: "Estimated from photo" });
+    const rice = await api.upload(`${setup}/appliance-photo`, undefined, undefined, token);
+    expect(rice.body).toMatchObject({ type: "rice_cooker", label: "Rice cooker", answers: {}, kwh: 0.35, unit: "kWh per use", tag: "Typical value" });
+
+    const tiles = (await api.get(setup, token)).body.gridCatalog as { type: string; kwh: number; tag: string }[];
+    expect(tiles.find((t) => t.type === "tv")).toMatchObject({ kwh: 0.12, tag: "Estimated from photo" });
+    expect(tiles.find((t) => t.type === "refrigerator")).toMatchObject({ kwh: 0.715, tag: "Estimated from photo" });
+    expect(tiles.find((t) => t.type === "rice_cooker")).toMatchObject({ kwh: 0.35, tag: "Typical value" });
+    const list = (await api.get(`/api/households/${SIN}/appliances`, token)).body.appliances as { type: string; answers: object }[];
+    expect(list.find((a) => a.type === "tv")!.answers).toEqual({ size: "large" });
+    expect(list.find((a) => a.type === "refrigerator")!.answers).toEqual({ inverter: "yes", size: "unknown" });
+
+    // Removing an appliance from the grid drops its photo estimate.
+    await api.put(`${setup}/appliances`, { counts: { refrigerator: 1 } }, token);
+    const after = (await api.get(setup, token)).body.gridCatalog as { type: string; tag: string }[];
+    expect(after.find((t) => t.type === "tv")!.tag).toBe("Typical value");
+    expect(after.find((t) => t.type === "refrigerator")!.tag).toBe("Estimated from photo");
+  });
+
+  it("a photo with no recognisable appliance is refused; tapping still works", async () => {
+    const vision = photoVision({ readable: true, type: "spaceship", answers: {} }, { readable: false });
+    const { api, token } = await start({ vision });
+    for (let i = 0; i < 2; i++) {
+      const photo = await api.upload(`${setup}/appliance-photo`, undefined, undefined, token);
+      expect(photo.status).toBe(422);
+      expect(photo.body.error).toMatch(/couldn't recognise an appliance/);
+    }
+  });
+
   it("the photo shortcut is optional: no vision support falls back to typical values", async () => {
     const { api, token } = await start();
-    expect((await api.upload(`${setup}/aircon-photo`, undefined, undefined, token)).status).toBe(503);
+    expect((await api.upload(`${setup}/appliance-photo`, undefined, undefined, token)).status).toBe(503);
   });
 
   it("traditional meters show the 12-bill aircon estimate as agreement", async () => {
