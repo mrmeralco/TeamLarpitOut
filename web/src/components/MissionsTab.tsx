@@ -32,10 +32,18 @@ const STEP_META: Record<string, { step: number; charge: number; mascot: string; 
   },
 };
 
+/** Eelio's line on a step opened after setup is complete, to change an answer. */
+const EDIT_HINT: Record<string, string> = {
+  household: "Someone moved in or out? Update it and Eelio recalculates.",
+  appliances: "Changed something at home? Update the grid and Eelio refreshes your missions.",
+  routine: "New schedule? Update your typical day and Eelio refreshes your missions.",
+};
+
 /**
  * Missions tab: the setup checklist until Household Setup is complete (#51), then the plan.
  * Eelio's onboarding opens on its own the first time (setup not started), and at `#/missions/save`
  * ("How it works", or "Want to save?" in the bill's Wrapped); `#/missions/setup/<step>` opens a step.
+ * After setup, the same route edits a step; `#/missions/setup/<step>/home` returns to Home when done.
  */
 export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpired, appliancesStep, routineAgreement, children }: {
   token: string;
@@ -45,14 +53,16 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
   setup: SetupStatus | null;
   onSetup: (s: SetupStatus) => void;
   onExpired: () => void;
-  /** The appliance step screen (tap grid, #52). */
-  appliancesStep?: (done: (s: SetupStatus) => void, back: () => void) => React.ReactNode;
+  /** The appliance step screen (tap grid, #52); `editing` once setup is complete. */
+  appliancesStep?: (done: (s: SetupStatus) => void, back: () => void, editing: boolean) => React.ReactNode;
   routineAgreement?: (aircon: import("../api/client").AirconPattern) => React.ReactNode;
   /** The Mission Plan, shown once setup is complete. */
   children: React.ReactNode;
 }) {
   const [autoOnboard, setAutoOnboard] = useState(true);
-  const toChecklist = () => go("missions");
+  // Editing after setup can start on Home (the appliances card); closing or saving goes back there.
+  const fromHome = sub[0] === "setup" && sub[2] === "home";
+  const toChecklist = () => (fromHome && setup?.complete ? go("home") : go("missions"));
   const isSetupModal = sub[0] === "setup" && (sub[1] === "household" || sub[1] === "appliances" || sub[1] === "routine");
   const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -79,18 +89,23 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
   const nextStep = (s: SetupStatus) => s.steps.find((x) => !x.done)?.key;
   const advance = (s: SetupStatus) => {
     onSetup(s);
+    // After setup this is only ever the routine step, when an edit added an aircon without a schedule:
+    // ask for it now, or the aircon would count zero hours.
     const next = nextStep(s);
-    if (s.complete || !next) go("missions");
-    else go("missions", "setup", next);
+    if (next) go("missions", "setup", next, ...(fromHome ? ["home"] : []));
+    else if (fromHome && s.complete) go("home");
+    else go("missions");
   };
 
-  const meta = STEP_META[sub[1]] ?? {
+  const editing = setup.complete;
+  const baseMeta = STEP_META[sub[1]] ?? {
     step: 1,
     charge: 33,
     mascot: "/mascot/eelio-hero.png",
     subtitle: "Setup",
     hint: "Complete your home setup to unlock missions.",
   };
+  const meta = editing ? { ...baseMeta, hint: EDIT_HINT[sub[1]] ?? baseMeta.hint } : baseMeta;
 
 
   const showOnboarding = !setup.complete && (sub[0] === "save" || (autoOnboard && !setup.onboardingSeen && setup.doneCount === 0 && sub[0] !== "setup"));
@@ -114,17 +129,7 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
     } else if (sub[1] === "routine") {
       stepModalNode = <SetupRoutine token={token} sin={household.sin} status={setup} onSaved={advance} onBack={toChecklist} onExpired={onExpired} agreement={routineAgreement} />;
     } else if (sub[1] === "appliances") {
-      stepModalNode = appliancesStep ? <>{appliancesStep(advance, toChecklist)}</> : (
-        <section className="flow">
-          <div className="card-head">
-            <button type="button" className="back" aria-label="Back" onClick={toChecklist}>‹</button>
-            <span className="muted small">Setup 2 of 3</span>
-          </div>
-          <h2>Tap the appliances you have</h2>
-          <p className="muted">List your appliances under Account → Appliances, then come back here.</p>
-          <button type="button" className="primary" onClick={() => go("account")}>Go to appliances</button>
-        </section>
-      );
+      stepModalNode = appliancesStep ? <>{appliancesStep(advance, toChecklist, editing)}</> : null;
     }
   }
 
@@ -133,7 +138,7 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
       className="setup-modal-backdrop"
       role="dialog"
       aria-modal="true"
-      aria-label="Set up your home"
+      aria-label={editing ? "Edit your home" : "Set up your home"}
       onClick={(e) => { if (e.target === e.currentTarget) toChecklist(); }}
     >
       <div className="setup-modal-sheet" tabIndex={-1} ref={dialogRef}>
@@ -141,12 +146,12 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
           <div className="setup-modal-hero-top">
             <span className="setup-step-badge">
               <span className="badge-dot" aria-hidden="true" />
-              Step {meta.step} of 3 · {meta.subtitle}
+              {editing ? `Edit · ${meta.subtitle}` : `Step ${meta.step} of 3 · ${meta.subtitle}`}
             </span>
             <button
               type="button"
               className="setup-modal-close"
-              aria-label="Close setup modal"
+              aria-label={editing ? "Close" : "Close setup modal"}
               onClick={toChecklist}
             >
               ×
@@ -159,7 +164,7 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
                 <span className="bubble-speaker">Eelio says</span>
                 <p>{meta.hint}</p>
               </div>
-              <div className="setup-modal-charge">
+              {!editing && <div className="setup-modal-charge">
                 <div className="setup-charge-label">
                   <span>Battery charge</span>
                   <strong>{meta.charge}%</strong>
@@ -167,7 +172,7 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
                 <div className="setup-charge-track">
                   <div className="setup-charge-bar" style={{ width: `${meta.charge}%` }} />
                 </div>
-              </div>
+              </div>}
             </div>
           </div>
         </div>

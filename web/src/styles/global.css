@@ -1637,6 +1637,8 @@ button.wide { width: 100%; margin-top: 10px; }
   padding: 22px 20px 20px;
   border-radius: 20px;
 }
+/* "Snap an appliance": the loader takes the button's place inside the setup sheet. */
+.photo-reading .eelio-loader.compact { margin: 10px auto 4px; }
 .eelio-loader-stage {
   position: relative;
   width: 170px;
@@ -1996,6 +1998,10 @@ button.wide { width: 100%; margin-top: 10px; }
 
 .usage-card { margin: 0; padding: 18px 20px; }
 .usage-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.usage-head-side { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+button.edit-link { background: none; border: 0; padding: 4px 2px; color: var(--primary); font-weight: 600; font-size: 0.9rem; border-radius: 4px; white-space: nowrap; }
+button.edit-link:hover { text-decoration: underline; }
+button.edit-link:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 .dash-side .save-card { width: 100%; }
 
@@ -2617,6 +2623,7 @@ button.wide { width: 100%; margin-top: 10px; }
 .tone-4.goal-seg, .tone-4.goal-dot, .tone-4.mission-quest-icon { background: #8C3B4F; }
 
 .quests-card { margin: 0; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.quests-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .quests-card-head h3 { margin: 0; font-size: 1.1rem; }
 .quests-card-head > div { display: flex; flex-direction: column; gap: 2px; }
 /* Missions stacked one under another (1, 2, 3), each a long row: icon · title and why · points and savings. */

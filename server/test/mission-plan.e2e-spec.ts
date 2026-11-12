@@ -169,6 +169,21 @@ describe("GET /api/households/:sin/missions/plan", () => {
     expect(first.missions.length).toBeGreaterThan(0);
   });
 
+  it("makes a new plan when the appliances are edited in the tap grid after setup", async () => {
+    const { api, token } = await ready();
+    const first = (await api.get(plan, token)).body;
+    expect(first.missions.map((m: { appliance: string }) => m.appliance)).toContain("aircon");
+    await new Promise((r) => setTimeout(r, 5));
+    const plans = api.app.get<UsagePlanRepository>(USAGE_PLAN_REPOSITORY);
+    const before = (await plans.find(SIN))!.createdAt;
+    const { aircon: _removed, ...withoutAircon } = grid.counts;
+    expect((await api.put(`/api/households/${SIN}/setup/appliances`, { counts: withoutAircon }, token)).status).toBe(200);
+    const after = (await api.get(plan, token)).body;
+    expect((await plans.find(SIN))!.createdAt).not.toBe(before);
+    expect(after.missions.length).toBeGreaterThan(0);
+    expect(after.missions.map((m: { appliance: string }) => m.appliance)).not.toContain("aircon");
+  });
+
   it("shows a brownout on Meralco's record for the plan's month, and nothing when there is none", async () => {
     const none = await ready();
     const plain = (await none.api.get(plan, none.token)).body;

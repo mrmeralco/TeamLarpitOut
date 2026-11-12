@@ -59,9 +59,11 @@ const Svg = ({ d }: { d: string }) => (
  * Missions tab, laid out like Home: a compact Eelio card showing collected Points and a "Check rewards"
  * button alongside a gamified goal meter on top, then the Missions as quest cards below.
  */
-export function MissionPlan({ token, household, missionId, onOpen, onBack, onRewards, onExpired }: {
+export function MissionPlan({ token, household, missionId, onOpen, onBack, onRewards, onEditAppliances, onExpired }: {
   token: string;
   household: Household;
+  /** "Edit appliances": the Missions follow the appliance list, so a wrong one is fixed there. */
+  onEditAppliances?: () => void;
   /** The open Mission detail, from `#/missions/m/<id>`. */
   missionId?: string;
   onOpen: (id: string) => void;
@@ -238,6 +240,7 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onRew
                 ? `${shownMissions.length} missions for today · new ones at midnight · tap one to see how`
                 : `${plan.missions.length} missions picked for your home · tap one to see how`}</span>
             </div>
+            {onEditAppliances && <button type="button" className="edit-link" onClick={onEditAppliances}>Edit appliances</button>}
           </div>
           {note && <p className="muted small" role="status">{note}</p>}
           {error && <p className="error" role="alert">{error}</p>}
