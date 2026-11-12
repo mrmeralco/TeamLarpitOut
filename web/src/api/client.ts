@@ -286,6 +286,20 @@ export interface EnergyLabelInput {
   referenceHoursPerDay?: number;
   confirmed: true;
 }
+export interface EnergyLabelDraft {
+  status: "read";
+  type: "aircon" | "refrigerator";
+  label: {
+    consumptionKwh: number | null;
+    period: "monthly" | "daily" | null;
+    referenceDays: number | null;
+    referenceHoursPerDay: number | null;
+  };
+  kwhPerHour: number | null;
+  missing: string[];
+  assumptions: { field: string; value: number; reason: string }[];
+  needsConfirmation: true;
+}
 export interface ApplianceInput {
   type: string;
   quantity?: number;
@@ -317,6 +331,13 @@ const authed = (token: string, signal?: AbortSignal): RequestInit => ({
 const householdPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/appliances`;
 
 export const appliancesApi = {
+  scanLabel: (token: string, sin: string, type: "aircon" | "refrigerator", photo: File, signal?: AbortSignal) => {
+    const body = new FormData();
+    body.append("type", type);
+    body.append("photo", photo);
+    return fetch(`${householdPath(sin)}/scan-label`, { ...authed(token, signal), method: "POST", body })
+      .then((r) => json<EnergyLabelDraft>(r));
+  },
   catalog: (signal?: AbortSignal) =>
     fetch("/api/appliances/catalog", { signal }).then((r) => json<{ appliances: CatalogAppliance[] }>(r)),
   list: (token: string, sin: string, signal?: AbortSignal) =>

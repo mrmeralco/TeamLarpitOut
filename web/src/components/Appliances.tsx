@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
   appliancesApi,
@@ -9,6 +9,7 @@ import {
   type TimeRange,
 } from "../api/client";
 import { monthLabel, peso } from "../lib/format";
+import { EnergyLabelScan } from "./EnergyLabelScan";
 
 const DAYS: { value: TimeRange["days"]; label: string }[] = [
   { value: "everyday", label: "Araw-araw" },
@@ -31,6 +32,9 @@ function blank(def: CatalogAppliance): ApplianceInput {
 }
 
 function ApplianceCard(props: {
+  token: string;
+  sin: string;
+  onExpired: () => void;
   def: CatalogAppliance;
   value: ApplianceInput;
   onChange: (a: ApplianceInput) => void;
@@ -63,6 +67,11 @@ function ApplianceCard(props: {
           </button>
         </div>
       </div>
+
+      {(def.type === "aircon" || def.type === "refrigerator") && <EnergyLabelScan
+        token={props.token} sin={props.sin} type={def.type} value={value.energyLabel} onExpired={props.onExpired}
+        onConfirm={(energyLabel) => set({ energyLabel })} onRemove={() => set({ energyLabel: undefined })}
+      />}
 
       {def.questions.map((q) => (
         <label key={q.key}>
@@ -127,6 +136,9 @@ function ApplianceCard(props: {
 }
 
 function Survey(props: {
+  token: string;
+  sin: string;
+  onExpired: () => void;
   catalog: CatalogAppliance[];
   initial: ApplianceInput[];
   saving: boolean;
@@ -134,22 +146,25 @@ function Survey(props: {
   onCancel?: () => void;
 }) {
   const byType = new Map(props.catalog.map((d) => [d.type, d]));
-  const [list, setList] = useState<ApplianceInput[]>(() =>
-    props.initial.length ? props.initial : STARTER.map((t) => byType.get(t)).filter(Boolean).map((d) => blank(d!)),
+  const nextId = useRef(0);
+  const [list, setList] = useState<{ id: number; value: ApplianceInput }[]>(() =>
+    (props.initial.length ? props.initial : STARTER.map((t) => byType.get(t)).filter(Boolean).map((d) => blank(d!)))
+      .map((value) => ({ id: nextId.current++, value })),
   );
   const [adding, setAdding] = useState("");
 
   return (
-    <>
+    <fieldset className="survey-fields" disabled={props.saving}>
       <p className="muted">Isang beses lang ito. Sagutin ang kaya mo; "Hindi ko alam" ay ayos lang.</p>
       <ul className="appliance-list">
-        {list.map((a, i) => (
+        {list.map(({ id, value: a }) => (
           <ApplianceCard
-            key={i}
+            key={id}
+            token={props.token} sin={props.sin} onExpired={props.onExpired}
             def={byType.get(a.type)!}
             value={a}
-            onChange={(next) => setList(list.map((x, j) => (j === i ? next : x)))}
-            onRemove={() => setList(list.filter((_, j) => j !== i))}
+            onChange={(next) => setList((current) => current.map((x) => x.id === id ? { ...x, value: next } : x))}
+            onRemove={() => setList((current) => current.filter((x) => x.id !== id))}
           />
         ))}
       </ul>
@@ -167,14 +182,15 @@ function Survey(props: {
           className="ghost"
           disabled={!adding}
           onClick={() => {
-            setList([...list, blank(byType.get(adding)!)]);
+            const entry = { id: nextId.current++, value: blank(byType.get(adding)!) };
+            setList((current) => [...current, entry]);
             setAdding("");
           }}
         >
           Idagdag
         </button>
       </div>
-      <button type="button" className="primary" disabled={props.saving || list.length === 0} onClick={() => props.onSave(list)}>
+      <button type="button" className="primary" disabled={props.saving || list.length === 0} onClick={() => props.onSave(list.map((a) => a.value))}>
         {props.saving ? "Sine-save…" : "I-save at tingnan kung saan napupunta"}
       </button>
       {props.onCancel && (
@@ -182,7 +198,7 @@ function Survey(props: {
           Huwag na lang baguhin
         </button>
       )}
-    </>
+    </fieldset>
   );
 }
 
@@ -228,9 +244,15 @@ function Breakdown({ data, onEdit }: { data: ApplianceBreakdown; onEdit: () => v
 }
 
 /** Appliances (asked once per Household) and "Saan napupunta?". Parent keys it by session and SIN. */
-export function Appliances({ token, household, onExpired, onSaved }: {
+type AppliancesProps = {
   token: string; household: Household; onExpired: () => void; onSaved?: () => void;
-}) {
+};
+
+export function Appliances(props: AppliancesProps) {
+  return <HouseholdAppliances key={`${props.token}:${props.household.sin}`} {...props} />;
+}
+
+function HouseholdAppliances({ token, household, onExpired, onSaved }: AppliancesProps) {
   const [catalog, setCatalog] = useState<CatalogAppliance[] | null>(null);
   const [saved, setSaved] = useState<ApplianceInput[] | null>(null);
   const [breakdown, setBreakdown] = useState<ApplianceBreakdown | null>(null);
@@ -259,6 +281,7 @@ export function Appliances({ token, household, onExpired, onSaved }: {
           appliancesApi.catalog(controller.signal),
           appliancesApi.list(token, household.sin, controller.signal),
         ]);
+        if (controller.signal.aborted) return;
         setCatalog(cat.appliances);
         if (mine.saved) {
           setSaved(mine.appliances.map(({ type, quantity, answers, timeRanges, usesPerWeek, energyLabel }) => ({
@@ -309,6 +332,7 @@ export function Appliances({ token, household, onExpired, onSaved }: {
         !error && <p className="muted">Kinukuha…</p>
       ) : editing ? (
         <Survey
+          token={token} sin={household.sin} onExpired={onExpired}
           catalog={catalog}
           initial={saved}
           saving={saving}

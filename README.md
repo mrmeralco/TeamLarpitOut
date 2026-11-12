@@ -56,9 +56,36 @@ pnpm typecheck
 - `POST /api/bills/check` `{ now: Bill, before?: Bill, tolerancePesos?: number, payments?: PaymentRecord[] }` → Bill Checks ("Tama ba ito?"): line sum, reading continuity, rate schedule fidelity, payment reflection (overall green / red, disagreeing figures, copyable summary)
 - `GET  /api/households/:sin/check` → same Bill Checks for a Household's latest Bill in the Bill source
 - `POST /api/bills/scan` (multipart, field `photo`) → editable draft: `now`, `before` (from printed history), `missing`, `estimated`, masked Service ID Number. `422` unreadable, `503` no vision key. Nothing is used until the PWA confirms and posts to `/api/bakit-ganito`.
+- `POST /api/households/:sin/appliances/scan-label` (authenticated multipart, fields `photo` and `type`: `aircon` or `refrigerator`) → editable energy-label draft; see below.
 - `GET  /api/households/:sin/bakit-ganito` → same, from the Household's two latest Bills in the Bill source
 
 `Bill = { period: "YYYY-MM", kwh, billingDays, chargeLines?: [{ label, amount }] }`
+
+### DOE energy labels
+
+In the appliance survey, aircon and refrigerator cards offer photo upload/capture. Review the stated kWh, its daily/monthly period, and its reference basis, then choose **Tama, gamitin ang energy label**. This changes only the local survey; the existing **I-save** action persists it. Retaking or cancelling a scan keeps any previously confirmed value. Removing a label restores visual answers or the default estimate. Unconfirmed drafts never enter the save payload.
+
+The scan endpoint uses the existing session and Household membership guards. Upload a JPEG, PNG, WebP, HEIC, or HEIF photo of at most 10 MiB. Successful responses use `Cache-Control: no-store` and contain:
+
+```json
+{
+  "status": "read",
+  "type": "aircon",
+  "label": { "consumptionKwh": 270, "period": "monthly", "referenceDays": 30, "referenceHoursPerDay": 9 },
+  "kwhPerHour": 1,
+  "missing": [],
+  "assumptions": [],
+  "needsConfirmation": true
+}
+```
+
+The example uses an explicit 30-day, 9-hour basis. Vision extracts printed consumption only; watts, cooling capacity, CSEC, and efficiency ratings are never substituted for kWh. Unprinted monthly reference days are prefilled as 30, and unprinted aircon operating hours as 9, **each flagged in `assumptions` with a reason for the user to review**. These are project assumptions, not a claim that every DOE label uses them. Printed values take priority. Invalid or ambiguous fields remain null in `label` and are listed in `missing`; normalization remains null until the basis is complete. A refrigerator's consumption is averaged over the full 24-hour day.
+
+The existing `PUT /api/households/:sin/appliances` accepts an optional `energyLabel` per aircon/ref: `{ consumptionKwh, period: "monthly" | "daily", referenceDays?, referenceHoursPerDay?, confirmed: true }`. Monthly values require positive reference days; aircon requires positive reference hours/day up to 24. Daily values cover one day. Save recomputes kWh/hour server-side, adapts refrigerator values to the estimator's kWh/day, and ignores client-supplied derived values. Confirmed labels take priority over answers and defaults, with **Mula sa energy label** in the breakdown. Quantity and routine are applied separately, and the breakdown still calibrates exactly to Bill kWh and centavo totals.
+
+Scan errors: `400` missing photo, unsupported type or MIME; `413` oversized photo; `422` unreadable label or detected appliance mismatch; `503` missing vision configuration; `502` provider failure. Missing/expired login returns `401`, unknown/unlinked Households return the same `404`. A failed scan leaves answers/defaults usable. The browser cancels scans on retake, card removal, Household/session change, or logout, and ignores delayed results.
+
+Label scanning uses the same `GEMINI_API_KEY` / `GEMINI_MODEL` configuration as Bill scanning. Photos and scan drafts are not retained by the application. Only confirmed label values are saved with appliances in the current **in-memory, per-Household repository**, lost on server restart; no migration is required. Automated checks use an injected fake vision provider and do not call Gemini.
 
 ### Mock My Meralco login
 
