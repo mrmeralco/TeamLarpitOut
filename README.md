@@ -64,6 +64,7 @@ pnpm typecheck
 - `POST /api/bills/scan` (Bearer token, multipart, field `photo`) → editable draft: `now`, `before` (from printed history), `missing`, `estimated`, masked Service ID Number and CAN, and `link` (Account Linking). `401` signed out, `422` unreadable, `503` no vision key. There is no anonymous scan: sign-in comes first (ADR-0005).
 - `POST /api/households/:sin/appliances/scan-label` (authenticated multipart, fields `photo` and `type`: `aircon` or `refrigerator`) → editable energy-label draft; see below.
 - `GET  /api/households/:sin/home` → the Home tab: amount due, badge, masked CAN, the four effects with `addsUp`, and `chargeLines` (`featured`: Generation, Distribution, System loss, Transmission, Taxes; `all`: every printed line with a stable `id`, amount, change vs. last month and `goesTo`).
+- `POST /api/households/:sin/charges/:lineId/ask` `{ question }` → `{ lineId, kind: answer | askMeralco | redirect, source: ai | template, answer, summary? }`. Stateless charge chat: code builds that one line's facts (amounts, kWh, per-kWh rate, usage vs rate split, payee, Bill Check result); the coach provider sees only those facts and the question. Any ₱ or kWh figure not in the facts falls back to the template answer; complaint questions get "Itanong kay Meralco" and the copyable summary; off-topic questions are redirected.
 - `GET  /api/households/:sin/bakit-ganito` → same, from the Household's two latest Bills in the Bill source
 
 `Bill = { period: "YYYY-MM", kwh, billingDays, chargeLines?: [{ label, amount }] }`

@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { chargePrompt, type ChargeFacts } from "../domain/charge-chat.js";
 import type { CoachProvider, MissionFacts } from "./coach-provider.interface.js";
 import { TemplateCoachProvider } from "./template-coach.provider.js";
 
@@ -36,6 +37,21 @@ export class GeminiCoachProvider implements CoachProvider {
       return text;
     } catch {
       return this.fallback.phraseMission(f);
+    }
+  }
+
+  /** The prompt holds only this line's facts and the question. Null on no key, error or timeout. */
+  async answerCharge({ facts, question }: { facts: ChargeFacts; question: string }): Promise<string | null> {
+    if (!this.client) return null;
+    try {
+      const reply = await Promise.race([
+        this.client.models.generateContent({ model: this.model, contents: chargePrompt(facts, question) }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("coach timeout")), TIMEOUT_MS)),
+      ]);
+      const text = (reply.text ?? "").trim().replace(/\s+/g, " ");
+      return text && text.length <= 700 ? text : null;
+    } catch {
+      return null;
     }
   }
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, ApiError, type Household, type LoginResult } from "./api/client";
+import { api, ApiError, type HomeChargeLine, type Household, type LoginResult } from "./api/client";
+import { ChargeChat } from "./components/ChargeChat";
 import { SignIn } from "./components/SignIn";
 import { LinkFlow } from "./components/LinkFlow";
 import { HouseholdPicker } from "./components/HouseholdPicker";
@@ -29,6 +30,7 @@ export function App() {
   const [rewardsVersion, setRewardsVersion] = useState(0);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
+  const [asking, setAsking] = useState<{ line: HomeChargeLine; previousMonth: string | null } | null>(null);
   const [tab, go] = useHashTab();
 
   const begin = useCallback((next: LoginResult, preferSin?: string) => {
@@ -39,7 +41,7 @@ export function App() {
     stored.set("household", sin || null);
   }, []);
   const end = useCallback((notice: string | null) => {
-    setSession(null); setSelectedSin(""); setLinking(false); setSessionNotice(notice);
+    setSession(null); setSelectedSin(""); setLinking(false); setAsking(null); setSessionNotice(notice);
     stored.set("token", null); stored.set("household", null);
   }, []);
   const onExpired = useCallback(() => end(EXPIRED), [end]);
@@ -62,7 +64,7 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [session, onExpired]);
 
-  const select = (sin: string) => { setSelectedSin(sin); stored.set("household", sin); };
+  const select = (sin: string) => { setSelectedSin(sin); setAsking(null); stored.set("household", sin); };
   const selected: Household | undefined = session?.households.find((h) => h.sin === selectedSin);
 
   if (restoring) return <main className="flow-screen"><p className="muted" role="status">Binubuksan…</p></main>;
@@ -93,7 +95,13 @@ export function App() {
       <main>
         {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
         {tab === "home" && <>
-          <Home key={`home:${key}`} token={session.token} household={selected} onExpired={onExpired} onSave={() => go("missions")} />
+          <Home key={`home:${key}`} token={session.token} household={selected} onExpired={onExpired} onSave={() => go("missions")}
+            onAskCharge={(line, summary) => setAsking({
+              line,
+              previousMonth: summary.bakitGanito ? new Date(`${summary.bakitGanito.previousPeriod}-01T00:00:00`).toLocaleDateString("en-PH", { month: "long" }) : null,
+            })} />
+          {asking && <ChargeChat key={`chat:${key}:${asking.line.id}`} token={session.token} sin={selected.sin} line={asking.line}
+            previousMonth={asking.previousMonth} onClose={() => setAsking(null)} onExpired={onExpired} />}
           <BillHistory key={`history:${key}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <BakitGanitoResult r={r} />} />
           {selected.meter_type === "smart" && <SmartMeterUsage key={`usage:${key}`} token={session.token} household={selected} onExpired={onExpired} />}
         </>}

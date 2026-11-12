@@ -662,3 +662,20 @@ export const homeApi = {
   summary: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(`/api/households/${encodeURIComponent(sin)}/home`, authed(token, signal)).then((r) => json<HomeSummary>(r)),
 };
+
+export interface ChargeAnswer {
+  lineId: string;
+  kind: "answer" | "askMeralco" | "redirect";
+  source: "ai" | "template";
+  answer: string;
+  summary?: string | null;
+}
+
+export const chargeApi = {
+  ask: (token: string, sin: string, lineId: string, question: string) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/charges/${encodeURIComponent(lineId)}/ask`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ question }),
+    }).then((r) => json<ChargeAnswer>(r)),
+};
