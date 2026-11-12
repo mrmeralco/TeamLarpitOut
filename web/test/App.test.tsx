@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { App } from "../src/App";
+import { clearPlanCache } from "../src/components/MissionPlan";
 import { clearHomeCache } from "../src/components/Home";
 
 const households = [
@@ -60,6 +61,10 @@ beforeEach(() => {
       source: "fallback", points: "Points are counted on your whole bill.",
       missions: [{ id: "aircon-off-1h", title: "Turn off the aircon 1 hour earlier", why: "Why.", how: ["Do it."], appliance: "aircon", kwhSaved: 18.6, pesoValue: 20800, percent: 3, share: 0.6, effort: "Easy", basis: "physics", assumptions: [] }],
     });
+    if (/^\/api\/households\/[^/]+\/setup\/onboarding-seen$/.test(input)) {
+      setup = { ...setup, onboardingSeen: true } as typeof setup;
+      return response(setup);
+    }
     if (/^\/api\/households\/[^/]+\/setup\/household$/.test(input)) {
       setup = setupStatus([true, setup.steps[1]!.done, setup.steps[2]!.done]);
       return response(setup);
@@ -110,7 +115,7 @@ beforeEach(() => {
   });
   vi.stubGlobal("fetch", fetchMock);
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearHomeCache(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearPlanCache(); clearHomeCache(); window.localStorage.clear(); });
 
 /** Home's Wrapped story is showing this Household's bill (the area is on the first slide). */
 const homeShows = (area: "Caloocan City" | "Quezon City") => screen.findByText(new RegExp(`· ${area} home`));
@@ -358,22 +363,43 @@ describe("My Meralco PWA", () => {
     expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
   });
 
-  it("'Want to save?' opens rewards onboarding; 'Maybe later' returns to Home", async () => {
+  it("Home has no 'Want to save?' card; the first Missions visit opens Eelio's onboarding, which leads into setup", async () => {
     setup = setupStatus([false, false, false]);
     render(<App />); await login();
-    fireEvent.click(await screen.findByRole("button", { name: /Want to save on your next bill/ }));
-    expect(await screen.findByRole("heading", { name: "Use less power. Get rewarded for it." })).toBeTruthy();
-    expect(window.location.hash).toBe("#/missions/save");
-    expect(screen.getByText(/unlock after your first verified savings/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Maybe later" }));
-    await screen.findByRole("button", { name: /Want to save on your next bill/ });
-    expect(window.location.hash).toBe("#/home");
+    await screen.findByRole("heading", { name: /bill/i });
+    expect(screen.queryByRole("button", { name: /Want to save on your next bill/ })).toBeNull();
+    await goTab("Missions");
+    const dialog = within(await screen.findByRole("dialog", { name: "Want to save on your next bill?" }));
+    fireEvent.click(dialog.getByRole("button", { name: "Show me" }));
+    expect(await screen.findByRole("dialog", { name: "Save on your bill, earn points" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByRole("dialog", { name: "Want to save on your next bill?" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Show me" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next" }));
+    expect(await screen.findByRole("dialog", { name: "First, help me get to know your home" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^Start setup · earn \d+ pts$/ }));
+    await waitFor(() => expect(window.location.hash).toBe("#/missions/setup/household"));
+    expect(await screen.findByRole("heading", { name: "Who lives there?" })).toBeTruthy();
+  });
+
+  it("'Maybe later' closes Eelio's onboarding for good, remembered on the server", async () => {
+    setup = setupStatus([false, false, false]);
+    render(<App />); await login();
+    await goTab("Missions");
+    fireEvent.click(await screen.findByRole("button", { name: "Maybe later" }));
+    expect(await screen.findByRole("heading", { name: "Set up your home" })).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await goTab("Home");
+    await goTab("Missions");
+    expect(await screen.findByRole("heading", { name: "Set up your home" })).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("the Missions tab shows the setup checklist until setup is complete, reachable onboarding included", async () => {
     setup = setupStatus([false, false, false]);
     render(<App />); await login();
     await goTab("Missions");
+    fireEvent.click(await screen.findByRole("button", { name: "Maybe later" }));
     expect(await screen.findByRole("heading", { name: "Set up your home" })).toBeTruthy();
     expect(screen.getByText("0 of 3 complete · about 2 minutes")).toBeTruthy();
     expect(screen.getByText("🔒 Your missions unlock after setup")).toBeTruthy();
@@ -388,7 +414,7 @@ describe("My Meralco PWA", () => {
     await act(async () => { window.location.hash = "/missions"; });
     expect(await screen.findByText("1 of 3 complete · about 2 minutes")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "How it works" }));
-    expect(await screen.findByRole("heading", { name: "Use less power. Get rewarded for it." })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: "Want to save on your next bill?" })).toBeTruthy();
   });
 
   it("checklist progress survives a reload (stored per Household on the server)", async () => {

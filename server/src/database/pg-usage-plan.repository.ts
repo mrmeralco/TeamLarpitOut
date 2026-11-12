@@ -1,6 +1,7 @@
 import type { TargetCut } from "../domain/baseline.js";
 import type { UsagePlan, UsagePlanRepository } from "../usage-plan/usage-plan-repository.interface.js";
 import type { Sql } from "./database.module.js";
+import { TtlCache } from "./ttl-cache.js";
 
 interface PlanRow {
   period: string;
@@ -27,9 +28,15 @@ interface MissionRow {
  * Household per period. `find` returns the latest period's plan, as the in-memory version kept only the last one.
  */
 export class PgUsagePlanRepository implements UsagePlanRepository {
+  private readonly cache = new TtlCache<UsagePlan | null>(60_000);
+
   constructor(private readonly sql: Sql) {}
 
-  async find(sin: string): Promise<UsagePlan | null> {
+  find(sin: string): Promise<UsagePlan | null> {
+    return this.cache.get(sin, () => this.load(sin));
+  }
+
+  private async load(sin: string): Promise<UsagePlan | null> {
     const [plan] = await this.sql<PlanRow[]>`
       select period, cut, target_kwh, target_centavos, aircon_setting, source, wording, shown, created_at, started_at
       from public.usage_plans where sin = ${sin} order by period desc, created_at desc limit 1`;
@@ -95,6 +102,8 @@ export class PgUsagePlanRepository implements UsagePlanRepository {
         await tx`insert into public.usage_plan_missions ${tx(missions)}`;
       }
     });
+    // find() returns the latest period's plan: drop the cached one so it's re-read after any save.
+    this.cache.delete(sin);
     return structuredClone(plan);
   }
 }

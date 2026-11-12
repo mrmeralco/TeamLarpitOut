@@ -12,6 +12,8 @@ export interface SetupRecord {
   /** Aircon visual answers estimated from a photo, with its kWh per hour. */
   airconPhoto?: { answers: Record<string, string>; kwhPerHour: number };
   completedAt?: string;
+  /** When Eelio's Missions onboarding was shown and closed. */
+  onboardingSeenAt?: string;
 }
 
 export interface SetupRepository {

@@ -70,13 +70,15 @@ describe("Daily Points for smart meter Households (ADR-0008)", () => {
 
     // The day Missions started is part plan, part not; it never counts. Nothing is settled yet.
     clock.now = at("2026-11-10", 23);
-    expect(await points()).toMatchObject({ balance: 100, lockedPoints: 100, spendable: 0 });
+    expect(await points()).toMatchObject({ balance: 50, lockedPoints: 50, spendable: 0 });
 
     // Nov 14, 9 AM: Nov 11–13 are complete; Nov 14 is still running.
     clock.now = at("2026-11-14", 9);
     const settled = await days();
     expect(settled.map((e: { day: string }) => e.day)).toEqual(["2026-11-13", "2026-11-12", "2026-11-11"]);
     // Nov 11 is 27 °C (5 CDD): expected 15.2 + 0.8 × 5 = 19.2 kWh, used 17.7, saved 1.5 kWh × ₱11 = ₱16.50.
+    // Points (same rules as the Bill): ₱211.20 baseline → ₱2.11 noise band not counted; ₱10.56 goal in full
+    // + ₱3.83 past it at half = ₱12.47 → 1 pt per ₱2 = 6.2 → November 2026, very strong El Niño ×1.3 → 8.
     expect(settled.at(-1)).toMatchObject({
       period: "2026-11",
       day: "2026-11-11",
@@ -84,15 +86,15 @@ describe("Daily Points for smart meter Households (ADR-0008)", () => {
       actualKwh: 17.7,
       savedKwh: 1.5,
       savedPesos: 1650,
-      points: 16,
+      points: 8,
       hasOutage: false,
       source: "meter_verified",
     });
     expect(settled.at(-1).description).toBe("Verified Savings on November 11, 2026 (1.5 kWh saved)");
-    // Nov 12 (6 CDD) saves 1.6 kWh = ₱17.60; Nov 13 (7 CDD) saves 1.7 kWh = ₱18.70.
-    expect(settled.map((e: { points: number }) => e.points)).toEqual([18, 17, 16]);
+    // Nov 12 (6 CDD) saves 1.6 kWh = ₱17.60 → 8; Nov 13 (7 CDD) saves 1.7 kWh = ₱18.70 → 9.
+    expect(settled.map((e: { points: number }) => e.points)).toEqual([9, 8, 8]);
     // The first daily savings unlock the Welcome Points.
-    expect(await points()).toMatchObject({ balance: 151, lockedPoints: 0, spendable: 151 });
+    expect(await points()).toMatchObject({ balance: 75, lockedPoints: 0, spendable: 75 });
   });
 
   it("settles each day once and adds a new day as it completes", async () => {
@@ -102,7 +104,7 @@ describe("Daily Points for smart meter Households (ADR-0008)", () => {
     expect(await days()).toHaveLength(3);
     clock.now = at("2026-11-15", 0);
     expect((await days()).map((e: { day: string }) => e.day)).toEqual(["2026-11-14", "2026-11-13", "2026-11-12", "2026-11-11"]);
-    expect((await points()).balance).toBe(100 + 16 + 17 + 18 + 19);
+    expect((await points()).balance).toBe(50 + 8 + 8 + 9 + 9);
   });
 
   it("gives a smart meter Household no Points from the Bill", async () => {
@@ -111,7 +113,7 @@ describe("Daily Points for smart meter Households (ADR-0008)", () => {
     clock.now = at("2026-11-14", 9);
     const body = await points();
     expect(body.history.some((e: { source: string }) => e.source === "bill_verified")).toBe(false);
-    expect(body.balance).toBe(151);
+    expect(body.balance).toBe(75);
   });
 
   it("earns nothing on a day with a recorded outage", async () => {
@@ -124,7 +126,7 @@ describe("Daily Points for smart meter Households (ADR-0008)", () => {
       hasOutage: true,
       excludedReason: expect.stringContaining("outage"),
     });
-    expect(settled.map((e: { points: number }) => e.points)).toEqual([18, 0, 16]);
+    expect(settled.map((e: { points: number }) => e.points)).toEqual([9, 0, 8]);
   });
 
   it("waits on a day with missing readings instead of counting it as zero use", async () => {
@@ -141,7 +143,7 @@ describe("Daily Points for smart meter Households (ADR-0008)", () => {
     const settled = await days();
     expect(settled).toHaveLength(3);
     expect(settled.every((e: { points: number; description: string }) => e.points === 0 && e.description.startsWith("No Verified Savings"))).toBe(true);
-    expect(await points()).toMatchObject({ balance: 100, lockedPoints: 100 });
+    expect(await points()).toMatchObject({ balance: 50, lockedPoints: 50 });
   });
 
   it("keeps counting from the first start when the plan is saved again", async () => {
@@ -150,7 +152,7 @@ describe("Daily Points for smart meter Households (ADR-0008)", () => {
     // Choosing the plan again must not move the start, or the saved days would become the reference.
     expect((await api.put(`/api/households/${SMART}/usage-plan`, { cut: 5, missionIds: ["aircon-timer-2h"] }, token)).status).toBe(200);
     expect((await api.get(`/api/households/${SMART}/usage-plan`, token)).body.plan.startedAt).toBe(new Date(PLAN_STARTS).toISOString());
-    expect((await days()).map((e: { points: number }) => e.points)).toEqual([18, 17, 16]);
+    expect((await days()).map((e: { points: number }) => e.points)).toEqual([9, 8, 8]);
   });
 
   it("gives no daily Points before Missions start", async () => {
@@ -166,12 +168,37 @@ describe("Daily Points for smart meter Households (ADR-0008)", () => {
     expect(body).toMatchObject({ balance: 0, history: [] });
   });
 
+  it("gives a smart meter home today's Missions, a new set the next day, with yesterday's result and the streak", async () => {
+    const { api, token, clock } = await startedMissions();
+    clock.now = at("2026-11-14", 9);
+    const plan = async () => (await api.get(`/api/households/${SMART}/missions/plan`, token)).body;
+    const first = (await plan()).daily;
+    expect(first.date).toBe("2026-11-14");
+    expect(first.missions).toHaveLength(3);
+    expect(new Set(first.missions.map((m: { id: string }) => m.id)).size).toBe(3);
+    // Per-day figures: a fraction of the month's goal.
+    expect(first.goal.pesos).toBeGreaterThan(0);
+    for (const m of first.missions) {
+      expect(m.pesoValue).toBeGreaterThan(0);
+      // Said for today, not for the whole period.
+      expect(m.why).toMatch(/Today this saves about [\d.]+ kWh/);
+      expect(m.why).not.toMatch(/this period/);
+    }
+    // Yesterday (Nov 13) earned 9 points on the meter; Nov 11–13 all earned, so a 3-day streak.
+    expect(first.yesterday).toMatchObject({ date: "2026-11-13", points: 9, hasOutage: false });
+    expect(first.streak).toBe(3);
+    clock.now = at("2026-11-15", 9);
+    const next = (await plan()).daily;
+    expect(next.date).toBe("2026-11-15");
+    expect(next.missions.map((m: { id: string }) => m.id).sort()).not.toEqual(first.missions.map((m: { id: string }) => m.id).sort());
+  });
+
   it("shows earned Points in the Rewards catalog", async () => {
     const { api, token, clock } = await startedMissions();
     clock.now = at("2026-11-14", 9);
     const { body } = await api.get(`/api/households/${SMART}/rewards`, token);
     expect(body.earned.slice(0, 3).map((e: { day: string }) => e.day)).toEqual(["2026-11-13", "2026-11-12", "2026-11-11"]);
-    expect(body.spendable).toBe(151);
+    expect(body.spendable).toBe(75);
   });
 });
 

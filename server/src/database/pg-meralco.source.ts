@@ -3,6 +3,7 @@ import type { MeralcoAccount, MeralcoAccountSource } from "../bills/meralco-acco
 import { toBill, type MeralcoBillRecord, type MeralcoChargeLine, type MeralcoPayment } from "../bills/meralco-records.js";
 import type { Bill } from "../domain/bill.js";
 import type { Sql } from "./database.module.js";
+import { TtlCache } from "./ttl-cache.js";
 
 type AccountRow = { can: string; sin: string; area: string; meter_type: MeralcoAccount["meter_type"] };
 
@@ -17,15 +18,24 @@ type AccountRow = { can: string; sin: string; area: string; meter_type: MeralcoA
  */
 export class PgMeralcoSource implements BillSource, MeralcoAccountSource {
   private readonly cache = new Map<string, { at: number; bills: Promise<Bill[]> }>();
+  private readonly accounts = new TtlCache<MeralcoAccount | null>(5 * 60_000);
 
   constructor(private readonly sql: Sql, private readonly ttlMs = 5 * 60_000, private readonly now = () => Date.now()) {}
 
-  async findByCan(can: string): Promise<MeralcoAccount | null> {
+  findByCan(can: string): Promise<MeralcoAccount | null> {
+    return this.accounts.get(`can:${can}`, () => this.loadByCan(can));
+  }
+
+  household(sin: string): Promise<MeralcoAccount | null> {
+    return this.accounts.get(`sin:${sin}`, () => this.loadHousehold(sin));
+  }
+
+  private async loadByCan(can: string): Promise<MeralcoAccount | null> {
     const [row] = await this.sql<AccountRow[]>`select can, sin, area, meter_type from meralco.accounts where can = ${can}`;
     return row ? { can: row.can, sin: row.sin, area: row.area, meter_type: row.meter_type } : null;
   }
 
-  async household(sin: string): Promise<MeralcoAccount | null> {
+  private async loadHousehold(sin: string): Promise<MeralcoAccount | null> {
     const [row] = await this.sql<AccountRow[]>`select can, sin, area, meter_type from meralco.accounts where sin = ${sin}`;
     return row ? { can: row.can, sin: row.sin, area: row.area, meter_type: row.meter_type } : null;
   }

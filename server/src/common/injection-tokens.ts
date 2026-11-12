@@ -9,6 +9,7 @@ export const VISION_PROVIDER = Symbol("VISION_PROVIDER");
 export const MERALCO_ACCOUNTS = Symbol("MERALCO_ACCOUNTS");
 /** Which login each Household is linked to (pending or active). */
 export const HOUSEHOLD_LINKS = Symbol("HOUSEHOLD_LINKS");
+export const HOUSEHOLD_CHANGES = Symbol("HOUSEHOLD_CHANGES");
 /** Delivers sign-up codes (SMS or email) and the email verification link (demo: logs them). */
 export const NOTIFIER = Symbol("NOTIFIER");
 /** Logins: email, verified mobile number, password hash (in-memory now; database later). */
@@ -28,6 +29,7 @@ export const APPLIANCE_REPOSITORY = Symbol("APPLIANCE_REPOSITORY");
 /** Per-Household Target and Missions for a billing period (in-memory now; database later). */
 export const USAGE_PLAN_REPOSITORY = Symbol("USAGE_PLAN_REPOSITORY");
 /** Per-Household typed Mid-month Reading for traditional meters (in-memory now; database later). */
+export const MISSION_REMINDER_REPOSITORY = Symbol("MISSION_REMINDER_REPOSITORY");
 export const MID_MONTH_READING_REPOSITORY = Symbol("MID_MONTH_READING_REPOSITORY");
 /** Words computed Missions for the household; never supplies a number. */
 export const COACH_PROVIDER = Symbol("COACH_PROVIDER");

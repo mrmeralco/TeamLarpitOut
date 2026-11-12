@@ -2,7 +2,7 @@
  * Welcome Points (ADR-0004): granted once per Household for finishing Household
  * Setup, shown in the balance at once but locked until the first Verified Savings.
  */
-export const WELCOME_POINTS = 100;
+export const WELCOME_POINTS = 50;
 
 interface LedgerEntry { source: string; points: number }
 

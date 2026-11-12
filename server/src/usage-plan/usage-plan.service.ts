@@ -24,6 +24,7 @@ import type { Bill } from "../domain/bill.js";
 import { compareTarget, detectHeatWave, forecastRange, forecastSingle } from "../domain/forecast.js";
 import { calculateHeatSensitivity, predictKwhPerDay } from "../domain/heat-sensitivity.js";
 import { rankMissions, type ApplianceUsage } from "../domain/mission-catalog.js";
+import { climateFor } from "../domain/climate.js";
 import { computeVerifiedSavings, type VerifiedSavingsResult } from "../domain/points.js";
 import { cost, type RateScheduleTable } from "../domain/rate-schedule.js";
 import { lockedPoints } from "../domain/welcome-points.js";
@@ -377,7 +378,7 @@ export class UsagePlanService {
     return {
       awardedPoints: 0,
       balance,
-      message: "Points come only from Verified Savings on your next Bill, not from self-reports.",
+      message: "Points come only from the savings on your next Bill, not from self-reports.",
     };
   }
 
@@ -427,6 +428,7 @@ export class UsagePlanService {
     const cddLast = await this.weather.getCddPerDay(prev.period);
     const cddActual = await this.weather.getCddPerDay(actual.period);
     const hasOutage = await this.outageSource.hasOutage(sin, actual.period);
+    const climate = climateFor(actual.period);
 
     const result = computeVerifiedSavings({
       previousBill: prev,
@@ -436,13 +438,14 @@ export class UsagePlanService {
       cddPerDayPrevious: cddLast,
       cddPerDayActual: cddActual,
       hasOutage,
+      multiplier: climate.multiplier,
     });
 
     const desc = result.hasOutage
       ? `A brownout/outage was recorded in ${monthName(result.period)} (${result.period}), so it does not qualify for Points.`
       : result.points > 0
-        ? `Verified Savings on the ${monthName(result.period)} Bill (${result.savedKwh} kWh saved)`
-        : `No Verified Savings on the ${monthName(result.period)} Bill`;
+        ? `Savings on the ${monthName(result.period)} Bill (${result.savedKwh} kWh saved · ${climate.label} ×${climate.multiplier})`
+        : `No savings past the normal range on the ${monthName(result.period)} Bill`;
 
     const entry: PointsEntry = {
       id: `pts-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,

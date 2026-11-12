@@ -586,6 +586,8 @@ export interface SetupStatus {
   grid?: Record<string, number> | null;
   gridCatalog?: GridTile[];
   welcomePoints: { points: number; granted: boolean; locked: boolean };
+  /** Eelio's Missions onboarding was already shown for this Household (stored on the server). */
+  onboardingSeen?: boolean;
 }
 export interface GridTile { type: string; label: string; kwh: number; unit: string; tag: "Typical value" | "Estimated from photo" }
 export interface AirconCheck {
@@ -597,6 +599,8 @@ const setupPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/s
 export const setupApi = {
   status: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(setupPath(sin), authed(token, signal)).then((r) => json<SetupStatus>(r)),
+  onboardingSeen: (token: string, sin: string) =>
+    fetch(`${setupPath(sin)}/onboarding-seen`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then((r) => json<SetupStatus>(r)),
   household: (token: string, sin: string, size: number) =>
     fetch(`${setupPath(sin)}/household`, {
       method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ size }),
@@ -632,6 +636,8 @@ export interface PlanMission {
   percent: number;
   /** Share of the 5% goal. */
   share: number;
+  /** Points this Mission is worth: 1 per ₱1 it saves. */
+  rewardPoints: number;
   effort: "Easy" | "Medium";
   basis: "physics" | "assumption";
   assumptions: { key: string; label: string; value: number }[];
@@ -643,6 +649,26 @@ export interface MissionPlan {
   coveredPercent: number;
   source: "ai" | "fallback";
   missions: PlanMission[];
+  /** Missions with "Remind me tonight" set this period (stored on the server). */
+  reminders?: string[];
+  /** Smart meter homes only: Missions change every day and points are counted daily (ADR-0008). */
+  daily?: {
+    /** Today, Asia/Manila (YYYY-MM-DD). */
+    date: string;
+    goal: { kwh: number; pesos: number };
+    rewardPoints: number;
+    /** Per-day kWh, pesos and points. */
+    missions: PlanMission[];
+    yesterday: { date: string; points: number; savedKwh: number; hasOutage: boolean } | null;
+    /** Days in a row, up to yesterday, that earned points. */
+    streak: number;
+  };
+  /** A brownout on Meralco's record for this period: no Points for it. */
+  outage?: { date: string | null; durationHours: number | null; description: string | null } | null;
+  /** Points the whole plan is worth (noise band, goal cap and climate applied). */
+  rewardPoints: number;
+  /** This month's climate (PAGASA ENSO advisories) and its Points multiplier. */
+  climate?: { phase: "elNino" | "laNina" | "neutral"; label: string; multiplier: number; source: string };
   points: string;
   changed?: boolean;
   swapped?: { out: string; in: string };
@@ -655,4 +681,7 @@ export const missionPlanApi = {
     fetch(`${missionPath(sin)}/plan/shuffle`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then((r) => json<MissionPlan>(r)),
   swap: (token: string, sin: string, id: string) =>
     fetch(`${missionPath(sin)}/${encodeURIComponent(id)}/swap`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then((r) => json<MissionPlan>(r)),
+  remind: (token: string, sin: string, id: string) =>
+    fetch(`${missionPath(sin)}/${encodeURIComponent(id)}/remind`, { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => json<{ missionId: string; reminded: boolean; reminders: string[] }>(r)),
 };
