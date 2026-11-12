@@ -11,7 +11,7 @@ beforeEach(() => {
   account = { status: "found", canMasked: "39•• ••• 482", area: "Caloocan City", meterType: "traditional", billsOnRecord: 12, firstPeriod: "2025-11", lastPeriod: "2026-10" };
   canMasked = "39•• ••• 482";
   fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
-    if (input === "/api/bills/scan") return response({
+    if (input === "/api/bills/scan" || input === "/api/bills/simulate") return response({
       status: "read", now: { period: "2026-10", kwh: 610, billingDays: 33, dueDate: "2026-11-24", chargeLines: [{ label: "Generation", amount: 6817 }] },
       before: { period: "2026-09", kwh: 520, billingDays: 33 }, missing: [], estimated: ["before.billingDays"],
       serviceIdMasked: null, canMasked, account, scanToken: "a".repeat(43),
@@ -131,5 +131,33 @@ describe("demo fallback", () => {
     expect(logoutBtn).toBeTruthy();
     fireEvent.click(logoutBtn);
     expect(onLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("loads simulated bill data when clicking 'Simulate bill data'", async () => {
+    render(<ScanBill token="t" onLinked={onLinked} onExpired={() => {}} />);
+    const simBtn = screen.getByRole("button", { name: /Simulate bill data/i });
+    fireEvent.click(simBtn);
+    await screen.findByRole("heading", { name: "Does this look right?" });
+    expect(screen.getByText("39•• ••• 482")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith("/api/bills/simulate", expect.anything());
+  });
+
+  it("allows proceeding with simulated bill data when scan encounters quota/network error", async () => {
+    fetchMock.mockImplementationOnce(async (input: string) => {
+      if (input === "/api/bills/scan") {
+        return response({ status: "unavailable", error: "Vision AI quota limit reached. Please use simulated bill data to proceed." }, 502);
+      }
+      return response({});
+    });
+
+    render(<ScanBill token="t" onLinked={onLinked} onExpired={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Take a photo of the bill"), { target: { files: [new File(["x"], "bill.jpg", { type: "image/jpeg" })] } });
+    await screen.findByRole("alert");
+    expect(screen.getByText(/Vision AI quota limit reached/)).toBeTruthy();
+
+    const continueBtn = screen.getByRole("button", { name: "Continue with simulated bill" });
+    fireEvent.click(continueBtn);
+    await screen.findByRole("heading", { name: "Does this look right?" });
+    expect(screen.getByText("39•• ••• 482")).toBeTruthy();
   });
 });

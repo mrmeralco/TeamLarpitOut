@@ -592,6 +592,10 @@ button.wide { width: 100%; margin-top: 10px; }
 .compare-row input { width: 84px; justify-self: end; padding: 8px; text-align: right; font-size: 15px; font-weight: 600; border-radius: 8px; }
 .notice-inline.with-icon { display: flex; gap: 10px; align-items: flex-start; margin: 0; }
 .notice-inline.with-icon svg { flex-shrink: 0; margin-top: 1px; }
+.simulate-action { display: flex; justify-content: center; margin-top: 4px; }
+.simulate-btn { font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; }
+.scan-error { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; margin-bottom: 8px; }
+.scan-error .btn-outline { width: 100%; height: 42px; font-size: 14px; }
 
 /* ───────────────────────── Layout: desktop first, responsive down to phones ───────────────────────── */
 

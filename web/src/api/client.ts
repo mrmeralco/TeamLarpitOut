@@ -168,6 +168,31 @@ export async function scanBill(photo: File, token: string): Promise<ScanOutcome>
   return { kind: "unavailable", error: body.error ?? `We couldn't read the photo (HTTP ${res.status}).` };
 }
 
+/** Simulate reading a bill without uploading a photo or using vision AI quota. */
+export async function simulateBill(
+  token: string,
+  options?: { can?: string; meterType?: "traditional" | "smart" },
+): Promise<ScanOutcome> {
+  let res: Response;
+  try {
+    res = await fetch("/api/bills/simulate", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(options ?? {}),
+    });
+  } catch {
+    return { kind: "unavailable", error: "We couldn't reach the server. Please try again." };
+  }
+  const body = await res.json().catch(() => ({}));
+  if (res.ok) return { kind: "read", ...body };
+  if (res.status === 401) return { kind: "unavailable", error: "HTTP 401: Please sign in first." };
+  if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
+  return { kind: "unavailable", error: body.error ?? `We couldn't simulate the bill (HTTP ${res.status}).` };
+}
+
 export interface BillBreakdownRow {
   label: string;
   amount: number;
