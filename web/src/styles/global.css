@@ -594,3 +594,16 @@ button.wide { width: 100%; margin-top: 10px; }
 .link { border: 0; background: none; padding: 0; color: var(--primary); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
 .otp { font-size: 1.4rem; letter-spacing: 0.5em; text-align: center; font-weight: 600; }
 .small { font-size: 0.85rem; }
+.pill { font-size: 0.75rem; font-weight: 600; padding: 6px 10px; border-radius: 999px; background: var(--muted); color: var(--muted-foreground); }
+.link-summary { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--muted); margin: 12px 0; }
+.notice-inline { padding: 12px 14px; border-radius: 12px; background: color-mix(in oklch, var(--primary) 10%, var(--background)); font-size: 0.9rem; }
+.can-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; }
+.tag { font-size: 0.72rem; font-weight: 600; padding: 4px 8px; border-radius: 6px; white-space: nowrap; }
+.tag.ok { background: color-mix(in oklch, var(--down) 16%, transparent); color: var(--foreground); }
+.tag.bad { background: color-mix(in oklch, var(--destructive) 16%, transparent); color: var(--foreground); }
+.tag.warn { background: color-mix(in oklch, var(--chart-1) 35%, transparent); color: var(--foreground); }
+.review { display: grid; gap: 0; margin: 12px 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.review div { display: flex; justify-content: space-between; padding: 12px 14px; border-top: 1px solid var(--border); }
+.review div:first-child { border-top: 0; }
+.review dt { color: var(--muted-foreground); }
+.review dd { margin: 0; font-weight: 600; }

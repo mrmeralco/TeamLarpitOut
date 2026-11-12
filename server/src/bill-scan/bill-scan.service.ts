@@ -3,7 +3,8 @@ import type { Bill, ChargeLine } from "../domain/bill.js";
 import { VISION_PROVIDER } from "../common/injection-tokens.js";
 import type { BillImage, RawBillReading, VisionProvider } from "../vision/vision-provider.interface.js";
 
-import { ScanContextStore } from "../vision/scan-context.store.js";
+import { ScanContextStore, tenDigits } from "../vision/scan-context.store.js";
+import { maskCan } from "../households/households.service.js";
 
 export type DraftBill = Partial<Bill>;
 
@@ -24,6 +25,8 @@ export type ScanResult =
       missing: string[];
       /** Service ID Number, masked; the full number is never sent back. */
       serviceIdMasked: string | null;
+      /** Customer Account Number, masked; null when the photo did not show a full CAN. */
+      canMasked: string | null;
       needsConfirmation: true;
     }
   | { status: "unreadable"; problem: string };
@@ -91,6 +94,7 @@ export function toScanResult(raw: RawBillReading): ScanResult {
     estimated,
     missing: [...missing],
     serviceIdMasked: maskServiceId(raw.serviceIdNumber),
+    canMasked: (() => { const can = tenDigits(raw.customerAccountNumber); return can ? maskCan(can) : null; })(),
     needsConfirmation: true,
   };
 }
@@ -102,6 +106,10 @@ export class BillScanService {
   async scan(image: BillImage) {
     const raw = await this.vision.readBill(image);
     const result = toScanResult(raw);
-    return result.status === "read" ? { ...result, scanToken: this.contexts.create(raw.serviceIdNumber) } : result;
+    if (result.status !== "read") return { result, can: null };
+    return {
+      result: { ...result, scanToken: this.contexts.create(raw.serviceIdNumber, raw.customerAccountNumber) },
+      can: tenDigits(raw.customerAccountNumber),
+    };
   }
 }

@@ -9,6 +9,7 @@ import {
   HttpCode,
   Post,
   ServiceUnavailableException,
+  UnauthorizedException,
   UnprocessableEntityException,
   UploadedFile,
   UseInterceptors,
@@ -17,6 +18,8 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { VisionUnavailableError } from "../vision/vision-provider.interface.js";
 import { BillScanService } from "./bill-scan.service.js";
 
+import type { Request } from "express";
+import { AuthService, SIGN_IN_REQUIRED } from "../auth/auth.service.js";
 import { SessionGuard, type AuthenticatedRequest } from "../auth/session.guard.js";
 import { HouseholdsService } from "../households/households.service.js";
 import { ScanContextStore } from "../vision/scan-context.store.js";
@@ -27,7 +30,12 @@ const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "ima
 
 @Controller("bills")
 export class BillScanController {
-  constructor(private readonly billScan: BillScanService, private readonly contexts: ScanContextStore, private readonly households: HouseholdsService) {}
+  constructor(
+    private readonly billScan: BillScanService,
+    private readonly contexts: ScanContextStore,
+    private readonly households: HouseholdsService,
+    private readonly auth: AuthService,
+  ) {}
 
   @Post("scan-linkage")
   @HttpCode(200)
@@ -48,15 +56,16 @@ export class BillScanController {
   @HttpCode(200)
   @Header("Cache-Control", "no-store")
   @UseInterceptors(FileInterceptor("photo", { limits: { fileSize: MAX_PHOTO_BYTES } }))
-  async scan(@UploadedFile() photo?: Express.Multer.File) {
+  async scan(@Req() request: Request, @UploadedFile() photo?: Express.Multer.File) {
+    const ownerId = this.optionalOwner(request);
     if (!photo) throw new BadRequestException({ error: "Walang litrato (field: photo)" });
     if (!IMAGE_TYPES.includes(photo.mimetype)) {
       throw new BadRequestException({ error: `Hindi larawan ang file (${photo.mimetype})` });
     }
 
-    let result;
+    let scanned;
     try {
-      result = await this.billScan.scan({ mimeType: photo.mimetype, data: photo.buffer });
+      scanned = await this.billScan.scan({ mimeType: photo.mimetype, data: photo.buffer });
     } catch (err) {
       if (err instanceof VisionUnavailableError) {
         throw new ServiceUnavailableException({
@@ -70,7 +79,20 @@ export class BillScanController {
         error: "Hindi nabasa ang litrato ngayon. Subukan ulit o i-type ang Bill.",
       });
     }
+    const { result, can } = scanned;
     if (result.status === "unreadable") throw new UnprocessableEntityException(result);
-    return result;
+    if (ownerId === null) return result;
+    // Account Linking: the scanned CAN activates this login's pending link when it is the same CAN.
+    const link = await this.households.activateFromScan(ownerId, can);
+    return link.status === "none" ? result : { ...result, link };
+  }
+
+  /** A bearer token is optional here; when sent it must be valid. */
+  private optionalOwner(request: Request): string | null {
+    const header = request.headers.authorization;
+    if (!header) return null;
+    const token = /^Bearer ([A-Za-z0-9_-]+)$/i.exec(header)?.[1];
+    if (!token) throw new UnauthorizedException({ error: SIGN_IN_REQUIRED });
+    return this.auth.authenticate(token);
   }
 }

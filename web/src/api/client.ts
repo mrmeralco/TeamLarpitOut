@@ -222,6 +222,35 @@ export interface DraftBill {
   estimated?: boolean;
 }
 
+/** What a scan did to the login's pending Account Linking. */
+export type LinkActivation =
+  | { status: "active"; householdSin: string; canMasked: string }
+  | { status: "pending"; reason: "differentAccount" | "canUnread"; canMasked: string }
+  | { status: "refused"; reason: "ownedByAnother"; message: string }
+  | { status: "none" };
+
+export interface LinkSummary {
+  status: "pending" | "active";
+  householdSin?: string;
+  canMasked: string;
+  area: string;
+  meterType: "traditional" | "smart";
+  billsOnRecord: number;
+  firstPeriod: string | null;
+  lastPeriod: string | null;
+}
+
+export const linkApi = {
+  start: (token: string, can: string) => fetch("/api/households/link", {
+    method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ can }),
+  }).then((r) => json<LinkSummary>(r)),
+  pending: (token: string, signal?: AbortSignal) => fetch("/api/households/link", authed(token, signal))
+    .then((r) => json<{ pending: LinkSummary | null }>(r)),
+  confirmTyped: (token: string, scanToken: string, can: string) => fetch("/api/households/link/confirm", {
+    method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ scanToken, can }),
+  }).then((r) => json<LinkActivation>(r)),
+};
+
 export type ScanOutcome =
   | {
       kind: "read";
@@ -230,18 +259,20 @@ export type ScanOutcome =
       estimated: string[];
       missing: string[];
       serviceIdMasked: string | null;
+      canMasked?: string | null;
+      link?: LinkActivation;
       scanToken: string;
     }
   | { kind: "unreadable"; problem: string }
   | { kind: "unavailable"; error: string };
 
 /** Send a Bill photo to be read. The result is a draft the user must confirm. */
-export async function scanBill(photo: File): Promise<ScanOutcome> {
+export async function scanBill(photo: File, token?: string): Promise<ScanOutcome> {
   const form = new FormData();
   form.append("photo", photo);
   let res: Response;
   try {
-    res = await fetch("/api/bills/scan", { method: "POST", body: form });
+    res = await fetch("/api/bills/scan", { method: "POST", body: form, ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) });
   } catch {
     return { kind: "unavailable", error: "Hindi maabot ang server. I-type na lang ang Bill." };
   }

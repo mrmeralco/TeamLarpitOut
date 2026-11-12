@@ -15,6 +15,7 @@ import {
   type ScanOutcome,
 } from "./api/client";
 import { SignIn } from "./components/SignIn";
+import { LinkFlow } from "./components/LinkFlow";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
@@ -370,6 +371,7 @@ export function App() {
   const [applianceVersion, setApplianceVersion] = useState(0);
   const [rewardsVersion, setRewardsVersion] = useState(0);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+  const [linking, setLinking] = useState(false);
   const selected = session?.households.find((h) => h.sin === selectedSin);
   const onExpired = useCallback(() => {
     setSession(null); setSelectedSin(""); setSessionNotice("Nag-expire ang session. Mag-sign in ulit.");
@@ -492,6 +494,14 @@ export function App() {
       </header>
 
       {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
+      {session && (linking || session.households.length === 0) && <LinkFlow key={`link:${session.token}`} token={session.token} onExpired={onExpired}
+        onCancel={session.households.length ? () => setLinking(false) : undefined}
+        onLinked={(sin) => {
+          void api.households(session.token).then((households) => {
+            setSession({ ...session, households }); setSelectedSin(sin); setLinking(false);
+          }).catch((err) => { if (err instanceof ApiError && err.status === 401) onExpired(); });
+        }} />}
+      {session && !linking && session.households.length > 0 && <button type="button" className="ghost" onClick={() => setLinking(true)}>+ Mag-link ng Household</button>}
       {session ? <HouseholdPicker households={session.households} selected={selectedSin} onSelect={setSelectedSin} onLogout={() => {
         const token = session.token;
         setSession(null); setSelectedSin(""); setSessionNotice(null);

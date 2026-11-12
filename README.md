@@ -54,6 +54,8 @@ pnpm typecheck
 - `POST /api/auth/email/verify` `{ email, code }` → `{ token }`, or `401` for a wrong, used or expired (10 min) code. Codes are stored hashed and work once; 5 wrong tries lock the code until a new start. A new login has no Households until one is linked.
 - `POST /api/auth/logout` (Bearer token) → `204`, revokes the session.
 - `GET  /api/households` (Bearer token) → the login's active Households.
+- `POST /api/households/link` `{ can }` (Bearer token) → masked summary `{ status: "pending", canMasked, area, meterType, billsOnRecord, firstPeriod, lastPeriod }` (never amounts, kWh or the address); `409` when another login holds the active link, `404` unknown CAN. `GET /api/households/link` → `{ pending }`.
+- Account Linking: a signed-in `POST /api/bills/scan` reads the Bill's CAN and adds `link`: `active` when it matches the pending CAN, `pending` with reason `differentAccount` or `canUnread`, or `refused`. When the CAN was unread, `POST /api/households/link/confirm` `{ scanToken, can }` checks the CAN typed from the Bill. Until the link is active every per-Household route returns `403`.
 - `GET  /api/rate-schedules` → `{ periods }`
 - `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` → effects, total (centavos)
 - `POST /api/bills/laman` `{ now: Bill, before?: Bill }` → grouped charge lines, pass-through vs Meralco distribution split

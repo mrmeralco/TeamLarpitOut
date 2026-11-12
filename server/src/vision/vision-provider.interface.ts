@@ -14,6 +14,8 @@ export interface RawBillReading {
   /** Why it could not be read (blurry, not a Meralco bill, cut off...). */
   problem?: string;
   serviceIdNumber?: string | null;
+  /** Customer Account Number (CAN) as printed. */
+  customerAccountNumber?: string | null;
   period?: string | null;
   billingDays?: number | null;
   kwh?: number | null;
