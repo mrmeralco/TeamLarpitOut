@@ -13,10 +13,12 @@ import { configureApp } from "../../src/app.setup.js";
 import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
-import { AUTH_CLOCK, BILL_SOURCE, MY_MERALCO_SOURCE, RATE_SCHEDULES, VISION_PROVIDER } from "../../src/common/injection-tokens.js";
+import { AUTH_CLOCK, BILL_SOURCE, MY_MERALCO_SOURCE, RATE_SCHEDULES, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
 import type { AuthClock } from "../../src/auth/auth.service.js";
 import { mockMyMeralcoSource, type MockMeralcoLogin, type MyMeralcoSource } from "../../src/bills/myMeralcoSource.js";
 import type { RawBillReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
+import { FakeWeatherProvider } from "../../src/weather/fake-weather.provider.js";
+import type { WeatherProvider } from "../../src/weather/weather-provider.interface.js";
 
 /** A small, round-number schedule so expected pesos are easy to check by hand. */
 export function schedule(period: string, perKwh: number, fixed = 50): RateSchedule {
@@ -68,6 +70,8 @@ export interface HarnessOptions {
   billSource?: BillSource;
   /** What the fake vision model "reads" from any photo, or a custom provider. */
   vision?: RawBillReading | VisionProvider;
+  /** Fake weather observations or a custom weather provider. */
+  weather?: WeatherProvider | Record<string, number>;
 }
 
 /** Fake vision provider: returns a fixed reading and records the images it got. */
@@ -104,6 +108,12 @@ export async function harness(opts: HarnessOptions = {}) {
       isProvider(opts.vision)
         ? opts.vision
         : fakeVision(opts.vision ?? { readable: false, problem: "no fake reading configured" }),
+    )
+    .overrideProvider(WEATHER_PROVIDER)
+    .useValue(
+      opts.weather && typeof (opts.weather as WeatherProvider).getCddPerDay === "function"
+        ? opts.weather
+        : new FakeWeatherProvider(opts.weather as Record<string, number> | undefined),
     )
     .compile();
 

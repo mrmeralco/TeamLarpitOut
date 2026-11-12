@@ -211,4 +211,58 @@ describe("merged bill breakdown and scan linkage", () => {
     expect(screen.queryByRole("heading", { name: "Bakit ganito?" })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Ano'ng laman ng bill ko?" })).toBeNull();
   });
+
+  it("taps Weather Effect in 'Bakit ganito?' to reveal bawat mas mainit na araw", async () => {
+    fetchMock.mockImplementation(async (input, init) => {
+      if (input === "/api/bakit-ganito") {
+        return response({
+          ...verdictResponse(),
+          effects: [
+            { key: "rate", label: "Rate Effect", amount: 10000 },
+            { key: "billingDays", label: "Billing Days Effect", amount: 10000 },
+            {
+              key: "weather",
+              label: "Weather Effect (tantya)",
+              amount: 15000,
+              estimate: true,
+              sensitivity: 1.5,
+              sensitivitySource: "history",
+              hotDayKwh: 1.5,
+            },
+            { key: "habit", label: "Habit Effect", amount: 15000 },
+          ],
+        });
+      }
+      if (input === "/api/bills/scan") {
+        return response({
+          status: "read",
+          now: { period: "2026-10", kwh: 200, billingDays: 31 },
+          before: { period: "2026-09", kwh: 150, billingDays: 30 },
+          missing: [],
+          estimated: [],
+          serviceIdMasked: "••••••7890",
+          scanToken: "a".repeat(43),
+        });
+      }
+      if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10"] });
+      throw new Error(`Unexpected request: ${input}`);
+    });
+
+    render(<App />);
+    await scanAndConfirm();
+    fireEvent.click(screen.getByRole("button", { name: "Bakit ganito?" }));
+    await screen.findByRole("heading", { name: "Bakit ganito?" });
+
+    const weatherRow = screen.getByRole("button", { name: /Weather Effect/ });
+    expect(weatherRow.textContent).toContain("Weather Effect (tantya)");
+    expect(weatherRow.textContent).toContain("Epekto ng init ng panahon (tantya)");
+
+    // Tap to expand
+    fireEvent.click(weatherRow);
+    expect(weatherRow.textContent).toContain("bawat mas mainit na araw ≈ +1.5 kWh mula sa sariling mga Bill");
+
+    // Tap to collapse
+    fireEvent.click(weatherRow);
+    expect(weatherRow.textContent).toContain("Epekto ng init ng panahon (tantya)");
+  });
 });

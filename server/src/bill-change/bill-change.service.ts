@@ -1,10 +1,12 @@
 import { Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import type { Bill } from "../domain/bill.js";
-import { splitBillChange } from "../domain/bill-change.js";
+import { NO_WEATHER, splitBillChange, type WeatherInput } from "../domain/bill-change.js";
 import { splitExtras } from "../domain/bill-extras.js";
+import { calculateHeatSensitivity, DEFAULT_COOLING_SENSITIVITY, type HeatSensitivityResult } from "../domain/heat-sensitivity.js";
 import { costLines, type RateSchedule, type RateScheduleTable } from "../domain/rate-schedule.js";
 import type { BillSource } from "../bills/bill-source.js";
-import { BILL_SOURCE, RATE_SCHEDULES } from "../common/injection-tokens.js";
+import { BILL_SOURCE, RATE_SCHEDULES, WEATHER_PROVIDER } from "../common/injection-tokens.js";
+import type { WeatherProvider } from "../weather/weather-provider.interface.js";
 
 /** "Bakit ganito?": the Bill Change split into four effects (ADR-0001). All amounts in centavos. */
 @Injectable()
@@ -12,19 +14,73 @@ export class BillChangeService {
   constructor(
     @Inject(RATE_SCHEDULES) private readonly rates: RateScheduleTable,
     @Inject(BILL_SOURCE) private readonly bills: BillSource,
+    @Inject(WEATHER_PROVIDER) private readonly weather: WeatherProvider,
   ) {}
 
   async explainForHousehold(sin: string) {
     const bills = await this.bills.bills(sin);
     if (bills.length < 2) throw new NotFoundException({ error: "Kailangan ng dalawang Bill" });
     const [before, now] = bills.slice(-2) as [Bill, Bill];
-    return this.explain(before, now);
+
+    const billsWithWeather = await Promise.all(
+      bills.map(async (b) => {
+        const cdd = await this.weather.getCddPerDay(b.period);
+        return {
+          period: b.period,
+          kwh: b.kwh,
+          billingDays: b.billingDays,
+          cddPerDay: cdd ?? -1,
+        };
+      }),
+    );
+
+    const sensitivity = calculateHeatSensitivity(billsWithWeather);
+    const cddBefore = await this.weather.getCddPerDay(before.period);
+    const cddNow = await this.weather.getCddPerDay(now.period);
+
+    const weatherInput: WeatherInput =
+      cddBefore !== null && cddNow !== null
+        ? {
+            heatSensitivity: sensitivity.heatSensitivity,
+            cddPerDayBefore: cddBefore,
+            cddPerDayNow: cddNow,
+          }
+        : NO_WEATHER;
+
+    return this.explain(before, now, weatherInput, sensitivity);
   }
 
-  explain(before: Bill, now: Bill) {
+  async explainWithFallback(before: Bill, now: Bill) {
+    const cddBefore = await this.weather.getCddPerDay(before.period);
+    const cddNow = await this.weather.getCddPerDay(now.period);
+
+    if (cddBefore !== null && cddNow !== null) {
+      const fallbackSensitivity: HeatSensitivityResult = {
+        heatSensitivity: DEFAULT_COOLING_SENSITIVITY,
+        source: "cooling_appliance_estimate",
+        label: "Cooling Appliance estimate",
+        hotDayKwh: DEFAULT_COOLING_SENSITIVITY,
+      };
+      const weatherInput: WeatherInput = {
+        heatSensitivity: fallbackSensitivity.heatSensitivity,
+        cddPerDayBefore: cddBefore,
+        cddPerDayNow: cddNow,
+      };
+      return this.explain(before, now, weatherInput, fallbackSensitivity);
+    }
+
+    return this.explain(before, now, NO_WEATHER);
+  }
+
+  explain(
+    before: Bill,
+    now: Bill,
+    weather: WeatherInput = NO_WEATHER,
+    sensitivity?: HeatSensitivityResult,
+  ) {
     const schedBefore = this.schedule(before.period);
     const schedNow = this.schedule(now.period);
-    const split = splitBillChange(before, now, schedBefore, schedNow);
+    const split = splitBillChange(before, now, schedBefore, schedNow, weather);
 
     const side = (bill: Bill, sched: RateSchedule, rebuilt: number, lifeline: number) => {
       const printed = splitExtras(bill.chargeLines);
@@ -77,9 +133,28 @@ export class BillChangeService {
       effects: [
         { key: "rate", label: "Rate Effect", amount: split.rateEffect },
         { key: "billingDays", label: "Billing Days Effect", amount: split.billingDaysEffect },
-        { key: "weather", label: "Weather Effect", amount: split.weatherEffect },
+        {
+          key: "weather",
+          label: "Weather Effect (tantya)",
+          amount: split.weatherEffect,
+          estimate: true,
+          sensitivity: sensitivity?.heatSensitivity,
+          sensitivitySource: sensitivity?.source,
+          sensitivityLabel: sensitivity?.label,
+          hotDayKwh: sensitivity?.hotDayKwh,
+        },
         { key: "habit", label: "Habit Effect", amount: split.habitEffect },
       ],
+      weatherDetail: sensitivity
+        ? {
+            heatSensitivity: sensitivity.heatSensitivity,
+            source: sensitivity.source,
+            label: sensitivity.label,
+            hotDayKwh: sensitivity.hotDayKwh,
+            cddPerDayBefore: weather.cddPerDayBefore,
+            cddPerDayNow: weather.cddPerDayNow,
+          }
+        : undefined,
       /** Only the lines that apply: lifeline gained/lost/changed, catch-up after an estimated Bill. */
       lines,
       /** With an estimated previous Bill the two months are re-split, so habit can't be measured. */

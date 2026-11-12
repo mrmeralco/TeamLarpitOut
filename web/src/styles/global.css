@@ -168,6 +168,8 @@ button.ghost { background: none; border: 1px dashed var(--border); color: var(--
 .lede { margin: -4px 0 12px; color: var(--muted-foreground); font-size: 0.9rem; }
 .effects { list-style: none; margin: 0; padding: 0; }
 .effects li { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.effects li.interactive { cursor: pointer; }
+.effects li.interactive:focus-visible { outline: 2px solid var(--ring); border-radius: 4px; }
 .effects li small { color: var(--muted-foreground); }
 .effect-head { display: flex; justify-content: space-between; gap: 8px; }
 .effect-head strong { font-variant-numeric: tabular-nums; }

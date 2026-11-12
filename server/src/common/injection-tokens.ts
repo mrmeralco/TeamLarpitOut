@@ -6,5 +6,6 @@ export const RATE_SCHEDULES = Symbol("RATE_SCHEDULES");
 export const BILL_SOURCE = Symbol("BILL_SOURCE");
 export const VISION_PROVIDER = Symbol("VISION_PROVIDER");
 export const MY_MERALCO_SOURCE = Symbol("MY_MERALCO_SOURCE");
+export const WEATHER_PROVIDER = Symbol("WEATHER_PROVIDER");
 /** Injectable time source for session expiry. */
 export const AUTH_CLOCK = Symbol("AUTH_CLOCK");
