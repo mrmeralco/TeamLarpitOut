@@ -16,5 +16,5 @@ We chose this because the team wants the message "save 5% by doing these few thi
 
 - The Target is fixed at 5% by default (the 5 / 10 / 15% choice can return later as a setting).
 - The AI receives only computed candidates and returns their ids plus wording; the server rejects any plan whose ids are not candidates, then falls back to a deterministic pick.
-- A smart meter Mission still has a time window for its daily check (#18); the plan view is the same.
+- Smart meter Households get the same plan, verified at the next Bill like traditional ones. Daily window checks and daily Points (#18) are deferred to future work.
 - Candidate rates without a source (`r_temp`, `r_batch`, `r_ref`, standby watts) stay labelled as assumptions.

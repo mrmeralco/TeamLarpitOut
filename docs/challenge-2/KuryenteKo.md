@@ -32,7 +32,7 @@ Capitalised terms (Bill, Meter Type, Bill Check, Habit Effect, Verified Savings,
 | Is the bill right? | **Bill Checks** compare Meralco's own figures only; red → "Itanong kay Meralco" + copyable summary. **The app never files complaints** |
 | Bill explanation | Personal, line by line, on a redrawn Bill (beyond Meralco's general "Understand your bill" page) |
 | Appliances *(rev)* | Part of Household Setup: **tap the appliances you have** (with counts) and pick **one routine** for the whole home; typical kWh per appliance; total calibrated to the Bill. Aircon photo optional ([ADR-0006](../adr/0006-setup-by-tapping-appliances-and-one-routine.md)) |
-| Missions *(rev)* | Goal: **use 5% less electricity** this period. Code computes candidate Missions across all appliances; AI picks a plan of up to five that reaches ~5%, words it, and can shuffle or swap ([ADR-0007](../adr/0007-missions-as-a-five-percent-plan.md)). **Traditional: one billing period**, verified by the next Bill. **Smart meter: daily / weekly** window checks |
+| Missions *(rev)* | Goal: **use 5% less electricity** this period. Code computes candidate Missions across all appliances; AI picks a plan of up to five that reaches ~5%, words it, and can shuffle or swap ([ADR-0007](../adr/0007-missions-as-a-five-percent-plan.md)). One billing period, verified by the next Bill. **Smart meter:** same plan, verified at the next Bill (daily window checks deferred, #18 closed) |
 | Points | **1 point = ₱1 of Verified Savings**: weather- and days-adjusted, never self-reported, brownouts excluded |
 | Rewards | **Partner-funded** catalog (load, e-wallet, vouchers), sample items in the demo. Never a Meralco bill discount |
 | Forecast | Range from history + weather forecast; narrows with a Mid-month Reading (traditional, typed) or updates daily (smart meter) |
@@ -90,9 +90,9 @@ Code turns the routine into hours per appliance (ref and Wi-Fi 24 h; lights, TV 
 |---|---|---|
 | **Saan napupunta?** | Appliance breakdown, calibrated to the Bill (shown on the Missions tab and in each Mission's "why") | Same (from setup, not from readings) |
 | **Goal** | **Use 5% less** than the weather- and days-adjusted Baseline, shown in kWh and pesos | Same |
-| **Missions** | A **Mission Plan** of up to five across appliances that reaches ~5%; AI picks and words it, shuffle / swap; each shows its share of the goal and ~₱ | Same, each with a daily or weekly time window |
+| **Missions** | A **Mission Plan** of up to five across appliances that reaches ~5%; AI picks and words it, shuffle / swap; each shows its share of the goal and ~₱ | Same |
 | **Forecast** | Range from history + 14-day weather; narrows after a typed Mid-month Reading; heat wave banner | Updates daily from readings; heat wave banner |
-| **Verified Savings & Points** | At the next Bill | Per Mission window, daily |
+| **Verified Savings & Points** | At the next Bill | At the next Bill (daily per-window Points: future work) |
 | **Rewards** | Spend Points on partner rewards | Same |
 
 ### 2.4 "Tama ba ito?" badge
@@ -111,7 +111,7 @@ Code turns the routine into hours per appliance (ref and Wi-Fi 24 h; lights, TV 
 
 Code computes every value; the AI only picks the wording. Each `rate` without a source is an **assumption, labelled in the app** until the team finds a DOE or Meralco figure.
 
-| Mission | kWh saved per period | Smart meter window check | Source |
+| Mission | kWh saved per period | Smart meter window check (future work) | Source |
 |---|---|---|---|
 | Aircon at 25°C instead of current setting | `aircon_kwh × r_temp × (25 − current_setting)` | Night (10 PM–6 AM) kWh vs. the same window's baseline | `r_temp`: **assumption, find DOE/Meralco tip** |
 | Aircon off 1–2 hours earlier (sleep timer) | `aircon_kw × hours_cut × days` | 4–6 AM kWh below the base-load level on ≥5 of 7 days | Physics (label kW) |
@@ -128,7 +128,7 @@ Missions marked "monthly only" are offered to smart meter homes too, verified at
 
 - **1 point = ₱1 of Verified Savings.** A Mission's peso value is also its expected points.
 - **Traditional:** at the next Bill, `points = cost(baseline) − cost(actual)` if positive, with the Baseline adjusted for weather and billing days.
-- **Smart meter:** per Mission, daily: `(baseline_window_kWh − actual_window_kWh) × ₱/kWh`, for days the window condition is met.
+- **Smart meter:** at the next Bill, same as traditional. *(Future work: per Mission, daily `(baseline_window_kWh − actual_window_kWh) × ₱/kWh` for days the window condition is met; #18 closed for the hackathon.)*
 - **Never self-reported.** Tapping "tapos na" earns nothing.
 - **Welcome Points (ADR-0004):** finishing Household Setup grants 100 pts once per Household, shown at once but locked until the first Verified Savings. Setup is the locked state of the Missions tab (household info, appliance tap grid, routine), reached from "Want to save on your next bill?"; Missions stay locked behind it.
 - **Brownouts excluded:** days (smart meter) or periods (traditional, from Meralco's record) with a recorded outage don't count.
@@ -161,7 +161,7 @@ flowchart TD
     O --> P["Goal: use 5 percent less. AI plan of 5 Missions across appliances covers 5.0 percent"]
     P --> Q{"Meter Type"}
     Q -->|Traditional| R["Mid-month reading: forecast on track"]
-    Q -->|Smart meter| S["Daily window checks"]
+    Q -->|Smart meter| S["Readings update the forecast daily"]
     R --> T["Next Bill: Verified Savings 341 pesos"]
     S --> T
     T --> U["341 Points earned, Welcome Points unlock"]
@@ -228,9 +228,7 @@ smart meter:             projected recomputed daily from readings
 
 # ---------- Points ----------
 traditional: points = max(0, cost(baseline_kwh, days, sched) - cost(kwh_actual, days, sched))   # at next Bill
-smart meter: for each mission, each day:
-                 if window_condition_met and no outage that day:
-                     points += max(0, baseline_window_kwh - actual_window_kwh) * per_kwh_total
+smart meter: same as traditional, at the next Bill        # daily window Points: future work (#18)
 # self-reports earn nothing; outage periods excluded
 ```
 
@@ -295,7 +293,7 @@ smart meter: for each mission, each day:
 
 **Stretch:** digital meter photo for the Mid-month Reading.
 
-**Not building (future work slide):** dispute pack and staff inbox; area map; blackout reports; know-your-rights card; analog meter dial model; Tagalog/English toggle; appliance breakdown from smart meter readings; family teams, leaderboard; real partner rewards; payments.
+**Not building (future work slide):** smart meter daily Mission window checks and daily Points (#18); dispute pack and staff inbox; area map; blackout reports; know-your-rights card; analog meter dial model; Tagalog/English toggle; appliance breakdown from smart meter readings; family teams, leaderboard; real partner rewards; payments.
 
 ---
 
@@ -397,7 +395,7 @@ flowchart LR
 | Innovation | 30% | Exact four-way split of every bill change; household-specific Heat Sensitivity; Bill Checks using only Meralco's figures; aircon hours inferred from bills; rewards only for verified, weather-adjusted savings |
 | Functionality | 25% | One end-to-end flow on a real bill, plus a smart meter account on the same app |
 | Impact | 20% | Every customer has a bill; only real mismatches go to Meralco, cutting pointless calls; savings are visible and rewarded |
-| Technical Challenge | 15% | AI bill and label reading, table-driven bill rebuild, regression on history × CDD, appliance calibration, interval-window verification, two mock APIs |
+| Technical Challenge | 15% | AI bill reading, table-driven bill rebuild, regression on history × CDD, appliance calibration, AI-picked Mission Plan from computed candidates, two mock APIs |
 | Presentation | 10% | A real bill decoded live; a smart meter account; Points redeemed |
 
 ---
@@ -435,7 +433,7 @@ If time runs short, cut from the bottom of §7, never from items 1–5.
 | 1:00–1:45 | Problem; existing tools stop at a general guide |
 | 1:45–4:30 | Sign in with email code → type CAN → scan the real bill → CAN matches → Home tab 🟢: **four effects add up exactly** → tap **System loss** → chat explains it → tap Init → "your heat sensitivity" |
 | 4:30–6:00 | "Want to save?" → rewards onboarding → tap appliances → pick routine ("12 bills agree: 8 hrs") → +100 Welcome Points → **5% plan** across appliances → shuffle → Mission detail |
-| 6:00–7:15 | Switch to a smart meter account: usage chart → "Aircon ba ito?" → daily Mission verified → Points → redeem a sample reward |
+| 6:00–7:15 | Switch to a smart meter account: usage chart → "Aircon ba ito?" → same 5% plan, forecast updating daily → Rewards: redeem a sample reward |
 | 7:15–7:45 | Red case: previous reading mismatch → both figures → "Itanong kay Meralco." |
 | 7:45–8:30 | How it works: AI reads, code decides; every peso and point is reproducible |
 | 8:30–9:30 | Why different; limits; future work |
