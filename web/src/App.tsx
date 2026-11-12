@@ -11,7 +11,7 @@ import { HouseholdPicker } from "./components/HouseholdPicker";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
 import { Appliances } from "./components/Appliances";
 import { MissionPlan, PlanSummaryCard } from "./components/MissionPlan";
-import { Home } from "./components/Home";
+import { clearHomeCache, Home } from "./components/Home";
 import { Rewards } from "./components/Rewards";
 import { TabBar } from "./components/TabBar";
 import { stored, useHashRoute, useRawHash } from "./lib/routes";
@@ -26,6 +26,8 @@ export function App() {
   const [session, setSession] = useState<LoginResult | null>(null);
   const [restoring, setRestoring] = useState(() => stored.get("token") !== null);
   const [selectedSin, setSelectedSin] = useState(() => stored.get("household") ?? "");
+  const [navCollapsed, setNavCollapsed] = useState(() => stored.get("nav") === "collapsed");
+  const toggleNav = useCallback(() => setNavCollapsed((c) => { stored.set("nav", c ? null : "collapsed"); return !c; }), []);
   /** Bumped when appliances are saved so Missions are recomputed. */
   const [applianceVersion, setApplianceVersion] = useState(0);
   const [rewardsVersion, setRewardsVersion] = useState(0);
@@ -46,6 +48,7 @@ export function App() {
   }, []);
   const end = useCallback((notice: string | null) => {
     setSession(null); setSelectedSin(""); setLinking(false); setAsking(null); setSessionNotice(notice);
+    clearHomeCache();
     stored.set("token", null); stored.set("household", null);
   }, []);
   const onExpired = useCallback(() => end(EXPIRED), [end]);
@@ -134,7 +137,7 @@ export function App() {
 
   const key = `${session.token}:${selected.sin}`;
   return (
-    <div className="shell">
+    <div className={`shell${navCollapsed ? " nav-collapsed" : ""}`}>
       <main>
         {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
         {tab === "home" && <>
@@ -163,7 +166,7 @@ export function App() {
           <Appliances key={`appliances:${key}`} token={session.token} household={selected} onExpired={onExpired} onSaved={() => { setApplianceVersion((v) => v + 1); refreshSetup(); }} />
         </>}
       </main>
-      <TabBar tab={tab} onLogout={logout} />
+      <TabBar tab={tab} onLogout={logout} collapsed={navCollapsed} onToggle={toggleNav} />
     </div>
   );
 }

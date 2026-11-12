@@ -8,24 +8,38 @@ const ICONS: Record<Tab, string> = {
 };
 const LABELS: Record<Tab, string> = { home: "Home", missions: "Missions", rewards: "Rewards", account: "Account" };
 
-export function TabBar({ tab, onLogout }: { tab: Tab; onLogout?: () => void }) {
-  return <nav className="tabbar" aria-label="Main">
-    <div className="tabbar-brand" aria-hidden="true">
-      <span className="brand-mark"><img src="/icon-192.png" alt="" /></span>
-      Eelio
+/**
+ * The app's navigation: a sidebar on desktop that folds into an icon rail (to give the content
+ * more room), and a bottom tab bar on phones.
+ */
+export function TabBar({ tab, onLogout, collapsed = false, onToggle }: { tab: Tab; onLogout?: () => void; collapsed?: boolean; onToggle?: () => void }) {
+  return <nav className={`tabbar${collapsed ? " collapsed" : ""}`} aria-label="Main">
+    <div className="tabbar-top">
+      <div className="tabbar-brand" aria-hidden="true">
+        <span className="brand-mark"><img src="/icon-192.png" alt="" /></span>
+        <span className="tabbar-text">Eelio</span>
+      </div>
+      {onToggle && (
+        <button type="button" className="tabbar-toggle" onClick={onToggle} aria-expanded={!collapsed}
+          aria-label={collapsed ? "Expand the sidebar" : "Collapse the sidebar"} title={collapsed ? "Expand" : "Collapse"}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={collapsed ? "m9 6 6 6-6 6" : "m15 6-6 6 6 6"} /></svg>
+        </button>
+      )}
     </div>
     {(Object.keys(LABELS) as Tab[]).map((t) => (
-      <a key={t} href={`#/${t}`} aria-current={t === tab ? "page" : undefined}>
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[t]} /></svg>
-        {LABELS[t]}
+      <a key={t} href={`#/${t}`} aria-current={t === tab ? "page" : undefined} title={collapsed ? LABELS[t] : undefined}>
+        <span className="tabbar-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[t]} /></svg>
+        </span>
+        <span className="tabbar-text">{LABELS[t]}</span>
       </a>
     ))}
     {onLogout && (
-      <button type="button" className="tabbar-logout" onClick={onLogout} aria-label="Log out">
+      <button type="button" className="tabbar-logout" onClick={onLogout} aria-label="Log out" title={collapsed ? "Log out" : undefined}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
         </svg>
-        <span>Log out</span>
+        <span className="tabbar-text">Log out</span>
       </button>
     )}
   </nav>;

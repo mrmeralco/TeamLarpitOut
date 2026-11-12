@@ -72,6 +72,18 @@ describe("ChargeChat", () => {
     expect(screen.queryByText(/From Meralco's bill guide/)).toBeNull();
   });
 
+  it("checks off each quick question asked and counts the progress", async () => {
+    render(<ChargeChat token="t" sin="1234567890" line={line} previousMonth={null} onClose={() => {}} onExpired={() => {}} />);
+    expect(screen.getByLabelText("0 of 4 explored")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Who sets this rate?" }));
+    await screen.findByText("Answer to: Who sets this rate?");
+    expect(screen.getByLabelText("1 of 4 explored")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Ask a question"), { target: { value: "Who gets this money?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText("Answer to: Who gets this money?");
+    expect(screen.getByLabelText("1 of 4 explored")).toBeTruthy();
+  });
+
   it("closes with the close button", () => {
     const onClose = vi.fn();
     render(<ChargeChat token="t" sin="1234567890" line={line} previousMonth={null} onClose={onClose} onExpired={() => {}} />);

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ApiError, appliancesApi, homeApi, missionPlanApi,
   type ApplianceBreakdown, type HomeChargeLine, type Household, type HomeSummary, type MissionPlan, type SetupStatus, type UsageMonth,
@@ -80,60 +80,94 @@ function UsageBars({ months }: { months: UsageMonth[] }) {
   );
 }
 
-const GROUPS: { key: string; label: string; note: string }[] = [
-  { key: "Pass-through", label: "Pass-through", note: "Goes to power generators and the grid" },
-  { key: "Meralco", label: "Meralco", note: "Meralco's own distribution charges" },
-  { key: "Government", label: "Government", note: "Taxes and government charges" },
-  { key: "Subsidy", label: "Subsidies", note: "Discounts for other customers, set by law" },
-  { key: "Other", label: "Other", note: "Other charges on the bill" },
+const GROUPS: { key: string; label: string; note: string; icon: string }[] = [
+  { key: "Pass-through", label: "Pass-through", note: "Goes to power generators and the grid", icon: "M13 2 4 14h7l-1 8 9-12h-7z" },
+  { key: "Meralco", label: "Meralco", note: "Meralco's own distribution charges", icon: "M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0zM12 17v5" },
+  { key: "Government", label: "Government", note: "Taxes and government charges", icon: "M3 21h18M4 10h16M12 3l9 5H3zM6 10v8M10 10v8M14 10v8M18 10v8" },
+  { key: "Subsidy", label: "Subsidies", note: "Discounts for other customers, set by law", icon: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" },
+  { key: "Other", label: "Other", note: "Other charges on the bill", icon: "M5 12h.01M12 12h.01M19 12h.01" },
 ];
 
 /** Every charge on the Bill, grouped by who gets the money; each line opens the charge chat. */
+/** On phones the charge tiles come in swipeable groups of this many (2 × 2). */
+const PAGE_SIZE = 4;
+
 function ChargesBreakdown({ data, onAsk }: { data: HomeSummary; onAsk?: (line: HomeChargeLine) => void }) {
+  const pager = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(0);
   const all = [...data.chargeLines.all].sort((a, b) => b.amount - a.amount);
   if (all.length === 0) return null;
   const lines = all.filter((l) => Math.round(l.amount / 100) !== 0);
   const zero = all.length - lines.length;
   const total = lines.reduce((s, l) => s + Math.max(0, l.amount), 0) || 1;
   const groupOf = (l: HomeChargeLine) => (GROUPS.some((g) => g.key === l.goesTo) ? l.goesTo! : "Other");
+  const toneOf = (key: string) => key.toLowerCase().replace(/\W/g, "");
   const groups = GROUPS.map((g) => ({ ...g, amount: lines.filter((l) => groupOf(l) === g.key).reduce((s, l) => s + Math.max(0, l.amount), 0) }))
     .filter((g) => g.amount > 0);
+  const pages = Array.from({ length: Math.ceil(lines.length / PAGE_SIZE) }, (_, p) => lines.slice(p * PAGE_SIZE, (p + 1) * PAGE_SIZE));
+  const tile = (l: HomeChargeLine, i: number) => {
+    const g = GROUPS.find((x) => x.key === groupOf(l))!;
+    const tone = toneOf(g.key);
+    const share = (Math.max(0, l.amount) / total) * 100;
+    return (
+      <li key={l.id} style={{ animationDelay: `${i * 30}ms` }}>
+        <button type="button" className={`charge-tile t-${tone}${i === 0 ? " biggest" : ""}`} onClick={() => onAsk?.(l)}
+          aria-label={`${l.label}: ${peso(l.amount)}${l.change !== null ? `, ${peso(l.change, true)} vs. last month` : ""}${l.goesTo ? `, ${l.goesTo}` : ""}.${i === 0 ? " Biggest charge." : ""} Ask about this charge`}>
+          <span className="charge-tile-top">
+            <span className={`charge-tile-icon g-${tone}`} aria-hidden="true"><Svg d={g.icon} />{i === 0 && <span className="charge-tile-crown" title="Biggest charge">★</span>}</span>
+            {l.change !== null && Math.round(l.change / 100) !== 0 && <span className={`charge-tile-change ${l.change > 0 ? "up" : "down"}`}>{l.change > 0 ? "▲" : "▼"} {wholePeso(Math.abs(l.change), false)}</span>}
+          </span>
+          <strong className="charge-tile-amount">{wholePeso(l.amount, false)}</strong>
+          <strong className="charge-tile-name">{l.label}</strong>
+          <span className="charge-tile-meter" aria-hidden="true"><span className={`g-${tone}`} style={{ width: `${Math.max(3, share)}%` }} /></span>
+          <span className="charge-tile-meta">{Math.round(share)}% of the bill</span>
+        </button>
+      </li>
+    );
+  };
   return (
-    <div className="card charges-card">
+    <section className="card charges-card home-charges" aria-label="Your bill's charges">
       <div className="charges-head">
-        <h3>Charges on your bill</h3>
-        <span className="muted small">Tap a charge to ask Eelio</span>
+        <div>
+          <h3>Charges on your bill</h3>
+          <span className="muted small">Tap a charge to ask Eelio what it is</span>
+        </div>
+        <strong className="charges-total">{wholePeso(total, false)}</strong>
       </div>
       <div className="split-bar" role="img" aria-label={groups.map((g) => `${g.label} ${Math.round((g.amount / total) * 100)}%`).join(", ")}>
-        {groups.map((g) => <span key={g.key} className={`seg g-${g.key.toLowerCase().replace(/\W/g, "")}`} style={{ width: `${(g.amount / total) * 100}%` }} />)}
+        {groups.map((g) => <span key={g.key} className={`seg g-${toneOf(g.key)}`} style={{ width: `${(g.amount / total) * 100}%` }} />)}
       </div>
       <ul className="split-legend">
         {groups.map((g) => (
           <li key={g.key} title={g.note}>
-            <span className={`swatch g-${g.key.toLowerCase().replace(/\W/g, "")}`} aria-hidden="true" />
+            <span className={`swatch g-${toneOf(g.key)}`} aria-hidden="true" />
             <span>{g.label}</span>
             <strong>{wholePeso(g.amount, false)}</strong>
             <span className="muted">{Math.round((g.amount / total) * 100)}%</span>
           </li>
         ))}
       </ul>
-      <ul className="charge-list">
-        {lines.map((l) => (
-          <li key={l.id}>
-            <button type="button" className="charge-row" onClick={() => onAsk?.(l)}
-              aria-label={`${l.label}: ${peso(l.amount)}${l.change !== null ? `, ${peso(l.change, true)} vs. last month` : ""}${l.goesTo ? `, ${l.goesTo}` : ""}. Ask about this charge`}>
-              <span className={`swatch g-${groupOf(l).toLowerCase().replace(/\W/g, "")}`} aria-hidden="true" />
-              <span className="charge-row-name"><strong>{l.label}</strong><span>{Math.round((Math.max(0, l.amount) / total) * 100)}% of the bill</span></span>
-              <span className="charge-row-amount">
-                <strong>{wholePeso(l.amount, false)}</strong>
-                {l.change !== null && l.change !== 0 && <span className={l.change > 0 ? "up" : "down"}>{wholePeso(l.change)}</span>}
-              </span>
-            </button>
-          </li>
+      <div className="charge-pages" ref={pager} onScroll={(e) => {
+        const el = e.currentTarget;
+        if (el.clientWidth) setPage(Math.round(el.scrollLeft / el.clientWidth));
+      }}>
+        {pages.map((group, p) => (
+          <ul key={p} className="charge-cards charge-page" role="list" aria-label={pages.length > 1 ? `Charges ${p * PAGE_SIZE + 1} to ${p * PAGE_SIZE + group.length}` : undefined}>
+            {group.map((l, j) => tile(l, p * PAGE_SIZE + j))}
+          </ul>
         ))}
-      </ul>
-      {zero > 0 && <p className="muted small">+{zero} more {zero === 1 ? "charge" : "charges"} at ₱0 on this bill.</p>}
-    </div>
+      </div>
+      {pages.length > 1 && (
+        <div className="charge-pager" aria-label="Charge groups">
+          {pages.map((_, p) => (
+            <button key={p} type="button" className={p === page ? "on" : ""} aria-label={`Show charges group ${p + 1} of ${pages.length}`} aria-current={p === page ? "true" : undefined}
+              onClick={() => { const el = pager.current; el?.scrollTo?.({ left: p * el.clientWidth, behavior: "smooth" }); setPage(p); }} />
+          ))}
+          <span aria-hidden="true">{page + 1}/{pages.length}{page < pages.length - 1 ? " · swipe for more" : ""}</span>
+        </div>
+      )}
+      {zero > 0 && <p className="muted small charges-zero">+{zero} more {zero === 1 ? "charge" : "charges"} at ₱0 on this bill.</p>}
+    </section>
   );
 }
 
@@ -159,6 +193,16 @@ function AppliancesCard({ data }: { data: ApplianceBreakdown }) {
 }
 
 /**
+ * The last Home data per session and Household, so coming back to the Home tab shows it at once
+ * while a fresh copy loads in the background (the first load still waits for the server).
+ */
+type HomeCache = { data?: HomeSummary; usage?: UsageMonth[]; plan?: MissionPlan | null; appliances?: ApplianceBreakdown | null };
+const homeCache = new Map<string, HomeCache>();
+const remember = (key: string, part: HomeCache) => homeCache.set(key, { ...homeCache.get(key), ...part });
+/** Forgets every cached Home, e.g. when the session ends. */
+export const clearHomeCache = () => homeCache.clear();
+
+/**
  * Home, gamified around Eelio: a hero card with the bill, Eelio's mood and charge, three star
  * skills, the last 12 bills' kWh as bars, the appliances (once set up), and on the side every
  * Meralco charge grouped by who gets the money. The bill's full story opens as "Wrapped".
@@ -177,11 +221,13 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   /** Household Setup progress: Eelio's charge, and the appliances card once appliances are set up. */
   setup?: SetupStatus | null;
 }) {
-  const [data, setData] = useState<HomeSummary | null>(null);
+  const cacheKey = `${token}:${household.sin}`;
+  const cached = homeCache.get(cacheKey);
+  const [data, setData] = useState<HomeSummary | null>(cached?.data ?? null);
   const [error, setError] = useState<string | null>(null);
-  const [usage, setUsage] = useState<UsageMonth[] | null>(null);
-  const [plan, setPlan] = useState<MissionPlan | null>(null);
-  const [appliances, setAppliances] = useState<ApplianceBreakdown | null>(null);
+  const [usage, setUsage] = useState<UsageMonth[] | null>(cached?.usage ?? null);
+  const [plan, setPlan] = useState<MissionPlan | null>(cached?.plan ?? null);
+  const [appliances, setAppliances] = useState<ApplianceBreakdown | null>(cached?.appliances ?? null);
   const [playing, setPlaying] = useState(false);
   const planReady = !!setup?.complete;
   const appliancesReady = !!setup?.steps.find((st) => st.key === "appliances")?.done;
@@ -191,10 +237,12 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
     const fail = (err: unknown) => {
       if (controller.signal.aborted) return;
       if (err instanceof ApiError && err.status === 401) onExpired();
-      else setError(err instanceof Error ? err.message : "Couldn't load Home.");
+      // A failed background refresh keeps the cached Home on screen.
+      else if (!homeCache.get(cacheKey)?.data) setError(err instanceof Error ? err.message : "Couldn't load Home.");
     };
-    homeApi.summary(token, household.sin, controller.signal).then(setData).catch(fail);
-    homeApi.usage(token, household.sin, controller.signal).then(setUsage).catch(() => { if (!controller.signal.aborted) setUsage([]); });
+    homeApi.summary(token, household.sin, controller.signal).then((d) => { remember(cacheKey, { data: d }); setData(d); }).catch(fail);
+    homeApi.usage(token, household.sin, controller.signal).then((u) => { remember(cacheKey, { usage: u }); setUsage(u); })
+      .catch(() => { if (!controller.signal.aborted && !homeCache.get(cacheKey)?.usage) setUsage([]); });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, household.sin]);
@@ -202,7 +250,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   useEffect(() => {
     if (!planReady) { setPlan(null); return; }
     const controller = new AbortController();
-    missionPlanApi.get(token, household.sin, controller.signal).then(setPlan).catch(() => {});
+    missionPlanApi.get(token, household.sin, controller.signal).then((p) => { remember(cacheKey, { plan: p }); setPlan(p); }).catch(() => {});
     return () => controller.abort();
   }, [token, household.sin, planReady]);
 
@@ -210,7 +258,8 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
     if (!appliancesReady) { setAppliances(null); return; }
     const controller = new AbortController();
     appliancesApi.breakdown(token, household.sin, controller.signal)
-      .then((b) => setAppliances(b.rows.length ? b : null)).catch(() => setAppliances(null));
+      .then((b) => { const next = b.rows.length ? b : null; remember(cacheKey, { appliances: next }); setAppliances(next); })
+      .catch(() => { if (!controller.signal.aborted && homeCache.get(cacheKey)?.appliances === undefined) setAppliances(null); });
     return () => controller.abort();
   }, [token, household.sin, appliancesReady]);
 
@@ -225,7 +274,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   const setupStars = setup ? Math.min(5, 1 + setup.doneCount + (plan ? 1 : 0)) : 1;
 
   return (
-    <section className="dash" aria-label="Home">
+    <section className="dash home-dash" aria-label="Home">
       <div className="dash-main">
         <div className={`hero mood-${mood}`}>
           <div className="hero-copy">
@@ -256,15 +305,9 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
           <li><span className="skill-icon tone-c"><Svg d={ICON.target} /></span><Stars value={setupStars} label="Mission ready" /><strong>Mission ready</strong></li>
         </ul>
 
-        <div className="card usage-card">
-          <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh per bill · last 12 months</span></div>
-          {usage === null ? <p className="muted small">Loading…</p> : <UsageBars months={usage} />}
-        </div>
-
-        {appliances && <AppliancesCard data={appliances} />}
       </div>
 
-      <aside className="dash-side" aria-label="Your bill's charges">
+      <aside className="dash-side" aria-label="Your usage and savings">
         {saveCard ?? (
           <button type="button" className="save-card" onClick={onSave}>
             <span><strong>Want to save on your next bill?</strong>
@@ -273,8 +316,16 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
             <span aria-hidden="true">→</span>
           </button>
         )}
-        <ChargesBreakdown data={data} onAsk={(line) => onAskCharge?.(line, data)} />
+        <div className="card usage-card">
+          <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh · last 12 bills</span></div>
+          {usage === null ? <p className="muted small">Loading…</p> : <UsageBars months={usage} />}
+        </div>
       </aside>
+
+      <div className="dash-wide">
+        <ChargesBreakdown data={data} onAsk={(line) => onAskCharge?.(line, data)} />
+        {appliances && <AppliancesCard data={appliances} />}
+      </div>
 
       {playing && (
         <div className="wrapped-overlay" role="dialog" aria-modal="true" aria-label="Your bill, wrapped">
