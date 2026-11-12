@@ -1,14 +1,38 @@
-import { Body, Controller, Get, Header, Param, Put, UseGuards } from "@nestjs/common";
+import { BadGatewayException, BadRequestException, Body, Controller, Get, Header, HttpCode, Param, Post, Put, ServiceUnavailableException, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { SessionGuard } from "../auth/session.guard.js";
 import { HouseholdAccessGuard } from "../households/household-access.guard.js";
 import { AppliancesService } from "./appliances.service.js";
 import { SaveAppliancesDto } from "./dto/save-appliances.dto.js";
+import { ScanApplianceLabelDto } from "./dto/scan-appliance-label.dto.js";
+import { ApplianceLabelScanService } from "./appliance-label-scan.service.js";
+import { VisionUnavailableError } from "../vision/vision-provider.interface.js";
 
 /** A Household's appliances and "Saan napupunta?". Owner only. */
 @Controller("households/:sin/appliances")
 @UseGuards(SessionGuard, HouseholdAccessGuard)
 export class AppliancesController {
-  constructor(private readonly appliances: AppliancesService) {}
+  constructor(private readonly appliances: AppliancesService, private readonly labelScan: ApplianceLabelScanService) {}
+
+  @Post("scan-label")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  @UseInterceptors(FileInterceptor("photo", { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async scanLabel(@Body() body: ScanApplianceLabelDto, @UploadedFile() photo?: Express.Multer.File) {
+    if (!photo) throw new BadRequestException({ error: "Walang litrato (field: photo)" });
+    if (!["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"].includes(photo.mimetype)) {
+      throw new BadRequestException({ error: "Hindi tanggap ang uri ng larawan." });
+    }
+    try {
+      return await this.labelScan.scan(body.type, { mimeType: photo.mimetype, data: photo.buffer });
+    } catch (err) {
+      if (err instanceof UnprocessableEntityException) throw err;
+      if (err instanceof VisionUnavailableError) {
+        throw new ServiceUnavailableException({ error: "Hindi pa naka-set up ang energy label scan. Gamitin muna ang mga sagot mo." });
+      }
+      throw new BadGatewayException({ error: "Hindi mabasa ang energy label ngayon. Subukan ulit o gamitin ang mga sagot mo." });
+    }
+  }
 
   @Get()
   @Header("Cache-Control", "no-store")

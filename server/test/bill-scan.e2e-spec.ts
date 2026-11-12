@@ -127,6 +127,7 @@ describe("POST /api/bills/scan", () => {
   it("returns 503 so the PWA falls back to typing when no vision model is configured", async () => {
     const api = await harness({
       vision: {
+        readEnergyLabel: async () => ({ readable: false }),
         readBill: async () => {
           throw new VisionUnavailableError("no key");
         },
