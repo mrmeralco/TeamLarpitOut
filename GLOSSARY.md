@@ -1,6 +1,6 @@
-# KuryenteKo
+# Eelio
 
-Helps a household understand its Meralco bill, see why it changed, check that the bill is consistent with Meralco's own records, and act to lower the next one, using the monthly bill everyone already has. KilosWatt is the name of its usage-management part (Target, Missions, Savings).
+Helps a household understand its Meralco bill, see why it changed, check that the bill is consistent with Meralco's own records, and act to lower the next one, using the monthly bill everyone already has.
 
 ## The bill
 
@@ -29,7 +29,7 @@ The number printed on the Bill that a person types to link a Household. Typing i
 _Avoid_: Account ID, reference number
 
 **Service ID Number**:
-Meralco's identifier for one service, also printed on the Bill. KuryenteKo links by CAN, not by Service ID Number.
+Meralco's identifier for one service, also printed on the Bill. Eelio links by CAN, not by Service ID Number.
 _Avoid_: Account number, reference number
 
 **Sign-in**:

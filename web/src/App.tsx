@@ -94,7 +94,7 @@ export function App() {
 
   if (!session) {
     return <main className="flow-screen">
-      <header><h1>KuryenteKo</h1><p>Bakit ganito ang bill ko?</p></header>
+      <header><h1>Eelio</h1><p>Bakit ganito ang bill ko?</p></header>
       {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
       <SignIn onLogin={(next) => { begin(next); setSessionNotice(null); }} />
     </main>;

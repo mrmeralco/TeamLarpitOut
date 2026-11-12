@@ -3,7 +3,7 @@ export function SaveIntro({ onStart, onLater }: { onStart: () => void; onLater: 
   return (
     <section className="flow save-intro" aria-labelledby="save-intro-title">
       <button type="button" className="back" aria-label="Back" onClick={onLater}>‹</button>
-      <span className="muted small">KuryenteKo Rewards</span>
+      <span className="muted small">Eelio Rewards</span>
       <h2 id="save-intro-title">Use less power. Get rewarded for it.</h2>
       <p className="muted">Every ₱1 you save on your bill earns 1 point.</p>
       <h3>How it works</h3>
