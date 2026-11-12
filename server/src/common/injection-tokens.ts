@@ -14,6 +14,8 @@ export const EMAIL_SENDER = Symbol("EMAIL_SENDER");
 /** Makes 6-digit sign-in codes (fixed in test mode). */
 export const SIGN_IN_CODE_GENERATOR = Symbol("SIGN_IN_CODE_GENERATOR");
 export const WEATHER_PROVIDER = Symbol("WEATHER_PROVIDER");
+/** Daily heat keyed by Household, independent of monthly CDD and forecasts. */
+export const DAILY_WEATHER_SOURCE = Symbol("DAILY_WEATHER_SOURCE");
 export const READING_SOURCE = Symbol("READING_SOURCE");
 /** Injectable time source for session expiry. */
 export const AUTH_CLOCK = Symbol("AUTH_CLOCK");

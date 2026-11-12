@@ -376,6 +376,23 @@ export interface AirconProposalResult {
   fallback?: "routine";
 }
 
+export type AirconPatternInput = Pick<ApplianceInput, "quantity" | "answers" | "energyLabel">;
+interface AirconPatternEvidence {
+  timeZone: "Asia/Manila";
+  range: ReadingRange | null;
+  expectedKw: number;
+  ratingSource: "label" | "answers" | "default";
+  coverage: { completeNights: number; matchingNights: number; heatMatchedNights: number };
+  provenance: {
+    readings: { kind: "synthetic"; note: string };
+    weather: { kind: "synthetic" | "observed"; note: string } | null;
+  };
+}
+export type AirconPatternResult = AirconPatternEvidence & ({
+  status: "proposal"; canPropose: true; routine: TimeRange; hours: number; stepKw: number; prompt: string;
+  heat: { temperatureSpanC: number; kwPerDegreeC: number; correlation: number };
+} | { status: "fallback"; canPropose: false; fallback: "routine"; reason: string });
+
 /** Create a standard daily time range yielding the given hours (starting at 22:00). */
 export function rangeFromHours(hours: number): TimeRange {
   const clamped = Math.max(1, Math.min(23, Math.round(hours)));
@@ -394,6 +411,12 @@ const authed = (token: string, signal?: AbortSignal): RequestInit => ({
 const householdPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/appliances`;
 
 export const appliancesApi = {
+  airconPattern: (token: string, sin: string, input: AirconPatternInput, signal?: AbortSignal) =>
+    fetch(`${householdPath(sin)}/aircon-pattern-proposal`, {
+      ...authed(token, signal), method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(input),
+    }).then((r) => json<AirconPatternResult>(r)),
   scanLabel: (token: string, sin: string, type: "aircon" | "refrigerator", photo: File, signal?: AbortSignal) => {
     const body = new FormData();
     body.append("type", type);
