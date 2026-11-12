@@ -214,7 +214,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   onExpired: () => void;
   /** Opens the charge chat for one line (#50). */
   onAskCharge?: (line: HomeChargeLine, summary: HomeSummary) => void;
-  /** "Want to save on your next bill?" → rewards onboarding (#51). */
+  /** "Want to save on your next bill?" in the bill's Wrapped → Eelio's onboarding in Missions (#51). */
   onSave?: () => void;
   /** Replaces the save card once Household Setup is done (Mission Plan summary). */
   saveCard?: ReactNode;
@@ -308,14 +308,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
       </div>
 
       <aside className="dash-side" aria-label="Your usage and savings">
-        {saveCard ?? (
-          <button type="button" className="save-card" onClick={onSave}>
-            <span><strong>Want to save on your next bill?</strong>
-              <span>{change && change.habit > 0 ? `${plainPeso(change.habit)} came from usage. Cut it and earn points.` : "Use a little less and earn points on your next bill."}</span>
-            </span>
-            <span aria-hidden="true">→</span>
-          </button>
-        )}
+        {saveCard}
         <div className="card usage-card">
           <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh · last 12 bills</span></div>
           {usage === null ? <p className="muted small">Loading…</p> : <UsageBars months={usage} />}

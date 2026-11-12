@@ -107,14 +107,12 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
             </div>
             {(data.lockedPoints ?? 0) > 0 && (
               <p className="small" data-testid="locked-points">
-                🔒 {data.lockedPoints} Welcome Points are locked until your first Verified Savings
+                🔒 {data.lockedPoints} Welcome Points unlock with your first savings
                 {household.meter_type === "smart" ? " on a coming day." : " on a coming Bill."}
               </p>
             )}
             <p className="muted">
-              1 Point for every ₱1 of Verified Savings
-              {household.meter_type === "smart" ? ", verified every day by your smart meter" : ", verified on your next bill"}.
-              Use them on sample rewards from our partners.
+              1 point for every ₱2 you save {household.meter_type === "smart" ? "each day your smart meter reads" : "on your bill"}, more in hot El Niño months; none when there's a brownout. Use them on sample rewards from our partners.
             </p>
           </div>
 

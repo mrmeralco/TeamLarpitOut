@@ -1,5 +1,6 @@
 import type { PointsEntry, PointsRepository } from "../usage-plan/points-repository.interface.js";
 import type { Sql } from "./database.module.js";
+import { TtlCache } from "./ttl-cache.js";
 
 interface PointsRow {
   id: string;
@@ -22,9 +23,15 @@ interface PointsRow {
 
 /** The Points ledger in `public.points_entries`; rows are only added and the balance is their sum. */
 export class PgPointsRepository implements PointsRepository {
+  private readonly cache = new TtlCache<PointsEntry[]>(30_000);
+
   constructor(private readonly sql: Sql) {}
 
-  async getEntries(sin: string): Promise<PointsEntry[]> {
+  getEntries(sin: string): Promise<PointsEntry[]> {
+    return this.cache.get(sin, () => this.load(sin));
+  }
+
+  private async load(sin: string): Promise<PointsEntry[]> {
     const rows = await this.sql<PointsRow[]>`
       select id, sin, period, to_char(day, 'YYYY-MM-DD') as day, points, source, saved_centavos, saved_kwh, baseline_kwh, actual_kwh,
              has_outage, excluded_reason, description, reward_id, reward_name, created_at
@@ -74,12 +81,15 @@ export class PgPointsRepository implements PointsRepository {
       created_at: new Date(entry.createdAt),
     };
     // A repeated id (e.g. Welcome Points granted twice in a race) is ignored: the ledger only grows once per entry.
-    await this.sql`insert into public.points_entries ${this.sql(row)} on conflict do nothing`;
+    try {
+      await this.sql`insert into public.points_entries ${this.sql(row)} on conflict do nothing`;
+    } finally {
+      this.cache.delete(sin);
+    }
   }
 
+  /** The sum of the (cached) entries: one query serves both the balance and the ledger. */
   async getBalance(sin: string): Promise<number> {
-    const [row] = await this.sql<{ balance: number }[]>`
-      select coalesce(sum(points), 0)::int as balance from public.points_entries where sin = ${sin}`;
-    return row?.balance ?? 0;
+    return (await this.getEntries(sin)).reduce((s, e) => s + e.points, 0);
   }
 }

@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Household, SetupStatus } from "../api/client";
 import type { Tab } from "../lib/routes";
-import { SaveIntro } from "./SaveIntro";
+import { setupApi } from "../api/client";
+import { MissionsOnboarding } from "./MissionsOnboarding";
 import { SetupChecklist } from "./SetupChecklist";
 import { SetupHousehold } from "./SetupHousehold";
 import { SetupRoutine } from "./SetupRoutine";
@@ -32,7 +33,8 @@ const STEP_META: Record<string, { step: number; charge: number; mascot: string; 
 
 /**
  * Missions tab: the setup checklist until Household Setup is complete (#51), then the plan.
- * `#/missions/save` is the rewards onboarding; `#/missions/setup/<step>` opens the step modal.
+ * Eelio's onboarding opens on its own the first time (setup not started), and at `#/missions/save`
+ * ("How it works", or "Want to save?" in the bill's Wrapped); `#/missions/setup/<step>` opens a step.
  */
 export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpired, appliancesStep, routineAgreement, children }: {
   token: string;
@@ -48,26 +50,10 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
   /** The Mission Plan, shown once setup is complete. */
   children: React.ReactNode;
 }) {
-  if (!setup) return <section className="card"><p className="muted" role="status">Loading setup…</p></section>;
+  const [autoOnboard, setAutoOnboard] = useState(true);
   const toChecklist = () => go("missions");
-  const nextStep = (s: SetupStatus) => s.steps.find((x) => !x.done)?.key;
-  const advance = (s: SetupStatus) => {
-    onSetup(s);
-    const next = nextStep(s);
-    if (s.complete || !next) go("missions");
-    else go("missions", "setup", next);
-  };
-
   const isSetupModal = sub[0] === "setup" && (sub[1] === "household" || sub[1] === "appliances" || sub[1] === "routine");
   const dialogRef = useRef<HTMLDivElement>(null);
-  const meta = STEP_META[sub[1]] ?? {
-    step: 1,
-    charge: 33,
-    mascot: "/mascot/eelio-hero.png",
-    subtitle: "Setup",
-    hint: "Complete your home setup to unlock missions.",
-  };
-
   useEffect(() => {
     if (!isSetupModal) return;
     dialogRef.current?.focus();
@@ -77,13 +63,37 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [isSetupModal]);
+  if (!setup) return <section className="card"><p className="muted" role="status">Loading setup…</p></section>;
+  const nextStep = (s: SetupStatus) => s.steps.find((x) => !x.done)?.key;
+  const advance = (s: SetupStatus) => {
+    onSetup(s);
+    const next = nextStep(s);
+    if (s.complete || !next) go("missions");
+    else go("missions", "setup", next);
+  };
 
-  if (sub[0] === "save") {
-    return <SaveIntro smart={household.meter_type === "smart"} onLater={() => go("home")} onStart={() => {
-      const next = nextStep(setup);
-      if (setup.complete || !next) go("missions"); else go("missions", "setup", next);
-    }} />;
-  }
+  const meta = STEP_META[sub[1]] ?? {
+    step: 1,
+    charge: 33,
+    mascot: "/mascot/eelio-hero.png",
+    subtitle: "Setup",
+    hint: "Complete your home setup to unlock missions.",
+  };
+
+
+  const showOnboarding = !setup.complete && (sub[0] === "save" || (autoOnboard && !setup.onboardingSeen && setup.doneCount === 0 && sub[0] !== "setup"));
+  const closeOnboarding = (start: boolean) => {
+    setAutoOnboard(false);
+    // Remembered on the server, so it shows once per Household on any device.
+    if (!setup.onboardingSeen) {
+      setupApi.onboardingSeen(token, household.sin).then(onSetup).catch((err) => { if (err?.status === 401) onExpired(); });
+    }
+    const next = nextStep(setup);
+    if (start && next) go("missions", "setup", next); else go("missions");
+  };
+  const onboardingNode = showOnboarding
+    ? <MissionsOnboarding smart={household.meter_type === "smart"} welcomePoints={setup.welcomePoints.points} onStart={() => closeOnboarding(true)} onLater={() => closeOnboarding(false)} />
+    : null;
 
   let stepModalNode: React.ReactNode = null;
   if (isSetupModal) {
@@ -161,6 +171,7 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
       <>
         <SetupChecklist status={setup} smart={household.meter_type === "smart"} onIntro={() => go("missions", "save")} onStep={(key) => go("missions", "setup", key)} />
         {modal}
+        {onboardingNode}
       </>
     );
   }

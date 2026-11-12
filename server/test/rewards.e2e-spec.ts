@@ -26,7 +26,7 @@ const schedules = [
 
 describe("19 · Rewards catalog and redemption", () => {
   it("shows points balance and sample rewards catalog with items labelled 'sample rewards'", async () => {
-    // 330 points earned from Verified Savings (240 kWh down to 210 kWh)
+    // 131 points from savings (240 kWh down to 210 kWh; see points.e2e-spec for the steps)
     const weather = { "2026-09": 8, "2026-10": 10, "2026-11": 10 };
     const bills = { [SIN]: [...baseHistory(), bill("2026-11", 210, 30)] };
 
@@ -37,7 +37,7 @@ describe("19 · Rewards catalog and redemption", () => {
     const { status, body } = await api.get(`/api/households/${SIN}/rewards`, token);
 
     expect(status).toBe(200);
-    expect(body.balance).toBe(330);
+    expect(body.balance).toBe(131);
     expect(body.tag).toBe("sample rewards");
     expect(body.disclaimer).toContain("Partner-funded");
     expect(body.disclaimer).toContain("Not a deduction or discount on your Meralco bill");
@@ -54,18 +54,18 @@ describe("19 · Rewards catalog and redemption", () => {
       expect(item).toHaveProperty("pointsNeeded");
     }
 
-    // ₱50 load = 500 pts (from issue description)
+    // ₱50 load = 250 pts (₱500 of savings at 1 pt per ₱2)
     const loadReward = body.catalog.find((i: any) => i.id === "reward-load-50");
     expect(loadReward).toBeDefined();
-    expect(loadReward.pointsCost).toBe(500);
-    // With 330 points, 500 pts is unaffordable:
+    expect(loadReward.pointsCost).toBe(250);
+    // With 131 points, 250 pts is unaffordable:
     expect(loadReward.affordable).toBe(false);
-    expect(loadReward.progressPercent).toBe(66); // floor(330 / 500 * 100) = 66%
-    expect(loadReward.pointsNeeded).toBe(170); // 500 - 330 = 170 pts
+    expect(loadReward.progressPercent).toBe(52); // floor(131 / 250 * 100) = 52%
+    expect(loadReward.pointsNeeded).toBe(119); // 250 - 131 = 119 pts
   });
 
   it("API test: cannot redeem beyond the balance", async () => {
-    // Household has 330 points.
+    // Household has 131 points.
     const weather = { "2026-09": 8, "2026-10": 10, "2026-11": 10 };
     const bills = { [SIN]: [...baseHistory(), bill("2026-11", 210, 30)] };
 
@@ -82,13 +82,13 @@ describe("19 · Rewards catalog and redemption", () => {
 
     expect(status).toBe(400);
     expect(body.error).toContain("is not enough for");
-    expect(body.balance).toBe(330);
-    expect(body.pointsCost).toBe(500);
-    expect(body.pointsNeeded).toBe(170);
+    expect(body.balance).toBe(131);
+    expect(body.pointsCost).toBe(250);
+    expect(body.pointsNeeded).toBe(119);
 
-    // Verify balance remains 330
+    // Verify balance remains 131
     const pointsRes = await api.get(`/api/households/${SIN}/points`, token);
-    expect(pointsRes.body.balance).toBe(330);
+    expect(pointsRes.body.balance).toBe(131);
   });
 
   it("rejects unknown rewardId", async () => {
@@ -106,19 +106,20 @@ describe("19 · Rewards catalog and redemption", () => {
   });
 
   it("redemption deducts Points and is recorded per Household", async () => {
-    // Give enough savings: usage dropped from 240 kWh to 180 kWh (60 kWh saved = ₱660 = 660 points).
+    // A bigger home: 640 kWh down to 540 kWh (₱1,100 off a ₱7,090 Baseline). ₱70.90 noise band; ₱354.50
+    // goal in full + ₱354.50 at half (cap) = ₱531.75 → 265.9 pts → ×1.3 (very strong El Niño) = 345 points.
     const weather = { "2026-09": 8, "2026-10": 10, "2026-11": 10 };
-    const bills = { [SIN]: [...baseHistory(), bill("2026-11", 180, 30)] };
+    const bills = { [SIN]: [bill("2026-09", 560, 30), bill("2026-10", 640, 30), bill("2026-11", 540, 30)] };
 
     const api = await harness({ bills, weather, schedules });
     const token = await api.login();
     await api.put(`/api/households/${SIN}/appliances`, survey, token);
 
-    // Verify initial balance is 660
+    // Verify initial balance is 345
     const initRes = await api.get(`/api/households/${SIN}/rewards`, token);
-    expect(initRes.body.balance).toBe(660);
+    expect(initRes.body.balance).toBe(345);
 
-    // Redeem ₱50 load (500 pts)
+    // Redeem ₱50 load (250 pts)
     const redeemRes = await api.post(
       `/api/households/${SIN}/rewards/redeem`,
       { rewardId: "reward-load-50" },
@@ -127,21 +128,21 @@ describe("19 · Rewards catalog and redemption", () => {
 
     expect(redeemRes.status).toBe(201);
     expect(redeemRes.body.success).toBe(true);
-    expect(redeemRes.body.redeemedPoints).toBe(500);
-    expect(redeemRes.body.balance).toBe(160); // 660 - 500 = 160
+    expect(redeemRes.body.redeemedPoints).toBe(250);
+    expect(redeemRes.body.balance).toBe(95); // 345 - 250 = 95
     expect(redeemRes.body.reward).toMatchObject({
       id: "reward-load-50",
-      pointsCost: 500,
+      pointsCost: 250,
       tag: "sample rewards",
     });
     expect(redeemRes.body.disclaimer).toContain("Partner-funded");
 
     // Verify updated catalog and balance via GET
     const rewardsAfter = await api.get(`/api/households/${SIN}/rewards`, token);
-    expect(rewardsAfter.body.balance).toBe(160);
+    expect(rewardsAfter.body.balance).toBe(95);
     expect(rewardsAfter.body.redemptions).toHaveLength(1);
     expect(rewardsAfter.body.redemptions[0]).toMatchObject({
-      points: -500,
+      points: -250,
       source: "redemption",
       rewardId: "reward-load-50",
       sin: SIN,
@@ -150,9 +151,9 @@ describe("19 · Rewards catalog and redemption", () => {
 
     // Also verify points endpoint reflects the deduction
     const pointsAfter = await api.get(`/api/households/${SIN}/points`, token);
-    expect(pointsAfter.body.balance).toBe(160);
+    expect(pointsAfter.body.balance).toBe(95);
 
-    // Now with 160 points left, attempting another 500 pt redemption must fail
+    // Now with 95 points left, attempting another 250 pt redemption must fail
     const secondRedeem = await api.post(
       `/api/households/${SIN}/rewards/redeem`,
       { rewardId: "reward-load-50" },

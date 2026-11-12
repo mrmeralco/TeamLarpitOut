@@ -6,12 +6,15 @@
  * learned from the complete days before Missions started (kWh per day against
  * cooling degree days), so a hot day raises it and a cool day lowers it.
  * Savings are priced at the per-kWh rates of the latest Bill's Rate Schedule.
- * 1 point = ₱1. Days with a recorded outage earn nothing. The Bill gives smart
+ * Points follow the same rules as the Bill (domain/points.ts): 1 point per ₱2 past a 1% noise band,
+ * full up to the 5% goal and half beyond, times the month's climate multiplier (domain/climate.ts).
+ * Days with a recorded outage earn nothing. The Bill gives smart
  * meter Households no Points; traditional Households keep earning at the Bill.
  */
 import { calculateHeatSensitivity, predictKwhPerDay, type HeatSensitivityResult } from "./heat-sensitivity.js";
 import { DAY_MS, HOUR_MS } from "./meter-reading.js";
-import { pointsFromSavings } from "./points.js";
+import { climateFor } from "./climate.js";
+import { earnedPoints } from "./points.js";
 
 /** Same base temperature as the monthly weather provider. */
 export const CDD_BASE_C = 22;
@@ -87,5 +90,7 @@ export function computeDailySavings(input: DailySavingsInput): DailySavingsResul
   }
   const savedKwh = Math.max(0, round2(baselineKwh - actualKwh));
   const savedPesos = Math.round(savedKwh * input.perKwhRate * 100);
-  return { ...base, savedKwh, savedPesos, points: pointsFromSavings(savedPesos), hasOutage: false, excludedReason: null };
+  const baselineCentavos = Math.round(baselineKwh * input.perKwhRate * 100);
+  const points = earnedPoints({ savedCentavos: savedPesos, baselineCentavos, multiplier: climateFor(input.day.date.slice(0, 7)).multiplier }).points;
+  return { ...base, savedKwh, savedPesos, points, hasOutage: false, excludedReason: null };
 }

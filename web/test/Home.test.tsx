@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clearPlanCache } from "../src/components/MissionPlan";
 import { clearHomeCache, Home } from "../src/components/Home";
 import type { ApplianceBreakdown, HomeChargeLine, HomeSummary, MissionPlan, SetupStatus } from "../src/api/client";
 
@@ -43,10 +44,10 @@ const setupStatus = (done: boolean[]): SetupStatus => ({
 });
 const plan: MissionPlan = {
   period: "2026-11", goal: { cut: 5, kwh: 31, pesos: 34100, baselineKwh: 620, targetKwh: 589, targetPesos: 600000 }, covered: 1, coveredPercent: 5,
-  source: "fallback", points: "",
+  source: "fallback", points: "", rewardPoints: 341,
   missions: [
-    { id: "aircon-off-1h", title: "Turn off the aircon 1 hour earlier", why: "", how: [], appliance: "aircon", kwhSaved: 18.6, pesoValue: 20800, percent: 3, share: 0.6, effort: "Easy", basis: "physics", assumptions: [] },
-    { id: "unplug", title: "Unplug chargers at night", why: "", how: [], appliance: "other", kwhSaved: 12.4, pesoValue: 13300, percent: 2, share: 0.4, effort: "Easy", basis: "physics", assumptions: [] },
+    { id: "aircon-off-1h", title: "Turn off the aircon 1 hour earlier", why: "", how: [], appliance: "aircon", kwhSaved: 18.6, pesoValue: 20800, percent: 3, share: 0.6, rewardPoints: 208, effort: "Easy", basis: "physics", assumptions: [] },
+    { id: "unplug", title: "Unplug chargers at night", why: "", how: [], appliance: "other", kwhSaved: 12.4, pesoValue: 13300, percent: 2, share: 0.4, rewardPoints: 133, effort: "Easy", basis: "physics", assumptions: [] },
   ],
 };
 const usage = [
@@ -73,7 +74,7 @@ const fetchMock = vi.fn(async (input: string) => {
 });
 
 beforeEach(() => { home = summary(); fetchMock.mockClear(); vi.stubGlobal("fetch", fetchMock); });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearHomeCache(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearPlanCache(); clearHomeCache(); });
 
 describe("Home: gamified with Eelio", () => {
   it("coming back to Home shows the last bill at once and refreshes it in the background", async () => {
@@ -170,12 +171,10 @@ describe("Home: gamified with Eelio", () => {
     expect(onAsk.mock.calls[0]![0].id).toBe("metering");
   });
 
-  it("before setup: the save card starts onboarding and there is no appliances card", async () => {
-    const onSave = vi.fn();
-    render(<Home token="t" household={household} onExpired={() => {}} onSave={onSave} setup={setupStatus([true, false, false])} />);
+  it("before setup: no 'Want to save?' card and no appliances card", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} onSave={() => {}} setup={setupStatus([true, false, false])} />);
     await screen.findByRole("heading", { name: "Your October bill" });
-    fireEvent.click(screen.getByRole("button", { name: /Want to save on your next bill\?.*₱577\.00 came from usage/ }));
-    expect(onSave).toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Want to save on your next bill/ })).toBeNull();
     expect(screen.queryByRole("heading", { name: "Your appliances" })).toBeNull();
     expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/appliances/breakdown") || url.endsWith("/missions/plan"))).toBe(false);
   });

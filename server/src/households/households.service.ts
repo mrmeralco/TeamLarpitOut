@@ -1,7 +1,8 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { toHousehold, type MeralcoAccountSource } from "../bills/meralco-accounts.js";
-import { HOUSEHOLD_LINKS, MERALCO_ACCOUNTS } from "../common/injection-tokens.js";
+import { HOUSEHOLD_CHANGES, HOUSEHOLD_LINKS, MERALCO_ACCOUNTS } from "../common/injection-tokens.js";
 import type { Household, HouseholdChange } from "../domain/household.js";
+import type { HouseholdChangeRepository } from "./household-change.repository.js";
 import type { HouseholdLinkRepository } from "./household-link.repository.js";
 
 /** Shows a CAN like "39•• ••• 482": enough to recognise, not enough to reuse. */
@@ -14,41 +15,30 @@ export function maskCan(can: string): string {
 
 @Injectable()
 export class HouseholdsService {
-  private readonly changes = new Map<string, HouseholdChange[]>();
-
   constructor(
     @Inject(MERALCO_ACCOUNTS) private readonly meralco: MeralcoAccountSource,
     @Inject(HOUSEHOLD_LINKS) private readonly links: HouseholdLinkRepository,
+    @Inject(HOUSEHOLD_CHANGES) private readonly changes: HouseholdChangeRepository,
   ) {}
 
   /** Active Households of this login, with masked addresses and Meter Types from Meralco. */
   async list(ownerId: string): Promise<Household[]> {
-    const out: Household[] = [];
-    for (const link of await this.links.forOwner(ownerId)) {
-      if (link.status !== "active") continue;
-      const account = await this.meralco.household(link.sin);
-      if (!account) continue;
-      const hhChanges = this.changes.get(link.sin);
-      out.push({
-        ...toHousehold(account),
-        ...(hhChanges && hhChanges.length > 0 ? { changes: structuredClone(hhChanges) } : {}),
-      });
-    }
-    return out;
+    // Every Household's account and changes are read together, not one after another.
+    const links = (await this.links.forOwner(ownerId)).filter((link) => link.status === "active");
+    const rows = await Promise.all(links.map(async (link) => {
+      const [account, changes] = await Promise.all([this.meralco.household(link.sin), this.changes.forHousehold(link.sin)]);
+      return account ? { ...toHousehold(account), ...(changes.length > 0 ? { changes } : {}) } : null;
+    }));
+    return rows.filter((h): h is Household => h !== null);
   }
 
   async getChanges(sin: string): Promise<HouseholdChange[]> {
-    return structuredClone(this.changes.get(sin) ?? []);
+    return this.changes.forHousehold(sin);
   }
 
   async addChange(sin: string, change: HouseholdChange): Promise<HouseholdChange> {
-    const list = this.changes.get(sin) ?? [];
-    const item: HouseholdChange = {
-      ...change,
-      recordedAt: change.recordedAt ?? new Date().toISOString(),
-    };
-    list.push(item);
-    this.changes.set(sin, list);
+    const item = { ...change, recordedAt: change.recordedAt ?? new Date().toISOString() };
+    await this.changes.add(sin, item);
     return item;
   }
 

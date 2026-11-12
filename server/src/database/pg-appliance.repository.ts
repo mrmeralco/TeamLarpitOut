@@ -1,6 +1,7 @@
 import type { ApplianceRepository, StoredAppliances } from "../appliances/appliance-repository.interface.js";
 import type { ApplianceInput } from "../domain/appliance-usage.js";
 import type { Sql } from "./database.module.js";
+import { TtlCache } from "./ttl-cache.js";
 
 interface ApplianceRow {
   type: string;
@@ -14,9 +15,15 @@ interface ApplianceRow {
 
 /** A Household's appliance list in `public.appliances`; saving replaces every row in one transaction. */
 export class PgApplianceRepository implements ApplianceRepository {
+  private readonly cache = new TtlCache<StoredAppliances | null>(60_000);
+
   constructor(private readonly sql: Sql) {}
 
-  async find(sin: string): Promise<StoredAppliances | null> {
+  find(sin: string): Promise<StoredAppliances | null> {
+    return this.cache.get(sin, () => this.load(sin));
+  }
+
+  private async load(sin: string): Promise<StoredAppliances | null> {
     const rows = await this.sql<ApplianceRow[]>`
       select type, quantity, answers, time_ranges, uses_per_week, energy_label, updated_at
       from public.appliances where sin = ${sin} order by position`;
@@ -50,6 +57,8 @@ export class PgApplianceRepository implements ApplianceRepository {
       }));
       await tx`insert into public.appliances ${tx(rows)}`;
     });
-    return { appliances: structuredClone(appliances), updatedAt: updatedAt.toISOString() };
+    const stored = { appliances: structuredClone(appliances), updatedAt: updatedAt.toISOString() };
+    this.cache.set(sin, appliances.length ? stored : null);
+    return stored;
   }
 }

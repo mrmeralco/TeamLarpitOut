@@ -62,6 +62,33 @@ export const ASSUMED = {
   refMedium: 0.1,
   /** Electric fan draw when the household has no fan in its list (kW). */
   fanKw: 0.065,
+  /** Idle hours a day a computer is put to sleep instead of left on. */
+  computerIdleHoursCut: 1,
+  /** Hours of fan use cut per day in empty rooms. */
+  fanHoursCut: 1,
+  /** Hours of "Keep Warm" cut per cook. */
+  riceKeepWarmHoursCut: 3,
+  /** Hours a night the Wi-Fi router is off. */
+  wifiNightHours: 6,
+} as const;
+
+/**
+ * Sourced figures (not assumptions): each is the conservative end of what the source reports.
+ * - computerSleepKw: ENERGY STAR desktops draw at most 2 W asleep (idle desktops: about 20–100 W).
+ * - riceKeepWarmKw: Keep Warm draws about 30–47 W (Panasonic SR-2363FH spec sheet: 47 W); 40 W used.
+ * - wifiRouterKw: home routers measured at 5.5–11 W (ISPreview, Legit Reviews); 7 W used.
+ * - airconCleanFilter: US DOE: a clean filter lowers aircon energy use by 5–15%; 5% used.
+ * - tvEcoMode: NRDC: auto-brightness cut TV power 13% on real-world content (up to ~50% in lab tests); 13% used.
+ * - refDoorOpenings: about 25% more ref energy at ~100 door openings a day vs none (Alissi et al., 1988);
+ *   opening it ~12 fewer times a day is about 3%.
+ */
+export const SOURCED = {
+  computerSleepKw: 0.002,
+  riceKeepWarmKw: 0.04,
+  wifiRouterKw: 0.007,
+  airconCleanFilter: 0.05,
+  tvEcoMode: 0.13,
+  refDoorOpenings: 0.03,
 } as const;
 
 function sum(ctx: MissionContext, type: ApplianceType) {
@@ -216,6 +243,116 @@ export const MISSION_CATALOG: MissionDefinition[] = [
       return {
         kwh: ref.kwh * ASSUMED.refMedium,
         assumptions: [{ key: "refMedium", label: "Savings at the medium setting (assumption)", value: ASSUMED.refMedium }],
+      };
+    },
+  },
+  {
+    id: "aircon-clean-filter",
+    title: "Clean the aircon filter every 2 weeks",
+    appliance: "aircon",
+    basis: "physics",
+    kwhSaved: (ctx) => {
+      const ac = sum(ctx, "aircon");
+      if (ac.kwh <= 0) return null;
+      return {
+        kwh: ac.kwh * SOURCED.airconCleanFilter,
+        assumptions: [{ key: "airconCleanFilter", label: "Savings from a clean filter (US DOE: 5–15%; low end used)", value: SOURCED.airconCleanFilter }],
+      };
+    },
+  },
+  {
+    id: "tv-eco-mode",
+    title: "Turn on the TV's energy-saving picture mode",
+    appliance: "tv",
+    basis: "physics",
+    kwhSaved: (ctx) => {
+      const tv = sum(ctx, "tv");
+      if (tv.kwh <= 0) return null;
+      return {
+        kwh: tv.kwh * SOURCED.tvEcoMode,
+        assumptions: [{ key: "tvEcoMode", label: "Savings with auto-brightness on (NRDC real-world test)", value: SOURCED.tvEcoMode }],
+      };
+    },
+  },
+  {
+    id: "ref-door",
+    title: "Open the ref less often, and close it quickly",
+    appliance: "refrigerator",
+    basis: "assumption",
+    kwhSaved: (ctx) => {
+      const ref = sum(ctx, "refrigerator");
+      if (ref.kwh <= 0) return null;
+      return {
+        kwh: ref.kwh * SOURCED.refDoorOpenings,
+        assumptions: [{ key: "refDoorOpenings", label: "Savings from ~12 fewer openings a day (from a 25%-at-100-openings study)", value: SOURCED.refDoorOpenings }],
+      };
+    },
+  },
+  {
+    id: "computer-sleep",
+    title: "Put the computer to sleep when you step away",
+    appliance: "computer",
+    basis: "assumption",
+    kwhSaved: (ctx) => {
+      const pc = sum(ctx, "computer");
+      if (pc.kwh <= 0 || pc.hours < 2) return null;
+      const kw = pc.kwh / (pc.hours * ctx.billingDays);
+      const kwh = Math.max(0, kw - SOURCED.computerSleepKw * pc.quantity) * ASSUMED.computerIdleHoursCut * ctx.billingDays;
+      return kwh > 0
+        ? { kwh, assumptions: [{ key: "computerIdleHoursCut", label: "Idle hours a day put to sleep (assumption)", value: ASSUMED.computerIdleHoursCut }] }
+        : null;
+    },
+  },
+  {
+    id: "fan-off-empty",
+    title: "Switch off fans in empty rooms",
+    appliance: "electric_fan",
+    basis: "assumption",
+    kwhSaved: (ctx) => {
+      const fan = sum(ctx, "electric_fan");
+      if (fan.kwh <= 0 || fan.hours < 2) return null;
+      const kw = fan.kwh / (fan.hours * ctx.billingDays);
+      return {
+        kwh: kw * ASSUMED.fanHoursCut * ctx.billingDays,
+        assumptions: [{ key: "fanHoursCut", label: "Fan hours cut per day (assumption)", value: ASSUMED.fanHoursCut }],
+      };
+    },
+  },
+  {
+    id: "rice-unplug-warm",
+    title: "Unplug the rice cooker after cooking, skip Keep Warm",
+    appliance: "rice_cooker",
+    basis: "assumption",
+    kwhSaved: (ctx) => {
+      const rice = sum(ctx, "rice_cooker");
+      if (rice.quantity <= 0 || rice.uses < 3) return null;
+      const weeks = ctx.billingDays / 7;
+      const kwh = SOURCED.riceKeepWarmKw * ASSUMED.riceKeepWarmHoursCut * rice.uses * weeks;
+      // Never more than half of what the rice cooker uses in the period, when that's known.
+      const capped = rice.kwh > 0 ? Math.min(kwh, rice.kwh * 0.5) : kwh;
+      return {
+        kwh: capped,
+        assumptions: [
+          { key: "riceKeepWarmHoursCut", label: "Keep Warm hours cut per cook (assumption)", value: ASSUMED.riceKeepWarmHoursCut },
+          { key: "riceKeepWarmKw", label: "Keep Warm power, kW (rice cooker spec sheets: 0.03–0.047)", value: SOURCED.riceKeepWarmKw },
+        ],
+      };
+    },
+  },
+  {
+    id: "wifi-off-night",
+    title: "Turn off the Wi-Fi router while everyone sleeps",
+    appliance: "wifi",
+    basis: "assumption",
+    kwhSaved: (ctx) => {
+      const wifi = sum(ctx, "wifi");
+      if (wifi.quantity <= 0) return null;
+      return {
+        kwh: SOURCED.wifiRouterKw * wifi.quantity * ASSUMED.wifiNightHours * ctx.billingDays,
+        assumptions: [
+          { key: "wifiNightHours", label: "Hours off each night (assumption)", value: ASSUMED.wifiNightHours },
+          { key: "wifiRouterKw", label: "Router power, kW (measured: 0.0055–0.011)", value: SOURCED.wifiRouterKw },
+        ],
       };
     },
   },

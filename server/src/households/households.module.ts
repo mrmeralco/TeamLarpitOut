@@ -4,9 +4,11 @@ import { SessionGuard, type AuthenticatedRequest } from "../auth/session.guard.j
 import { MeralcoAccountsModule } from "../bills/meralco-accounts.module.js";
 import { demoLinks, demoLoginsEnabled } from "../auth/demo-logins.js";
 import { meralcoAccountOf, realBillHousehold } from "../bills/real-bill-household.js";
-import { DATABASE, HOUSEHOLD_LINKS } from "../common/injection-tokens.js";
+import { DATABASE, HOUSEHOLD_CHANGES, HOUSEHOLD_LINKS } from "../common/injection-tokens.js";
 import type { Sql } from "../database/database.module.js";
+import { PgHouseholdChangeRepository } from "../database/pg-household-change.repository.js";
 import { PgHouseholdLinkRepository } from "../database/pg-household-link.repository.js";
+import { InMemoryHouseholdChangeRepository } from "./household-change.repository.js";
 import { InMemoryHouseholdLinkRepository } from "./household-link.repository.js";
 import { HouseholdAccessGuard } from "./household-access.guard.js";
 import { HouseholdsService } from "./households.service.js";
@@ -59,6 +61,11 @@ export class HouseholdsController {
       useFactory: (db: Sql | null) => db
         ? new PgHouseholdLinkRepository(db)
         : new InMemoryHouseholdLinkRepository(demoLoginsEnabled() ? demoLinks(meralcoAccountOf(realBillHousehold())) : []),
+    },
+    {
+      provide: HOUSEHOLD_CHANGES,
+      inject: [DATABASE],
+      useFactory: (db: Sql | null) => (db ? new PgHouseholdChangeRepository(db) : new InMemoryHouseholdChangeRepository()),
     },
   ],
   exports: [AuthModule, MeralcoAccountsModule, HouseholdsService, HouseholdAccessGuard, HOUSEHOLD_LINKS],

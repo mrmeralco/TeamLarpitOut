@@ -106,21 +106,20 @@ describe("Verified Savings and Points (traditional)", () => {
     expect(res.status).toBe(201);
     expect(res.body.awardedPoints).toBe(0);
     // Only the (locked) Welcome Points from finishing setup; the self-report added nothing.
-    expect(res.body.balance).toBe(100);
+    expect(res.body.balance).toBe(50);
     expect(res.body.message).toContain("not from self-reports");
 
     // Balance is still only the locked Welcome Points: nothing spendable
     const pointsRes = await api.get(`/api/households/${SIN}/points`, token);
-    expect(pointsRes.body).toMatchObject({ balance: 100, lockedPoints: 100, spendable: 0 });
+    expect(pointsRes.body).toMatchObject({ balance: 50, lockedPoints: 50, spendable: 0 });
   });
 
-  it("awards 1 Point per ₱1 of Verified Savings when habits change and shows where each Point came from", async () => {
-    // Weather is unchanged: 10 CDD -> 10 CDD.
-    // Household reduced usage from 240 kWh to 210 kWh (30 kWh saved).
-    // Baseline: 240 kWh at ₱11/kWh + ₱50 fixed = 240 * 11 + 50 = ₱2,690 (269,000 centavos).
-    // Actual: 210 kWh at ₱11/kWh + ₱50 fixed = 210 * 11 + 50 = ₱2,360 (236,000 centavos).
-    // Saved pesos: ₱330 (33,000 centavos).
-    // Points: 330 points (1 point per ₱1).
+  it("awards Points for savings past the normal range, capped by the goal and set by the month's climate", async () => {
+    // Weather is unchanged: 10 CDD -> 10 CDD. Usage dropped from 240 kWh to 210 kWh (30 kWh saved).
+    // Baseline: 240 kWh at ₱11/kWh + ₱50 fixed = ₱2,690. Actual: 210 kWh = ₱2,360. Saved: ₱330.
+    // Noise band (1% of the Baseline): ₱26.90 not counted, so ₱303.10 counts.
+    // 5% goal = ₱134.50 counts in full; the next ₱134.50 (up to twice the goal) counts half.
+    // ₱134.50 + ₱67.25 = ₱201.75 → 1 pt per ₱2 = 100.9 → November 2026, very strong El Niño ×1.3 → 131.
     const weather = { "2026-09": 8, "2026-10": 10, "2026-11": 10 };
     const bills = { [SIN]: [...baseHistory(), bill("2026-11", 210, 30)] };
 
@@ -131,7 +130,7 @@ describe("Verified Savings and Points (traditional)", () => {
     const { status, body } = await api.get(`/api/households/${SIN}/points`, token);
 
     expect(status).toBe(200);
-    expect(body.balance).toBe(330);
+    expect(body.balance).toBe(131);
     expect(body.history).toHaveLength(1);
     expect(body.history[0]).toMatchObject({
       period: "2026-11",
@@ -139,11 +138,12 @@ describe("Verified Savings and Points (traditional)", () => {
       actualKwh: 210,
       savedKwh: 30,
       savedPesos: 33_000,
-      points: 330,
+      points: 131,
       hasOutage: false,
       source: "bill_verified",
     });
     expect(body.history[0].description).toContain("30 kWh saved");
+    expect(body.history[0].description).toContain("Very strong El Niño ×1.3");
   });
 
   it("needs login and household ownership", async () => {
