@@ -73,4 +73,16 @@ export class UsagePlanController {
   deleteReading(@Param("sin") sin: string) {
     return this.usagePlan.deleteReading(sin);
   }
+
+  @Get("points")
+  @Header("Cache-Control", "no-store")
+  points(@Param("sin") sin: string) {
+    return this.usagePlan.getPoints(sin);
+  }
+
+  @Post(["usage-plan/self-report", "missions/self-report"])
+  @Header("Cache-Control", "no-store")
+  selfReport(@Param("sin") sin: string, @Body() body?: { missionId?: string; status?: string }) {
+    return this.usagePlan.selfReport(sin, body?.missionId);
+  }
 }

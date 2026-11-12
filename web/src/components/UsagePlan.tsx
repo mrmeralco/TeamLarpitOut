@@ -4,6 +4,7 @@ import {
   usagePlanApi,
   type Household,
   type Mission,
+  type PointsResult,
   type TargetResult,
   type UsagePlan as Plan,
 } from "../api/client";
@@ -11,27 +12,79 @@ import { monthLabel, peso } from "../lib/format";
 
 const MAX_MISSIONS = 3;
 
-function PlanSummary({ plan, onEdit }: { plan: Plan; onEdit: () => void }) {
+function PlanSummary({
+  plan,
+  points,
+  onEdit,
+  onSelfReport,
+  selfReportStatus,
+}: {
+  plan: Plan;
+  points: PointsResult | null;
+  onEdit: () => void;
+  onSelfReport: (missionId: string) => void;
+  selfReportStatus: string | null;
+}) {
   const total = plan.missions.reduce((s, m) => s + m.pesoValue, 0);
   return (
     <>
+      {points && (
+        <div style={{ background: "var(--muted)", padding: "10px 12px", marginBottom: "14px", borderRadius: "var(--radius)" }}>
+          <div className="effect-head">
+            <span>⭐ Naipong Points</span>
+            <strong>{points.balance} Points</strong>
+          </div>
+          <small className="muted" style={{ display: "block", marginTop: "4px", fontSize: "0.8rem" }}>
+            1 Point bawat ₱1 ng Verified Savings sa susunod na Bill. Brownouts excluded; walang points ang self-report.
+          </small>
+        </div>
+      )}
       <p>
         Target sa {monthLabel(plan.period)}: <strong>{peso(plan.targetPesos)}</strong> ({plan.targetKwh} kWh, −{plan.cut}%)
       </p>
       <ul className="plan-missions">
         {plan.missions.map((m) => (
-          <li key={m.id} className="effect-head">
-            <span>{m.title}</span>
+          <li key={m.id} className="effect-head" style={{ alignItems: "center" }}>
+            <div>
+              <span>{m.title}</span>
+              <button
+                type="button"
+                className="ghost"
+                style={{ fontSize: "0.75rem", padding: "2px 6px", marginLeft: "8px" }}
+                onClick={() => onSelfReport(m.id)}
+              >
+                Markahang tapos
+              </button>
+            </div>
             <strong>{peso(m.pesoValue)}</strong>
           </li>
         ))}
       </ul>
+      {selfReportStatus && (
+        <p className="muted" style={{ fontSize: "0.85rem", padding: "6px 8px", background: "var(--secondary)", borderRadius: "var(--radius)" }}>
+          {selfReportStatus}
+        </p>
+      )}
       <small className="muted">
         Mga {peso(total)} ang tipid kung magagawa lahat. Susuriin ito sa susunod na Bill.
       </small>
       <button type="button" className="ghost wide" onClick={onEdit}>
         Baguhin ang Target o Missions
       </button>
+
+      {points && points.history.length > 0 && (
+        <div style={{ marginTop: "14px", borderTop: "1px solid var(--border)", paddingTop: "10px" }}>
+          <h4 style={{ fontSize: "0.85rem", margin: "0 0 6px" }}>Kasaysayan ng Points</h4>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "6px" }}>
+            {points.history.map((h) => (
+              <li key={h.id} className="effect-head" style={{ fontSize: "0.8rem" }}>
+                <span>{h.description}</span>
+                <strong className={h.points > 0 ? "down" : ""}>+{h.points} pts</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </>
   );
 }
@@ -72,6 +125,8 @@ export function UsagePlan({ token, household, onExpired }: { token: string; hous
   const [chosen, setChosen] = useState<string[]>([]);
   const [airconSetting, setAirconSetting] = useState("");
   const [saving, setSaving] = useState(false);
+  const [points, setPoints] = useState<PointsResult | null>(null);
+  const [selfReportStatus, setSelfReportStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fail = (err: unknown, fallback: string) => {
@@ -96,11 +151,13 @@ export function UsagePlan({ token, household, onExpired }: { token: string; hous
     const controller = new AbortController();
     (async () => {
       try {
-        const [t, p] = await Promise.all([
+        const [t, p, pts] = await Promise.all([
           usagePlanApi.target(token, household.sin, controller.signal),
           usagePlanApi.plan(token, household.sin, controller.signal),
+          usagePlanApi.points(token, household.sin, controller.signal).catch(() => null),
         ]);
         setTarget(t);
+        if (pts) setPoints(pts);
         if (p.active && p.plan) {
           setPlan(p.plan);
           setCut(p.plan.cut);
@@ -117,6 +174,15 @@ export function UsagePlan({ token, household, onExpired }: { token: string; hous
   }, [token, household.sin]);
 
   const setting = airconSetting && Number(airconSetting) >= 16 && Number(airconSetting) <= 30 ? Number(airconSetting) : undefined;
+
+  async function handleSelfReport(missionId: string) {
+    try {
+      const res = await usagePlanApi.selfReport(token, household.sin, { missionId, status: "tapos na" });
+      setSelfReportStatus(res.message);
+    } catch (err) {
+      fail(err, "Hindi maitala ang self-report.");
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -142,7 +208,13 @@ export function UsagePlan({ token, household, onExpired }: { token: string; hous
       {!target ? (
         !error && <p className="muted">Kinukuha…</p>
       ) : plan && !editing ? (
-        <PlanSummary plan={plan} onEdit={() => setEditing(true)} />
+        <PlanSummary
+          plan={plan}
+          points={points}
+          onEdit={() => setEditing(true)}
+          onSelfReport={handleSelfReport}
+          selfReportStatus={selfReportStatus}
+        />
       ) : (
         <>
           <p className="muted">

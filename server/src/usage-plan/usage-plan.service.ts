@@ -1,27 +1,35 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { AppliancesService } from "../appliances/appliances.service.js";
 import type { BillSource } from "../bills/bill-source.js";
+import type { OutageSource } from "../bills/outage-source.js";
 import type { CoachProvider } from "../coach/coach-provider.interface.js";
 import { TemplateCoachProvider } from "../coach/template-coach.provider.js";
 import {
   BILL_SOURCE,
   COACH_PROVIDER,
   MID_MONTH_READING_REPOSITORY,
+  OUTAGE_SOURCE,
+  POINTS_REPOSITORY,
   RATE_SCHEDULES,
   USAGE_PLAN_REPOSITORY,
   WEATHER_PROVIDER,
 } from "../common/injection-tokens.js";
 import { findAppliance } from "../domain/appliance-catalog.js";
 import { baseline, nextPeriod, TARGET_CUTS, targetKwh, type TargetCut } from "../domain/baseline.js";
+import type { Bill } from "../domain/bill.js";
 import { compareTarget, detectHeatWave, forecastRange, forecastSingle } from "../domain/forecast.js";
 import { calculateHeatSensitivity, predictKwhPerDay } from "../domain/heat-sensitivity.js";
 import { rankMissions, type ApplianceUsage } from "../domain/mission-catalog.js";
+import { computeVerifiedSavings, type VerifiedSavingsResult } from "../domain/points.js";
 import { cost, type RateScheduleTable } from "../domain/rate-schedule.js";
 import type { WeatherProvider } from "../weather/weather-provider.interface.js";
 import type { MidMonthReading, MidMonthReadingRepository } from "./mid-month-reading-repository.interface.js";
+import type { PointsEntry, PointsRepository } from "./points-repository.interface.js";
 import type { UsagePlan, UsagePlanRepository } from "./usage-plan-repository.interface.js";
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
+const MONTHS = ["Enero", "Pebrero", "Marso", "Abril", "Mayo", "Hunyo", "Hulyo", "Agosto", "Setyembre", "Oktubre", "Nobyembre", "Disyembre"];
+const monthName = (period: string) => MONTHS[Number(period.slice(5, 7)) - 1] ?? period;
 
 /** KilosWatt for traditional meters: Baseline, Target, and Missions for one billing period. */
 @Injectable()
@@ -35,6 +43,8 @@ export class UsagePlanService {
     @Inject(USAGE_PLAN_REPOSITORY) private readonly plans: UsagePlanRepository,
     @Inject(MID_MONTH_READING_REPOSITORY) private readonly readings: MidMonthReadingRepository,
     @Inject(COACH_PROVIDER) private readonly coach: CoachProvider,
+    @Inject(POINTS_REPOSITORY) private readonly pointsRepo: PointsRepository,
+    @Inject(OUTAGE_SOURCE) private readonly outageSource: OutageSource,
     private readonly appliances: AppliancesService,
   ) {}
 
@@ -303,5 +313,117 @@ export class UsagePlanService {
   async deleteReading(sin: string) {
     await this.readings.delete(sin);
     return this.forecast(sin);
+  }
+
+  /**
+   * Points balance and ledger for the Household.
+   * Auto-settles any newly arrived bills against their weather-adjusted baseline.
+   */
+  async getPoints(sin: string) {
+    const history = await this.bills.bills(sin);
+    if (!history.length) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    await this.autoSettle(sin);
+    const [balance, entries] = await Promise.all([
+      this.pointsRepo.getBalance(sin),
+      this.pointsRepo.getEntries(sin),
+    ]);
+    return {
+      currency: "PHP-centavos",
+      balance,
+      history: entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    };
+  }
+
+  /**
+   * Self-report for a Mission.
+   * Per specification (§2.6): "Never self-reported. Tapping 'tapos na' earns nothing."
+   */
+  async selfReport(sin: string, _missionId?: string) {
+    const history = await this.bills.bills(sin);
+    if (!history.length) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    const balance = await this.pointsRepo.getBalance(sin);
+    return {
+      awardedPoints: 0,
+      balance,
+      message: "Ang Points ay ibinibigay lamang mula sa Verified Savings sa susunod na Bill, hindi sa self-report.",
+    };
+  }
+
+  private async autoSettle(sin: string) {
+    const history = await this.bills.bills(sin);
+    if (history.length < 2) return;
+    const existing = await this.pointsRepo.getEntries(sin);
+    const settled = new Set(existing.map((e) => e.period));
+    const plan = await this.plans.find(sin);
+
+    if (plan) {
+      for (let i = 1; i < history.length; i++) {
+        const b = history[i]!;
+        if (b.period >= plan.period && !settled.has(b.period)) {
+          const prev = history[i - 1]!;
+          await this.settlePeriod(sin, prev, b);
+          settled.add(b.period);
+        }
+      }
+    } else {
+      const latest = history[history.length - 1]!;
+      if (!settled.has(latest.period)) {
+        const prev = history[history.length - 2]!;
+        await this.settlePeriod(sin, prev, latest);
+        settled.add(latest.period);
+      }
+    }
+  }
+
+  private async settlePeriod(sin: string, prev: Bill, actual: Bill): Promise<VerifiedSavingsResult> {
+    const history = await this.bills.bills(sin);
+    const priorBills = history.filter((b) => b.period < actual.period);
+    const withWeather = await Promise.all(
+      (priorBills.length ? priorBills : history).map(async (b) => ({
+        kwh: b.kwh,
+        billingDays: b.billingDays,
+        cddPerDay: (await this.weather.getCddPerDay(b.period)) ?? -1,
+      })),
+    );
+    const sensitivity = calculateHeatSensitivity(withWeather);
+    const schedule = this.rates.get(actual.period) ?? this.rates.get(prev.period)!;
+    const cddLast = await this.weather.getCddPerDay(prev.period);
+    const cddActual = await this.weather.getCddPerDay(actual.period);
+    const hasOutage = await this.outageSource.hasOutage(sin, actual.period);
+
+    const result = computeVerifiedSavings({
+      previousBill: prev,
+      actualBill: actual,
+      schedule,
+      heatSensitivity: sensitivity.heatSensitivity,
+      cddPerDayPrevious: cddLast,
+      cddPerDayActual: cddActual,
+      hasOutage,
+    });
+
+    const desc = result.hasOutage
+      ? `May naitalang brownout/outage noong ${monthName(result.period)} (${result.period}) kaya hindi kwalipikado sa Points.`
+      : result.points > 0
+        ? `Verified Savings sa Bill ng ${monthName(result.period)} (${result.savedKwh} kWh natipid)`
+        : `Walang Verified Savings para sa Bill ng ${monthName(result.period)}`;
+
+    const entry: PointsEntry = {
+      id: `pts-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      sin,
+      period: result.period,
+      points: result.points,
+      savedPesos: result.savedPesos,
+      savedKwh: result.savedKwh,
+      baselineKwh: result.baselineKwh,
+      actualKwh: result.actualKwh,
+      source: "bill_verified",
+      hasOutage: result.hasOutage,
+      excludedReason: result.excludedReason,
+      description: desc,
+      createdAt: new Date().toISOString(),
+    };
+
+    await this.pointsRepo.addEntry(sin, entry);
+    return result;
   }
 }
