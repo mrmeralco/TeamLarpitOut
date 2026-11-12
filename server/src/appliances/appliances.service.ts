@@ -7,7 +7,7 @@ import {
   UnprocessableEntityException,
 } from "@nestjs/common";
 import type { BillSource } from "../bills/bill-source.js";
-import { APPLIANCE_REPOSITORY, BILL_SOURCE, RATE_SCHEDULES } from "../common/injection-tokens.js";
+import { APPLIANCE_REPOSITORY, BILL_SOURCE, RATE_SCHEDULES, WEATHER_PROVIDER } from "../common/injection-tokens.js";
 import { findAppliance, type ApplianceType } from "../domain/appliance-catalog.js";
 import {
   calibrateToBill,
@@ -16,7 +16,13 @@ import {
   validateAppliance,
   type ApplianceInput,
 } from "../domain/appliance-usage.js";
+import {
+  estimateAirconHoursFromHistory,
+  type BillWithWeather,
+} from "../domain/heat-sensitivity.js";
+import type { Household } from "../domain/household.js";
 import { costLines, type RateScheduleTable } from "../domain/rate-schedule.js";
+import type { WeatherProvider } from "../weather/weather-provider.interface.js";
 import type { ApplianceRepository } from "./appliance-repository.interface.js";
 import type { ApplianceDto } from "./dto/save-appliances.dto.js";
 
@@ -26,6 +32,7 @@ export class AppliancesService {
     @Inject(APPLIANCE_REPOSITORY) private readonly repository: ApplianceRepository,
     @Inject(BILL_SOURCE) private readonly bills: BillSource,
     @Inject(RATE_SCHEDULES) private readonly rates: RateScheduleTable,
+    @Inject(WEATHER_PROVIDER) private readonly weather: WeatherProvider,
   ) {}
 
   /** The Household's saved appliances; `saved: false` means the survey hasn't been answered yet. */
@@ -86,6 +93,80 @@ export class AppliancesService {
         /** Charged per customer regardless of use, so no appliance causes them. */
         fixedCharges,
       },
+    };
+  }
+
+  /**
+   * For a traditional Household, estimate aircon hours from the cooling part of
+   * Heat Sensitivity divided by the aircon's kWh per hour (kW).
+   * Fallback: routine question.
+   */
+  async airconProposal(sin: string, household: Household, answers?: Record<string, string>) {
+    if (household.meter_type !== "traditional") {
+      return {
+        canPropose: false,
+        hours: null,
+        reason: "Para lang sa traditional meter ang pagtatantya mula sa Bill History.",
+        fallback: "routine",
+      };
+    }
+
+    const history = await this.bills.bills(sin);
+    if (!history || history.length < 3) {
+      return {
+        canPropose: false,
+        hours: null,
+        reason: "Kailangan ng kahit 3 bills sa Bill History.",
+        fallback: "routine",
+      };
+    }
+
+    const withWeather: BillWithWeather[] = await Promise.all(
+      history.map(async (b) => ({
+        period: b.period,
+        kwh: b.kwh,
+        billingDays: b.billingDays,
+        cddPerDay: (await this.weather.getCddPerDay(b.period)) ?? -1,
+      })),
+    );
+
+    const def = findAppliance("aircon")!;
+    let effectiveAnswers = answers ?? {};
+    if (!answers || Object.keys(answers).length === 0) {
+      const stored = await this.repository.find(sin);
+      const aircon = stored?.appliances.find((a) => a.type === "aircon");
+      if (aircon?.answers) effectiveAnswers = aircon.answers;
+    }
+
+    const normalizedAnswers = Object.fromEntries(
+      def.questions.map((q) => [q.key, effectiveAnswers[q.key] ?? "unknown"]),
+    );
+    const rating = def.rating(normalizedAnswers);
+    const airconKw = rating ?? def.defaultRating;
+
+    const estimated = estimateAirconHoursFromHistory(withWeather, airconKw);
+    if (!estimated) {
+      return {
+        canPropose: false,
+        hours: null,
+        reason: "Hindi sapat o walang pagtaas sa init sa Bill History.",
+        fallback: "routine",
+      };
+    }
+
+    const { hours, coolingKwhPerDay } = estimated;
+    return {
+      canPropose: true,
+      hours,
+      coolingKwhPerDay,
+      airconKw: Math.round(airconKw * 100) / 100,
+      prompt: `Mukhang mga ${hours} oras/araw bukas ang aircon mo. Tama ba?`,
+      options: [
+        { action: "confirm", label: "Oo", hours },
+        { action: "longer", label: "Mas matagal", hours: Math.min(24, hours + 2) },
+        { action: "shorter", label: "Mas maikli", hours: Math.max(1, hours - 2) },
+      ],
+      fallback: "routine",
     };
   }
 

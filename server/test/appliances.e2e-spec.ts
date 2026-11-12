@@ -291,3 +291,123 @@ describe('GET /api/households/:sin/appliances/breakdown ("Saan napupunta?")', ()
     expect((await api.get(`/api/households/${OTHER_OWN_SIN}/appliances/breakdown`, token)).status).toBe(404);
   });
 });
+
+describe("13 · Aircon hours from Bill History (traditional)", () => {
+  const cdds = [2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 3.5, 4.0, 4.5];
+  const months = [
+    "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04",
+    "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10",
+  ];
+  const weatherMap: Record<string, number> = {};
+  months.forEach((p, i) => { weatherMap[p] = cdds[i]!; });
+
+  // Base 10 kWh/day, slope 2.0 kWh/CDD. Mean CDD = 4.0 -> cooling = 8.0 kWh/day.
+  const syntheticBills = months.map((period, i) =>
+    bill(period, Math.round((10 + 2.0 * cdds[i]!) * 30), 30),
+  );
+
+  it("API test with synthetic history and a known aircon returns the expected hours", async () => {
+    const api = await harness({
+      bills: { [SIN]: syntheticBills },
+      weather: weatherMap,
+    });
+    const token = await api.login();
+
+    // Default aircon (1.0 kW): 8.0 kWh cooling / 1.0 kW = 8 hours
+    const res = await api.get(`/api/households/${SIN}/appliances/aircon-proposal`, token);
+    expect(res.status).toBe(200);
+    expect(res.body.canPropose).toBe(true);
+    expect(res.body.hours).toBe(8);
+    expect(res.body.coolingKwhPerDay).toBe(8);
+    expect(res.body.airconKw).toBe(1.0);
+    expect(res.body.prompt).toBe("Mukhang mga 8 oras/araw bukas ang aircon mo. Tama ba?");
+    expect(res.body.options).toEqual([
+      { action: "confirm", label: "Oo", hours: 8 },
+      { action: "longer", label: "Mas matagal", hours: 10 },
+      { action: "shorter", label: "Mas maikli", hours: 6 },
+    ]);
+  });
+
+  it("calculates hours with specific aircon answers", async () => {
+    const api = await harness({
+      bills: { [SIN]: syntheticBills },
+      weather: weatherMap,
+    });
+    const token = await api.login();
+
+    // Window, non-inverter, large room: 1.6 * 1.1 * 1.0 = 1.76 kW
+    // 8.0 kWh cooling / 1.76 kW = 4.545 -> rounded to 5 hours
+    const res = await api.get(
+      `/api/households/${SIN}/appliances/aircon-proposal?mount=window&inverter=no&room=large`,
+      token,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.canPropose).toBe(true);
+    expect(res.body.hours).toBe(5);
+    expect(res.body.prompt).toBe("Mukhang mga 5 oras/araw bukas ang aircon mo. Tama ba?");
+  });
+
+  it("proposal is never used until confirmed or adjusted", async () => {
+    const api = await harness({
+      bills: { [SIN]: syntheticBills },
+      weather: weatherMap,
+    });
+    const token = await api.login();
+
+    // 1. Fetching proposal does not save it.
+    await api.get(`/api/households/${SIN}/appliances/aircon-proposal`, token);
+    const initial = await api.get(`/api/households/${SIN}/appliances`, token);
+    expect(initial.body.saved).toBe(false);
+    expect(initial.body.appliances).toEqual([]);
+
+    // 2. Saving an unconfirmed aircon without routine/timeRanges is rejected.
+    const unconfirmedSave = await api.put(
+      `/api/households/${SIN}/appliances`,
+      { appliances: [{ type: "aircon" }] },
+      token,
+    );
+    expect(unconfirmedSave.status).toBe(400);
+    expect(unconfirmedSave.body.issues).toContain("Aircon: kailan ito bukas?");
+
+    // 3. Only when user confirms (e.g. 8 hours) or adjusts is it accepted.
+    const confirmedSave = await api.put(
+      `/api/households/${SIN}/appliances`,
+      {
+        appliances: [
+          {
+            type: "aircon",
+            timeRanges: [{ start: "22:00", end: "06:00", days: "everyday" }],
+          },
+        ],
+      },
+      token,
+    );
+    expect(confirmedSave.status).toBe(200);
+    expect(confirmedSave.body.saved).toBe(true);
+    expect(confirmedSave.body.appliances[0]).toMatchObject({
+      type: "aircon",
+      hoursPerDay: 8,
+    });
+  });
+
+  it("falls back when household is smart meter or has insufficient bills", async () => {
+    const api = await harness({
+      bills: {
+        [SIN]: syntheticBills.slice(0, 2), // only 2 bills
+        [OTHER_OWN_SIN]: syntheticBills, // smart meter
+      },
+      weather: weatherMap,
+    });
+    const token = await api.login();
+
+    // Traditional with fewer than 3 bills -> fallback
+    const short = await api.get(`/api/households/${SIN}/appliances/aircon-proposal`, token);
+    expect(short.body.canPropose).toBe(false);
+    expect(short.body.fallback).toBe("routine");
+
+    // Smart meter household -> fallback
+    const smart = await api.get(`/api/households/${OTHER_OWN_SIN}/appliances/aircon-proposal`, token);
+    expect(smart.body.canPropose).toBe(false);
+    expect(smart.body.fallback).toBe("routine");
+  });
+});

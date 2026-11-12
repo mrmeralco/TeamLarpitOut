@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   ApiError,
   appliancesApi,
+  rangeFromHours,
+  type AirconProposalResult,
   type ApplianceBreakdown,
   type ApplianceInput,
   type CatalogAppliance,
@@ -26,7 +28,10 @@ function blank(def: CatalogAppliance): ApplianceInput {
     quantity: 1,
     answers: Object.fromEntries(def.questions.map((q) => [q.key, "unknown"])),
   };
-  if (def.routine === "timeRanges") a.timeRanges = [{ start: "18:00", end: "22:00", days: "everyday" }];
+  if (def.routine === "timeRanges") {
+    // Aircon starts unconfirmed so proposal or routine question must be answered
+    a.timeRanges = def.type === "aircon" ? [] : [{ start: "18:00", end: "22:00", days: "everyday" }];
+  }
   if (def.routine === "usesPerWeek") a.usesPerWeek = 2;
   return a;
 }
@@ -37,14 +42,46 @@ function ApplianceCard(props: {
   onExpired: () => void;
   def: CatalogAppliance;
   value: ApplianceInput;
+  household: Household;
   onChange: (a: ApplianceInput) => void;
   onRemove: () => void;
 }) {
-  const { def, value, onChange } = props;
+  const { def, value, household, token, onChange } = props;
   const set = (patch: Partial<ApplianceInput>) => onChange({ ...value, ...patch });
   const ranges = value.timeRanges ?? [];
   const setRange = (i: number, patch: Partial<TimeRange>) =>
     set({ timeRanges: ranges.map((r, j) => (i === j ? { ...r, ...patch } : r)) });
+
+  const isTraditionalAircon = def.type === "aircon" && household.meter_type === "traditional";
+  const [proposal, setProposal] = useState<AirconProposalResult | null>(null);
+  const [loadingProposal, setLoadingProposal] = useState(false);
+  const [manualRoutine, setManualRoutine] = useState(false);
+  const [confirmedHours, setConfirmedHours] = useState<number | null>(() => {
+    if (ranges.length > 0) {
+      const r = ranges[0];
+      const m1 = Number(r.start.split(":")[0]) * 60 + Number(r.start.split(":")[1]);
+      const m2 = Number(r.end.split(":")[0]) * 60 + Number(r.end.split(":")[1]);
+      return Math.round(((m2 - m1 + 1440) % 1440) / 60);
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (!isTraditionalAircon) return;
+    const controller = new AbortController();
+    setLoadingProposal(true);
+    appliancesApi
+      .airconProposal(token, household.sin, value.answers, controller.signal)
+      .then((res) => {
+        setProposal(res);
+        if (!res.canPropose) setManualRoutine(true);
+      })
+      .catch(() => {
+        setManualRoutine(true);
+      })
+      .finally(() => setLoadingProposal(false));
+    return () => controller.abort();
+  }, [isTraditionalAircon, token, household.sin, JSON.stringify(value.answers)]);
 
   return (
     <li className="appliance">
@@ -88,7 +125,76 @@ function ApplianceCard(props: {
 
       {def.routine === "alwaysOn" && <p className="muted">Laging bukas, kaya walang tanong sa oras.</p>}
 
-      {def.routine === "timeRanges" && (
+      {def.routine === "timeRanges" && isTraditionalAircon && !manualRoutine && proposal?.canPropose && (
+        <div className="proposal-box">
+          <p className="proposal-prompt">
+            {proposal.prompt ?? `Mukhang mga ${proposal.hours} oras/araw bukas ang aircon mo. Tama ba?`}
+          </p>
+          {confirmedHours !== null && ranges.length > 0 ? (
+            <div className="row proposal-confirmed">
+              <span className="muted">Kinumpirma: {confirmedHours} oras/araw</span>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  setConfirmedHours(null);
+                  set({ timeRanges: [] });
+                }}
+              >
+                Baguhin
+              </button>
+            </div>
+          ) : (
+            <div className="row proposal-actions">
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  const h = proposal.hours!;
+                  setConfirmedHours(h);
+                  set({ timeRanges: [rangeFromHours(h)] });
+                }}
+              >
+                Oo
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  const h = Math.min(24, proposal.hours! + 2);
+                  setConfirmedHours(h);
+                  set({ timeRanges: [rangeFromHours(h)] });
+                }}
+              >
+                Mas matagal
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  const h = Math.max(1, proposal.hours! - 2);
+                  setConfirmedHours(h);
+                  set({ timeRanges: [rangeFromHours(h)] });
+                }}
+              >
+                Mas maikli
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            className="ghost fallback-btn"
+            onClick={() => {
+              setManualRoutine(true);
+              if (ranges.length === 0) set({ timeRanges: [{ start: "18:00", end: "22:00", days: "everyday" }] });
+            }}
+          >
+            Ibahin / manu-manong ilagay ang routine
+          </button>
+        </div>
+      )}
+
+      {def.routine === "timeRanges" && (!isTraditionalAircon || manualRoutine || !proposal?.canPropose) && (
         <div className="routine">
           <span className="muted">Kailan bukas?</span>
           {ranges.map((r, i) => (
@@ -113,6 +219,17 @@ function ApplianceCard(props: {
           {ranges.length < 6 && (
             <button type="button" className="ghost" onClick={() => set({ timeRanges: [...ranges, { start: "06:00", end: "08:00", days: "everyday" }] })}>
               + Isa pang oras
+            </button>
+          )}
+          {isTraditionalAircon && proposal?.canPropose && (
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                setManualRoutine(false);
+              }}
+            >
+              Bumalik sa tantya mula sa Bill History
             </button>
           )}
         </div>
@@ -142,6 +259,7 @@ function Survey(props: {
   catalog: CatalogAppliance[];
   initial: ApplianceInput[];
   saving: boolean;
+  household: Household;
   onSave: (list: ApplianceInput[]) => void;
   onCancel?: () => void;
 }) {
@@ -163,6 +281,7 @@ function Survey(props: {
             token={props.token} sin={props.sin} onExpired={props.onExpired}
             def={byType.get(a.type)!}
             value={a}
+            household={props.household}
             onChange={(next) => setList((current) => current.map((x) => x.id === id ? { ...x, value: next } : x))}
             onRemove={() => setList((current) => current.filter((x) => x.id !== id))}
           />
@@ -336,6 +455,7 @@ function HouseholdAppliances({ token, household, onExpired, onSaved }: Appliance
           catalog={catalog}
           initial={saved}
           saving={saving}
+          household={household}
           onSave={save}
           onCancel={saved.length ? () => setEditing(false) : undefined}
         />

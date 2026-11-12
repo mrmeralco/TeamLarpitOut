@@ -3,6 +3,7 @@ import { BillsModule } from "../bills/bills.module.js";
 import { APPLIANCE_REPOSITORY } from "../common/injection-tokens.js";
 import { HouseholdsModule } from "../households/households.module.js";
 import { RateSchedulesModule } from "../rate-schedules/rate-schedules.module.js";
+import { WeatherModule } from "../weather/weather.module.js";
 import { ApplianceCatalogController } from "./appliance-catalog.controller.js";
 import { AppliancesController } from "./appliances.controller.js";
 import { AppliancesService } from "./appliances.service.js";
@@ -11,7 +12,7 @@ import { VisionModule } from "../vision/vision.module.js";
 import { ApplianceLabelScanService } from "./appliance-label-scan.service.js";
 
 @Module({
-  imports: [HouseholdsModule, BillsModule, RateSchedulesModule, VisionModule],
+  imports: [HouseholdsModule, BillsModule, RateSchedulesModule, WeatherModule, VisionModule],
   controllers: [ApplianceCatalogController, AppliancesController],
   exports: [AppliancesService],
   providers: [AppliancesService, ApplianceLabelScanService, { provide: APPLIANCE_REPOSITORY, useFactory: () => new InMemoryApplianceRepository() }],

@@ -431,6 +431,21 @@ label.check input { width: auto; accent-color: var(--primary); }
 .appliance .qty label { flex-direction: row; align-items: center; margin: 0; gap: 6px; }
 .appliance .qty input { width: 4.5rem; }
 .routine { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; font-size: 0.85rem; }
+.proposal-box {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.proposal-prompt { margin: 0; font-weight: 500; font-size: 0.9rem; }
+.proposal-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.proposal-actions button { padding: 6px 10px; font-size: 0.85rem; }
+.proposal-confirmed { align-items: center; justify-content: space-between; font-size: 0.85rem; }
+.fallback-btn { font-size: 0.8rem; text-decoration: underline; padding: 4px 0; border: none; align-self: flex-start; }
 .range { align-items: center; flex-wrap: wrap; gap: 6px; }
 .range input[type="time"] { width: auto; flex: 1 1 6.5rem; }
 .range select { flex: 1 1 7rem; width: auto; }

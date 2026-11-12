@@ -61,6 +61,7 @@ export class BillChangeService {
         source: "cooling_appliance_estimate",
         label: "Cooling Appliance estimate",
         hotDayKwh: DEFAULT_COOLING_SENSITIVITY,
+        sigma: 1.0,
       };
       const weatherInput: WeatherInput = {
         heatSensitivity: fallbackSensitivity.heatSensitivity,

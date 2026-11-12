@@ -325,6 +325,35 @@ export interface ApplianceBreakdown {
   totals: { kwh: number; perKwhCharges: number; fixedCharges: number };
 }
 
+export interface AirconProposalOption {
+  action: "confirm" | "longer" | "shorter";
+  label: string;
+  hours: number;
+}
+
+export interface AirconProposalResult {
+  canPropose: boolean;
+  hours: number | null;
+  coolingKwhPerDay?: number;
+  airconKw?: number;
+  prompt?: string;
+  options?: AirconProposalOption[];
+  reason?: string;
+  fallback?: "routine";
+}
+
+/** Create a standard daily time range yielding the given hours (starting at 22:00). */
+export function rangeFromHours(hours: number): TimeRange {
+  const clamped = Math.max(1, Math.min(23, Math.round(hours)));
+  const startHour = 22;
+  const endHour = (startHour + clamped) % 24;
+  return {
+    start: "22:00",
+    end: `${String(endHour).padStart(2, "0")}:00`,
+    days: "everyday",
+  };
+}
+
 const authed = (token: string, signal?: AbortSignal): RequestInit => ({
   headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
 });
@@ -342,6 +371,13 @@ export const appliancesApi = {
     fetch("/api/appliances/catalog", { signal }).then((r) => json<{ appliances: CatalogAppliance[] }>(r)),
   list: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(householdPath(sin), authed(token, signal)).then((r) => json<HouseholdAppliances>(r)),
+  airconProposal: (token: string, sin: string, query?: Record<string, string>, signal?: AbortSignal) => {
+    const cleanQuery = query
+      ? Object.fromEntries(Object.entries(query).filter(([, v]) => v !== undefined && v !== ""))
+      : undefined;
+    const qs = cleanQuery && Object.keys(cleanQuery).length > 0 ? "?" + new URLSearchParams(cleanQuery).toString() : "";
+    return fetch(`${householdPath(sin)}/aircon-proposal${qs}`, authed(token, signal)).then((r) => json<AirconProposalResult>(r));
+  },
   save: (token: string, sin: string, appliances: ApplianceInput[]) =>
     fetch(householdPath(sin), {
       method: "PUT",
@@ -388,6 +424,56 @@ export interface UsagePlan {
   createdAt: string;
 }
 
+export interface ForecastRange {
+  minKwh: number;
+  maxKwh: number;
+  minPesos: number;
+  maxPesos: number;
+}
+
+export interface ForecastProjected {
+  kwh: number;
+  pesos: number;
+  kwhSoFar: number;
+  elapsedDays: number;
+  remainingDays: number;
+  reading: number;
+  readingDate: string | null;
+}
+
+export interface TargetComparison {
+  targetKwh: number;
+  targetPesos: number;
+  diffPesos: number;
+  diffKwh: number;
+  status: "within_target" | "over_target";
+  label: string;
+}
+
+export interface ForecastResult {
+  currency: "PHP-centavos";
+  period: string;
+  billingDays: number;
+  rateSchedulePeriod: string;
+  hasReading: boolean;
+  lastReading: number | null;
+  range: ForecastRange | null;
+  projected: ForecastProjected | null;
+  targetComparison: TargetComparison | null;
+  heatWave: {
+    active: boolean;
+    heatIndex: number | null;
+    banner: string | null;
+    kwhAdjustmentPerDay: number;
+  };
+  heatSensitivity: {
+    value: number;
+    source: string;
+    label: string;
+    sigma: number;
+  };
+}
+
 const planPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}`;
 
 export const usagePlanApi = {
@@ -405,6 +491,19 @@ export const usagePlanApi = {
       headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify(body),
     }).then((r) => json<{ active: boolean; plan: UsagePlan }>(r)),
+  forecast: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`${planPath(sin)}/forecast`, authed(token, signal)).then((r) => json<ForecastResult>(r)),
+  saveReading: (token: string, sin: string, body: { reading: number; elapsedDays?: number; readingDate?: string }) =>
+    fetch(`${planPath(sin)}/mid-month-reading`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }).then((r) => json<ForecastResult>(r)),
+  deleteReading: (token: string, sin: string) =>
+    fetch(`${planPath(sin)}/mid-month-reading`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }).then((r) => json<ForecastResult>(r)),
 };
 
 export type HomeBadge = "green" | "yellow" | "red";

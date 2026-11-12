@@ -1,5 +1,5 @@
 import seed from "../data/meralco-demo-seed.json" with { type: "json" };
-import type { WeatherProvider } from "./weather-provider.interface.js";
+import type { WeatherForecastInfo, WeatherProvider } from "./weather-provider.interface.js";
 
 export class OpenMeteoWeatherProvider implements WeatherProvider {
   private readonly cache = new Map<string, number>();
@@ -57,6 +57,51 @@ export class OpenMeteoWeatherProvider implements WeatherProvider {
       return val;
     }
 
+    return null;
+  }
+
+  async getForecast(period?: string): Promise<WeatherForecastInfo | null> {
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${this.latitude}&longitude=${this.longitude}&daily=temperature_2m_max,apparent_temperature_max,temperature_2m_mean&forecast_days=14&timezone=Asia%2FManila`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          daily?: {
+            temperature_2m_mean?: number[];
+            apparent_temperature_max?: number[];
+          };
+        };
+        const temps = data.daily?.temperature_2m_mean ?? [];
+        const heatIndices = data.daily?.apparent_temperature_max ?? [];
+        let cddPerDay = 4.0;
+        if (temps.length > 0) {
+          let sumCdd = 0;
+          for (const t of temps) sumCdd += Math.max(0, t - this.baseTemperature);
+          cddPerDay = Math.round((sumCdd / temps.length) * 10) / 10;
+        }
+        const maxHeatIndex = heatIndices.length > 0 ? Math.max(...heatIndices) : null;
+        const isHeatWave = maxHeatIndex !== null && maxHeatIndex >= 42;
+        return {
+          cddPerDay,
+          heatIndexMax: maxHeatIndex !== null ? Math.round(maxHeatIndex * 10) / 10 : null,
+          isHeatWave,
+        };
+      }
+    } catch {
+      // Offline, sandboxed, or rate-limited: fallback
+    }
+
+    if (period) {
+      const cdd = await this.getCddPerDay(period);
+      if (cdd !== null) {
+        const isHigh = cdd >= 5.5;
+        return {
+          cddPerDay: cdd,
+          heatIndexMax: isHigh ? 43.0 : 38.0,
+          isHeatWave: isHigh,
+        };
+      }
+    }
     return null;
   }
 }
