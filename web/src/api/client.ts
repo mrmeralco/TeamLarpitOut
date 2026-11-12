@@ -116,7 +116,10 @@ export interface BakitGanito {
 
 async function json<T>(res: Response): Promise<T> {
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(res.status, body.error ?? (Array.isArray(body.message) ? body.message.join(" ") : body.message) ?? `HTTP ${res.status}`);
+  if (!res.ok) {
+    const base = body.error ?? (Array.isArray(body.message) ? body.message.join(" ") : body.message) ?? `HTTP ${res.status}`;
+    throw new ApiError(res.status, Array.isArray(body.issues) && body.issues.length ? `${base} ${body.issues.join("; ")}` : base);
+  }
   return body as T;
 }
 
@@ -227,3 +230,54 @@ export const fetchBillBreakdown = (now: BillInput, before: BillInput) =>
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ now, before }),
   }).then((r) => json<BillBreakdown>(r));
+
+export type RoutineKind = "alwaysOn" | "timeRanges" | "usesPerWeek";
+export interface TimeRange { start: string; end: string; days: "everyday" | "weekdays" | "weekends" }
+export interface CatalogAppliance {
+  type: string;
+  label: string;
+  routine: RoutineKind;
+  questions: { key: string; label: string; options: { value: string; label: string }[] }[];
+}
+export interface ApplianceInput {
+  type: string;
+  quantity?: number;
+  answers?: Record<string, string>;
+  timeRanges?: TimeRange[];
+  usesPerWeek?: number;
+}
+export interface SavedAppliance extends ApplianceInput {
+  label: string;
+  routine: RoutineKind;
+  source: "answers" | "default";
+  sourceLabel: string;
+  hoursPerDay: number | null;
+  estimatedKwhPerDay: number;
+}
+export interface HouseholdAppliances { saved: boolean; updatedAt: string | null; appliances: SavedAppliance[] }
+/** Amounts in centavos; row kWh add up exactly to the Bill's kWh. */
+export interface ApplianceBreakdown {
+  bill: { period: string; kwh: number; billingDays: number };
+  rows: { index: number; type: string; label: string; quantity: number; source: string; sourceLabel: string; kwh: number; pesos: number; share: number }[];
+  totals: { kwh: number; perKwhCharges: number; fixedCharges: number };
+}
+
+const authed = (token: string, signal?: AbortSignal): RequestInit => ({
+  headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
+});
+const householdPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/appliances`;
+
+export const appliancesApi = {
+  catalog: (signal?: AbortSignal) =>
+    fetch("/api/appliances/catalog", { signal }).then((r) => json<{ appliances: CatalogAppliance[] }>(r)),
+  list: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(householdPath(sin), authed(token, signal)).then((r) => json<HouseholdAppliances>(r)),
+  save: (token: string, sin: string, appliances: ApplianceInput[]) =>
+    fetch(householdPath(sin), {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ appliances }),
+    }).then((r) => json<HouseholdAppliances>(r)),
+  breakdown: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`${householdPath(sin)}/breakdown`, authed(token, signal)).then((r) => json<ApplianceBreakdown>(r)),
+};

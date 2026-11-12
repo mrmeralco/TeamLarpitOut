@@ -17,6 +17,7 @@ import {
 import { MyMeralcoLogin } from "./components/MyMeralcoLogin";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
+import { Appliances } from "./components/Appliances";
 import { ScanLinkageNotice } from "./components/ScanLinkageNotice";
 import { BillBreakdown } from "./components/BillBreakdown";
 import { BillChecks } from "./components/BillChecks";
@@ -491,6 +492,7 @@ export function App() {
         });
       }} /> : <MyMeralcoLogin onLogin={(next) => { setSession(next); setSelectedSin(""); setSessionNotice(null); }} />}
       {session && selected && <BillHistory key={`${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <Result r={r} />} />}
+      {session && selected && <Appliances key={`appliances:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />}
 
       <section className="card hero-scan">
         <h2>Quick verdict · walang login</h2>
