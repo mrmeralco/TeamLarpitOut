@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Household, SetupStatus } from "../api/client";
 import type { Tab } from "../lib/routes";
+import { EelioLoader } from "./EelioLoader";
 import { SaveIntro } from "./SaveIntro";
 import { SetupChecklist } from "./SetupChecklist";
 import { SetupHousehold } from "./SetupHousehold";
@@ -48,7 +49,18 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
   /** The Mission Plan, shown once setup is complete. */
   children: React.ReactNode;
 }) {
-  if (!setup) return <section className="card"><p className="muted" role="status">Loading setup…</p></section>;
+  if (!setup) {
+    return (
+      <section className="dash loading" aria-busy="true">
+        <EelioLoader
+          variant="setup"
+          badge="Home Setup"
+          title="Loading setup…"
+          role="status"
+        />
+      </section>
+    );
+  }
   const toChecklist = () => go("missions");
   const nextStep = (s: SetupStatus) => s.steps.find((x) => !x.done)?.key;
   const advance = (s: SetupStatus) => {

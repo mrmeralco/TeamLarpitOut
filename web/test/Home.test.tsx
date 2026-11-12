@@ -78,6 +78,8 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearHomeCache(); });
 describe("Home: gamified with Eelio", () => {
   it("coming back to Home shows the last bill at once and refreshes it in the background", async () => {
     const first = render(<Home token="t" household={household} onExpired={() => {}} />);
+    expect(screen.getByText(/Eelio is reading your bill/)).toBeTruthy();
+    expect(first.container.querySelector('.eelio-loader img[src="/mascot/eelio-swim-1.png"]')).toBeTruthy();
     expect(await screen.findByRole("heading", { name: "Your October bill" })).toBeTruthy();
     first.unmount();
     const calls = fetchMock.mock.calls.length;

@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ApiError, linkApi, scanBill, simulateBill, type DraftBill, type LinkCorrections, type ScanOutcome } from "../api/client";
 import { BackButton, Icon, ICON } from "./auth/AuthScreens";
+import { EelioLoader } from "./EelioLoader";
 import { pesoValue } from "../lib/format";
 
 type ReadScan = Extract<ScanOutcome, { kind: "read" }>;
@@ -106,12 +107,23 @@ export function ScanBill({ token, onLinked, onExpired, onBack, onLogout }: {
         <p className="lead">We read the Customer Account Number (CAN) on your bill to link your account and load 12 months of history. Make sure the CAN is visible.</p>
       </div>
       <div className="camera" aria-hidden="true">
-        <div className="bill-sketch">
-          <span className="bar accent" /><span className="bar w85" /><span className="bar w70" /><span className="block" />
-          <span className="bar w90" /><span className="bar w80" /><span className="bar w60" />
-          <span className="sketch-foot"><span className="bar w40" /><span className="total" /></span>
-        </div>
-        <span>{busy ? "Reading your bill…" : "Align the whole bill inside the frame"}</span>
+        {busy ? (
+          <EelioLoader
+            compact
+            variant="bill"
+            badge="Bill Detective"
+            title="Reading your bill…"
+          />
+        ) : (
+          <>
+            <div className="bill-sketch">
+              <span className="bar accent" /><span className="bar w85" /><span className="bar w70" /><span className="block" />
+              <span className="bar w90" /><span className="bar w80" /><span className="bar w60" />
+              <span className="sketch-foot"><span className="bar w40" /><span className="total" /></span>
+            </div>
+            <span>Align the whole bill inside the frame</span>
+          </>
+        )}
       </div>
       {error && <div className="scan-error">
         <p className="error" role="alert">{error}</p>

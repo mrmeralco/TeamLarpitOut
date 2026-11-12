@@ -6,6 +6,7 @@ import {
   type Household,
   type RewardsCatalogResult,
 } from "../api/client";
+import { EelioLoader } from "./EelioLoader";
 
 interface RewardsProps {
   token: string;
@@ -77,6 +78,18 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
     }
   };
 
+  if (loading && !data) {
+    return (
+      <section className="dash loading" id="rewards" aria-busy="true" aria-label="Rewards">
+        <EelioLoader
+          variant="rewards"
+          badge="Rewards Vault"
+          title="Loading the Rewards catalog…"
+        />
+      </section>
+    );
+  }
+
   return (
     <section className="card rewards-card anchor" id="rewards" aria-labelledby="rewards-heading">
       <div className="rewards-header">
@@ -89,7 +102,14 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
         </p>
       </div>
 
-      {loading && <p className="muted">Loading the Rewards catalog…</p>}
+      {loading && (
+        <EelioLoader
+          compact
+          variant="rewards"
+          badge="Rewards Vault"
+          title="Loading the Rewards catalog…"
+        />
+      )}
       {error && <p className="error">{error}</p>}
 
       {feedback && (
