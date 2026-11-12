@@ -53,6 +53,25 @@ describe("ChargeChat", () => {
     expect(screen.getByRole("button", { name: "Copy the summary for Meralco" })).toBeTruthy();
   });
 
+  it("shows the official Meralco explanation under the answer when retrieval found one", async () => {
+    fetchMock.mockImplementationOnce(async () => response({
+      lineId: "generation", kind: "answer", source: "ai", answer: "It went up because you used more.",
+      sources: [{ title: "Generation Charge", text: "The cost of power Meralco buys from power producers.", url: "https://www.meralco.com.ph/residential/understand-your-bill" }],
+    }));
+    render(<ChargeChat token="t" sin="1234567890" line={line} previousMonth={null} onClose={() => {}} onExpired={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Why did this go up?" }));
+    expect(await screen.findByText("From Meralco's bill guide: Generation Charge")).toBeTruthy();
+    expect(screen.getByText("The cost of power Meralco buys from power producers.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "meralco.com.ph" }).getAttribute("href")).toBe("https://www.meralco.com.ph/residential/understand-your-bill");
+  });
+
+  it("shows no source box when retrieval had nothing", async () => {
+    render(<ChargeChat token="t" sin="1234567890" line={line} previousMonth={null} onClose={() => {}} onExpired={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Why did this go up?" }));
+    await screen.findByText("Answer to: Why did this go up?");
+    expect(screen.queryByText(/From Meralco's bill guide/)).toBeNull();
+  });
+
   it("closes with the close button", () => {
     const onClose = vi.fn();
     render(<ChargeChat token="t" sin="1234567890" line={line} previousMonth={null} onClose={onClose} onExpired={() => {}} />);

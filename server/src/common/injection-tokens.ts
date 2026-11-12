@@ -35,3 +35,5 @@ export const POINTS_REPOSITORY = Symbol("POINTS_REPOSITORY");
 export const OUTAGE_SOURCE = Symbol("OUTAGE_SOURCE");
 /** Per-Household Household Setup progress (in-memory now; database later). */
 export const SETUP_REPOSITORY = Symbol("SETUP_REPOSITORY");
+/** Retrieval over Meralco's public bill guide (the ML service's /rag/search). */
+export const KNOWLEDGE_SOURCE = Symbol("KNOWLEDGE_SOURCE");
