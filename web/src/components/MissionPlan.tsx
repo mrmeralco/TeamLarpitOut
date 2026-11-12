@@ -63,6 +63,8 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
   const pct = Math.min(100, Math.round(plan.covered * 100));
   return (
     <section className="mission-plan" aria-labelledby="mission-plan-title">
+      <div className="plan-grid">
+      <div className="plan-summary">
       <span className="muted small">{monthName(plan.period)} billing period</span>
       <div className="card goal-card">
         <span className="muted small">This month's goal</span>
@@ -73,6 +75,8 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
         </div>
         <p className="small">Your plan covers {Math.min(plan.coveredPercent, 99.9).toFixed(1)}%{plan.covered >= 1 ? " · Goal reached" : ` of ${plan.goal.cut}%`}</p>
       </div>
+      </div>
+      <div className="plan-body">
       <div className="section-head">
         <h3>Your plan, picked for your home</h3>
         <button type="button" className="ghost" disabled={busy} onClick={() => void shuffle()}>{busy ? "…" : "Shuffle"}</button>
@@ -94,6 +98,8 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
         {plan.source === "ai" ? "AI picks and words the missions for your appliances and routine." : "Missions picked for your appliances and routine."}{" "}
         Every peso value is computed from your bill. Points come only from savings verified on your next bill.
       </p>
+      </div>
+      </div>
       {children}
     </section>
   );

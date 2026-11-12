@@ -76,7 +76,7 @@ describe("Home tab", () => {
     const ask = await screen.findByRole("alert");
     expect(ask.textContent).toContain("Ask Meralco");
     expect(ask.textContent).toContain("Total ₱3,000 vs lines ₱2,690");
-    const order = [...document.querySelectorAll(".home2 > *")].map((el) => el.className);
+    const order = [...document.querySelectorAll(".home-main > *")].map((el) => el.className);
     expect(order.indexOf("card home-ask")).toBeLessThan(order.indexOf("card home-due"));
     expect(within(ask).getByRole("button", { name: "Copy summary" })).toBeTruthy();
   });

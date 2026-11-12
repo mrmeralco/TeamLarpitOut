@@ -5,6 +5,7 @@ import { SetupAppliances } from "./components/SetupAppliances";
 import { AirconAgreement } from "./components/AirconAgreement";
 import { ChargeChat } from "./components/ChargeChat";
 import { AuthFlow, CreatePassword } from "./components/auth/AuthScreens";
+import { AuthLayout } from "./components/auth/AuthLayout";
 import { ScanBill } from "./components/ScanBill";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
@@ -102,15 +103,15 @@ export function App() {
 
   if (!session) {
     const createPassword = /^#\/create-password\/([A-Za-z0-9_-]{43})$/.exec(rawHash);
-    return <main className="auth-main">
+    return <main className="auth-main"><AuthLayout>
       {createPassword
         ? <CreatePassword token={createPassword[1]!} onDone={signedIn} onBack={() => { window.location.hash = "/signup"; }} />
         : <AuthFlow initial={rawHash === "#/signin" || sessionNotice ? "signin" : "signup"} notice={sessionNotice} onSignedIn={signedIn} />}
-    </main>;
+    </AuthLayout></main>;
   }
 
   if (linking || !selected) {
-    return <main className="auth-main">
+    return <main className="auth-main"><AuthLayout>
       <ScanBill key={`link:${session.token}`} token={session.token} onExpired={onExpired}
         onBack={selected ? () => setLinking(false) : undefined}
         onLinked={(sin) => {
@@ -118,7 +119,7 @@ export function App() {
             begin({ ...session, households }, sin); setLinking(false); go("home");
           }).catch((err) => { if (err instanceof ApiError && err.status === 401) onExpired(); });
         }} />
-    </main>;
+    </AuthLayout></main>;
   }
 
   const key = `${session.token}:${selected.sin}`;

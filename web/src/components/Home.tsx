@@ -96,6 +96,8 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
         <span className={`home-badge ${data.badge.status}`}><span className="dot" aria-hidden="true" />{BADGE[data.badge.status]}</span>
       </div>
 
+      <div className="home-grid">
+      <div className="home-main">
       {action.kind === "askMeralco" && (
         <div className="card home-ask" role="alert">
           <strong>Ask Meralco</strong>
@@ -131,7 +133,9 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
         </ul>
         <p className="small muted">{change.addsUp ? `✓ Adds up: ${peso(change.total, true)}` : "The total doesn't add up yet; see Bill Checks."}</p>
       </> : <p className="muted">{data.bakitGanitoUnavailable}</p>}
+      </div>
 
+      <div className="home-side">
       {data.chargeLines.all.length > 0 && <>
         <div className="section-head"><h3>Charges on your bill</h3><span className="muted small">Tap any charge to ask</span></div>
         <div className="charges">
@@ -157,6 +161,8 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
           <span aria-hidden="true">→</span>
         </button>
       )}
+      </div>
+      </div>
     </section>
   );
 }
