@@ -2,6 +2,7 @@ import { Controller, Get, Module, ValidationPipe, type INestApplication } from "
 import { BakitGanitoModule } from "./bakit-ganito/bakit-ganito.module.js";
 import { RateSchedulesModule } from "./rate-schedules/rate-schedules.module.js";
 import { VisionModule } from "./vision/vision.module.js";
+import { LamanModule } from "./laman/laman.module.js";
 
 @Controller("health")
 export class HealthController {
@@ -12,7 +13,7 @@ export class HealthController {
 }
 
 @Module({
-  imports: [RateSchedulesModule, BakitGanitoModule, VisionModule],
+  imports: [RateSchedulesModule, BakitGanitoModule, VisionModule, LamanModule],
   controllers: [HealthController],
 })
 export class AppModule {}
