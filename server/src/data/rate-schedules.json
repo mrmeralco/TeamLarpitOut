@@ -1,0 +1,65 @@
+{
+  "_note": "The one Rate Schedule table (ADR-0001). SAMPLE values shaped like a Meralco residential bill; replace with the real charge lines from the team's Bills and Meralco's published schedule. Per-kWh rates are pesos per kWh; fixed amounts are pesos per customer per month. VAT is listed as its own lines.",
+  "schedules": [
+    {
+      "period": "2026-09",
+      "perKwh": [
+        { "code": "generation", "label": "Generation Charge", "rate": 7.1820, "passThrough": true },
+        { "code": "transmission", "label": "Transmission Charge", "rate": 1.0350, "passThrough": true },
+        { "code": "system_loss", "label": "System Loss Charge", "rate": 0.6210, "passThrough": true },
+        { "code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false },
+        { "code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.4950, "passThrough": false },
+        { "code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.3230, "passThrough": false },
+        { "code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true },
+        { "code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true },
+        { "code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true },
+        { "code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.9870, "passThrough": true }
+      ],
+      "fixed": [
+        { "code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38 },
+        { "code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.00 },
+        { "code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57 }
+      ]
+    },
+    {
+      "period": "2026-10",
+      "perKwh": [
+        { "code": "generation", "label": "Generation Charge", "rate": 7.4510, "passThrough": true },
+        { "code": "transmission", "label": "Transmission Charge", "rate": 1.0470, "passThrough": true },
+        { "code": "system_loss", "label": "System Loss Charge", "rate": 0.6455, "passThrough": true },
+        { "code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false },
+        { "code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.4950, "passThrough": false },
+        { "code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.3230, "passThrough": false },
+        { "code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true },
+        { "code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true },
+        { "code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true },
+        { "code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 1.0215, "passThrough": true }
+      ],
+      "fixed": [
+        { "code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38 },
+        { "code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.00 },
+        { "code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57 }
+      ]
+    },
+    {
+      "period": "2026-11",
+      "perKwh": [
+        { "code": "generation", "label": "Generation Charge", "rate": 7.0230, "passThrough": true },
+        { "code": "transmission", "label": "Transmission Charge", "rate": 1.0120, "passThrough": true },
+        { "code": "system_loss", "label": "System Loss Charge", "rate": 0.6050, "passThrough": true },
+        { "code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false },
+        { "code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.4950, "passThrough": false },
+        { "code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.3230, "passThrough": false },
+        { "code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true },
+        { "code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true },
+        { "code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true },
+        { "code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.9660, "passThrough": true }
+      ],
+      "fixed": [
+        { "code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38 },
+        { "code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.00 },
+        { "code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57 }
+      ]
+    }
+  ]
+}
