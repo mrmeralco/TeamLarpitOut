@@ -75,6 +75,22 @@ To keep the phone-first PWA fast and lightweight without heavy video files, scre
 - **Transparent (`no-bg`) Sheet:** [eelio-transition-sheet.png](assets/no-bg/eelio-transition-sheet.png)
 - **Black BG Sheet:** [eelio-transition-sheet.png](assets/black-bg/eelio-transition-sheet.png)
 
+### Live Animation Preview ("Electric Dash" Loop)
+
+![Eelio Electric Dash Animation (White BG)](assets/white-bg/eelio-electric-dash-animation.gif)
+![Eelio Electric Dash Animation (Black BG)](assets/black-bg/eelio-electric-dash-animation.gif)
+
+- **Transparent Animated GIF:** [eelio-electric-dash-animation.gif](assets/no-bg/eelio-electric-dash-animation.gif)
+- **White BG Animated GIF:** [eelio-electric-dash-animation.gif](assets/white-bg/eelio-electric-dash-animation.gif)
+- **Black BG Animated GIF:** [eelio-electric-dash-animation.gif](assets/black-bg/eelio-electric-dash-animation.gif)
+
+### Frame-by-Frame Sprite Breakdown
+
+1. **Frame 1 — Coil (`eelio-frame-1-coil.png`):** Coils in anticipation, storing electrical potential energy before a leap.
+2. **Frame 2 — Dash (`eelio-frame-2-dash.png`):** Streamlined horizontal sprint with lightning trail.
+3. **Frame 3 — Spark Loop (`eelio-frame-3-spark-loop.png`):** Discharging electric pulses during loading or OCR wait states.
+4. **Frame 4 — Arrive (`eelio-frame-4-arrive.png`):** Decelerating and sticking the landing as content reveals.
+
 ![Eelio Transition Frames (White BG)](assets/white-bg/eelio-transition-sheet.png)
 ![Eelio Transition Frames (Black BG)](assets/black-bg/eelio-transition-sheet.png)
 
