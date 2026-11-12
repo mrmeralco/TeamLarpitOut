@@ -1,0 +1,11 @@
+{
+  "name": "kuryenteko",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@10.34.9"
+}
