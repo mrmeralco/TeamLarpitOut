@@ -154,11 +154,6 @@ Switching intervals cancels the previous load and clears its chart. Switching Ho
 
 Run `pnpm test`, `pnpm typecheck`, and `pnpm build` for workspace checks. UI tests cover automatic smart-only loading, accessible values, interval switching, retry, and delayed-response isolation; API tests exercise injected reading sources.
 
-### Scan linkage
+### Account Linking
 
-A successful public `POST /api/bills/scan` now includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized Service ID Number is retained server-side, with a maximum of 1,000 active references; no photo or scanned Bill is saved. Complete ten-digit identifiers are required for matching; whitespace and hyphens are accepted. Missing or partial identifiers cannot identify a Household.
-
-- `POST /api/bills/scan-linkage` `{ scanToken }`, with `Authorization: Bearer <login token>`, returns `{ status: "linked", householdSin }`, `{ status: "unlinked" }` or `{ status: "unknown" }`.
-- Matching uses the full identifier and the current login's linked Households, never a masked suffix or a client-supplied SIN. Invalid input returns 400; missing/expired login returns 401; expired or unknown references return the same 404. A scan reference cannot be used as a login token.
-- The PWA resolves linkage after the existing “Tama ba?” confirmation, including when login happens after the scan. Unlinked Bills keep their quick verdict with “Hindi naka-link ang account na ito sa My Meralco mo.” A linked scan offers its matching Household explicitly; it never automatically saves or assigns a Bill. Choosing another linked Household in the picker separately opens that Household's own history.
-- `pnpm test` runs the backend HTTP suite plus frontend DOM tests for login, stale responses, Household switching, logout, expiry, errors and scan linkage. Manual browser verification requires a connected browser.
+A signed-in `POST /api/bills/scan` includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized CAN printed on the Bill is retained server-side (at most 1,000 active references); no photo or scanned Bill is saved. Complete ten-digit CANs are required; whitespace and hyphens are accepted. The scan activates the login's pending link only when the CAN matches; a scan reference is never a login token. The old `POST /api/bills/scan-linkage` and the anonymous quick verdict were removed with ADR-0005.
