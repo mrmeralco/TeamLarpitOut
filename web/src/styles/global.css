@@ -208,27 +208,30 @@ label.check input { width: auto; accent-color: var(--primary); }
 .history small { display: block; color: var(--muted-foreground); font-weight: normal; }
 .history tbody th { font-weight: 500; }
 
-/* Smart meter usage */
+/* Smart meter usage: Home's usage card for a smart meter Household, same size and bars as the 12-Bill card */
 .smart-meter-usage { min-width: 0; }
-.meter-usage-intervals { display: flex; gap: 6px; }
-.meter-usage-intervals button { flex: 1; padding: 10px 8px; color: var(--foreground); background: var(--muted); border: 1px solid var(--border); }
+.meter-usage-intervals { display: flex; gap: 4px; margin-bottom: 2px; }
+.meter-usage-intervals button { flex: 1; padding: 4px 8px; min-height: 0; font-size: .8rem; line-height: 1.4; color: var(--foreground); background: var(--muted); border: 1px solid var(--border); border-radius: 999px; }
 .meter-usage-intervals button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); font-weight: 600; }
-.smart-meter-usage .notice { border-left: 3px solid var(--primary); padding: 8px 10px; font-size: .85rem; }
-.meter-usage-window { font-size: .8rem; overflow-wrap: anywhere; }
-.meter-usage-total strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
-.meter-usage-chart { margin: 16px 0; }
-.meter-usage-chart figcaption { font-weight: 600; font-size: .9rem; }
-.meter-usage-chart svg { display: block; width: 100%; height: auto; }
-.meter-usage-chart text { fill: var(--foreground); font: 10px system-ui, sans-serif; }
-.meter-usage-grid { stroke: var(--border); }
-.meter-usage-bar { fill: var(--chart-4); }
-.meter-usage-bar.partial { fill: var(--chart-2); stroke: var(--foreground); stroke-dasharray: 2 2; }
-.smart-meter-usage table { width: 100%; border-collapse: collapse; font-size: .8rem; }
-.smart-meter-usage caption { text-align: left; color: var(--muted-foreground); margin-bottom: 8px; }
-.smart-meter-usage th, .smart-meter-usage td { border-bottom: 1px solid var(--border); padding: 8px 4px; text-align: right; }
-.smart-meter-usage th:first-child { text-align: left; font-weight: 500; }
-.smart-meter-usage th small { display: block; font-weight: normal; }
-.smart-meter-usage summary:focus-visible, .smart-meter-usage button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.home-dash .dash-side .meter-usage-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.meter-usage-body > p { margin: 0; }
+.meter-bars .bar-col { cursor: pointer; outline: none; border-radius: 8px; }
+.meter-bars .bar-col:focus-visible { box-shadow: 0 0 0 2px var(--ring); }
+.meter-bars .bar-col.partial .ubar { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--primary) 35%, var(--card)) 0 6px, color-mix(in srgb, var(--primary) 22%, var(--card)) 6px 12px); }
+.meter-bars .bar-col.active .ubar { background: linear-gradient(180deg, #E06A1B, var(--brand-ink)); box-shadow: 0 6px 16px rgba(194, 80, 12, 0.35); }
+.meter-bars .bar-month { white-space: nowrap; }
+.meter-usage-tip {
+  position: absolute; left: 50%; z-index: 3; pointer-events: none; display: flex; flex-direction: column; gap: 1px;
+  padding: 6px 10px; border-radius: 10px; white-space: nowrap;
+  background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(31, 27, 22, 0.14); font-size: .75rem; line-height: 1.35;
+}
+.meter-usage-tip span { color: var(--muted-foreground); }
+.meter-usage-tip strong { font-size: .9rem; font-variant-numeric: tabular-nums; }
+.meter-usage-tip .meter-usage-tip-partial { color: var(--warn); }
+.meter-usage-caption { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.meter-usage-total { color: var(--foreground); font-variant-numeric: tabular-nums; }
+.smart-meter-usage button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 /* Bill Checks (Is it right?) */
 

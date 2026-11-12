@@ -64,12 +64,19 @@ const breakdown: ApplianceBreakdown = {
   ],
   totals: { kwh: 610, perKwhCharges: 0, fixedCharges: 0 },
 };
+const readings = {
+  sin: "9876543210", interval: "day", timeZone: "Asia/Manila",
+  range: { from: "2026-11-01T16:00:00.000Z", to: "2026-11-02T16:00:00.000Z" }, available: null,
+  provenance: { kind: "synthetic", note: "Test simulation." },
+  readings: [{ from: "2026-11-01T16:00:00.000Z", to: "2026-11-02T16:00:00.000Z", kwh: 12.5, partial: false }],
+};
 let home: HomeSummary;
 const fetchMock = vi.fn(async (input: string) => {
   if (input.endsWith("/home")) return new Response(JSON.stringify(home));
   if (input.endsWith("/bills")) return new Response(JSON.stringify(usage));
   if (input.endsWith("/missions/plan")) return new Response(JSON.stringify(plan));
   if (input.endsWith("/appliances/breakdown")) return new Response(JSON.stringify(breakdown));
+  if (input.includes("/readings?")) return new Response(JSON.stringify(readings));
   throw new Error(`Unexpected ${input}`);
 });
 
@@ -156,6 +163,28 @@ describe("Home: gamified with Eelio", () => {
     expect(within(charges).getByRole("button", { name: /^Generation:.*Biggest charge\./ })).toBeTruthy();
     const side = within(screen.getByRole("complementary", { name: "Your usage and savings" }));
     expect(side.getByRole("heading", { name: "Your usage" })).toBeTruthy();
+  });
+
+  it("a traditional meter's usage card shows the last 12 bills and never reads a smart meter", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    const side = within(await screen.findByRole("complementary", { name: "Your usage and savings" }));
+    expect(await side.findByText("kWh · last 12 bills")).toBeTruthy();
+    expect(side.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("/readings"))).toBe(false);
+  });
+
+  it("a smart meter's usage card is the Hour / Day / Week meter chart instead of the 12 bills", async () => {
+    const smart = { sin: "9876543210", masked_address: "••• Quezon City", meter_type: "smart" as const };
+    home = summary({ meterType: "smart", area: "Quezon City" });
+    render(<Home token="t" household={smart} onExpired={() => {}} />);
+    const side = within(await screen.findByRole("complementary", { name: "Your usage and savings" }));
+    const card = within(side.getByRole("region", { name: "Smart meter usage" }));
+    expect(card.getByRole("heading", { name: "Your usage" })).toBeTruthy();
+    expect(card.getByText(/kWh · smart meter/)).toBeTruthy();
+    for (const label of ["Hour", "Day", "Week"]) expect(card.getByRole("button", { name: label })).toBeTruthy();
+    expect(await card.findByRole("img", { name: "Mon, Nov 2, 2026: 12.5 kWh, complete" })).toBeTruthy();
+    expect(side.queryByText("kWh · last 12 bills")).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/bills"))).toBe(false);
   });
 
   it("groups the charge tiles by 4 for swiping on phones, with a pager", async () => {
