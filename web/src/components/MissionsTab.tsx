@@ -21,7 +21,7 @@ const STEP_META: Record<string, { step: number; charge: number; mascot: string; 
     charge: 66,
     mascot: "/mascot/eelio-detective.png",
     subtitle: "Appliance Grid",
-    hint: "Tap the appliances you have. Eelio will match typical consumption.",
+    hint: "Tap the appliances you have, or snap a photo so Eelio can estimate its size.",
   },
   routine: {
     step: 3,

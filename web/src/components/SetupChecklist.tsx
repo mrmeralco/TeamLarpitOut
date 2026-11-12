@@ -4,7 +4,7 @@ import { greeting } from "./HomeWrapped";
 const HOME_TEXT: Record<string, string> = { allDay: "home almost all day", eveningsWeekends: "home most evenings", daytime: "home mostly daytime" };
 const STEP_TEXT: Record<SetupStatus["steps"][number]["key"], { title: string; hint: string }> = {
   household: { title: "Your household", hint: "How many people live there" },
-  appliances: { title: "Tap the appliances you have", hint: "No photos or wattage needed" },
+  appliances: { title: "Tap the appliances you have", hint: "Quick tap grid or snap an appliance photo" },
   routine: { title: "Pick your daily routine", hint: "Two quick choices for the whole home" },
 };
 

@@ -58,8 +58,18 @@ describe("Setup tap grid", () => {
 
   it("has a visible remove button as the accessible alternative to long-press", () => {
     render(<SetupAppliances token="t" sin="1234567890" status={status({ grid: { tv: 2 } })} onSaved={() => {}} onBack={() => {}} onExpired={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Decrease tv" }));
+    expect(screen.getByRole("button", { name: /^tv, 1\./ })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Remove tv" }));
     expect(screen.getByRole("button", { name: /^tv\. Tap to add/ })).toBeTruthy();
+  });
+
+  it("adjusts an appliance count with the docked − and + buttons", () => {
+    render(<SetupAppliances token="t" sin="1234567890" status={status({ grid: { electric_fan: 3 } })} onSaved={() => {}} onBack={() => {}} onExpired={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "Decrease Electric fan" }));
+    expect(screen.getByRole("button", { name: /^Electric fan, 2\./ })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Increase Electric fan" }));
+    expect(screen.getByRole("button", { name: /^Electric fan, 3\./ })).toBeTruthy();
   });
 
   const snap = () => fireEvent.change(document.querySelector('input[type="file"]')!, {
