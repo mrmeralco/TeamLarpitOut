@@ -11,6 +11,10 @@ export interface UsagePlan {
   airconSetting: number | null;
   missions: { id: string; title: string; kwhSaved: number; pesoValue: number }[];
   createdAt: string;
+  /** Mission Plan (ADR-0007): who picked it, the AI's wording, and every set shown so far (for shuffle). */
+  source?: "ai" | "fallback" | "manual";
+  wording?: Record<string, { title: string; why: string }>;
+  shown?: string[][];
 }
 
 export interface UsagePlanRepository {

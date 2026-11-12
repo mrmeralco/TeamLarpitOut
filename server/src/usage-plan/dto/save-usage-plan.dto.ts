@@ -2,7 +2,7 @@ import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsIn, IsInt, IsOption
 import { TARGET_CUTS, type TargetCut } from "../../domain/baseline.js";
 
 export class SaveUsagePlanDto {
-  @IsIn(TARGET_CUTS as unknown as number[], { message: "Ang bawas ay 5, 10 o 15 porsyento lang." })
+  @IsIn(TARGET_CUTS as unknown as number[], { message: "Ang goal ay 5% na bawas." })
   cut: TargetCut;
 
   @IsArray()

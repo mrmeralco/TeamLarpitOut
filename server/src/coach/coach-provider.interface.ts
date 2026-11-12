@@ -1,4 +1,18 @@
 import type { ChargeFacts } from "../domain/charge-chat.js";
+import type { PlannedMission } from "../domain/mission-plan.js";
+
+/** One computed candidate, as the AI sees it: no personal data, only this Mission's figures. */
+export interface CandidateFacts {
+  id: string;
+  title: string;
+  appliance: string;
+  kwhSaved: number;
+  pesos: number;
+  percent: number;
+  effort: string;
+  group: string;
+  why: string;
+}
 
 /** The figures a Mission message may mention. All computed by code. */
 export interface MissionFacts {
@@ -20,4 +34,9 @@ export interface CoachProvider {
    * Returns null when it has no answer (no AI configured, error, timeout); the server then uses the template.
    */
   answerCharge?(input: { facts: ChargeFacts; question: string }): Promise<string | null>;
+  /**
+   * Picks up to five candidate ids that together reach about 5% and words each for this home.
+   * `avoid` lists sets already shown (for shuffle). Null when it has no answer; the server then picks.
+   */
+  pickMissionPlan?(input: { goalPercent: number; candidates: CandidateFacts[]; avoid: string[][] }): Promise<PlannedMission[] | null>;
 }

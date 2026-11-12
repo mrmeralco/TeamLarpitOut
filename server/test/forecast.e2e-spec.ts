@@ -148,7 +148,7 @@ describe("16 · Forecast: range, typed Mid-month Reading, heat wave banner", () 
     // Set a 10% Target plan with an available mission
     const missionsRes = await api.get(`/api/households/${SIN}/missions`, token);
     const missionIds = [missionsRes.body.missions[0].id];
-    const planRes = await api.put(`/api/households/${SIN}/usage-plan`, { cut: 10, missionIds }, token);
+    const planRes = await api.put(`/api/households/${SIN}/usage-plan`, { cut: 5, missionIds }, token);
     expect(planRes.status).toBe(200);
 
     // Case A: Low reading (12780 = only 40 kWh used in 15 days) -> within target
