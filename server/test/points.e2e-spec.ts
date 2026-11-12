@@ -91,7 +91,7 @@ describe("Verified Savings and Points (traditional)", () => {
     // Save a plan first
     const putRes = await api.put(
       `/api/households/${SIN}/usage-plan`,
-      { cut: 10, missionIds: ["aircon-timer-2h"] },
+      { cut: 5, missionIds: ["aircon-timer-2h"] },
       token,
     );
     expect(putRes.status).toBe(200);

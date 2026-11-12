@@ -12,6 +12,7 @@ import {
 } from "../api/client";
 import { monthLabel, peso } from "../lib/format";
 import { EnergyLabelScan } from "./EnergyLabelScan";
+import { AirconPatternProposal } from "./AirconPatternProposal";
 
 const DAYS: { value: TimeRange["days"]; label: string }[] = [
   { value: "everyday", label: "Araw-araw" },
@@ -43,6 +44,7 @@ function ApplianceCard(props: {
   def: CatalogAppliance;
   value: ApplianceInput;
   household: Household;
+  allowPattern: boolean;
   onChange: (a: ApplianceInput) => void;
   onRemove: () => void;
 }) {
@@ -73,13 +75,16 @@ function ApplianceCard(props: {
     appliancesApi
       .airconProposal(token, household.sin, value.answers, controller.signal)
       .then((res) => {
+        if (controller.signal.aborted) return;
         setProposal(res);
         if (!res.canPropose) setManualRoutine(true);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (error instanceof ApiError && error.status === 401) { props.onExpired(); return; }
         setManualRoutine(true);
       })
-      .finally(() => setLoadingProposal(false));
+      .finally(() => { if (!controller.signal.aborted) setLoadingProposal(false); });
     return () => controller.abort();
   }, [isTraditionalAircon, token, household.sin, JSON.stringify(value.answers)]);
 
@@ -194,33 +199,14 @@ function ApplianceCard(props: {
         </div>
       )}
 
-      {def.routine === "timeRanges" && (!isTraditionalAircon || manualRoutine || !proposal?.canPropose) && (
-        <div className="routine">
-          <span className="muted">Kailan bukas?</span>
-          {ranges.map((r, i) => (
-            <div className="row range" key={i}>
-              <input type="time" aria-label="Simula" value={r.start} onChange={(e) => setRange(i, { start: e.target.value })} />
-              <span>hanggang</span>
-              <input type="time" aria-label="Tapos" value={r.end} onChange={(e) => setRange(i, { end: e.target.value })} />
-              <select aria-label="Mga araw" value={r.days} onChange={(e) => setRange(i, { days: e.target.value as TimeRange["days"] })}>
-                {DAYS.map((d) => (
-                  <option key={d.value} value={d.value}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-              {ranges.length > 1 && (
-                <button type="button" className="ghost" aria-label="Alisin ang oras" onClick={() => set({ timeRanges: ranges.filter((_, j) => j !== i) })}>
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-          {ranges.length < 6 && (
-            <button type="button" className="ghost" onClick={() => set({ timeRanges: [...ranges, { start: "06:00", end: "08:00", days: "everyday" }] })}>
-              + Isa pang oras
-            </button>
-          )}
+      {def.routine === "timeRanges" && def.type === "aircon" && household.meter_type === "smart" ? (
+        <AirconPatternProposal token={token} sin={household.sin} value={value} allowProposal={props.allowPattern}
+          onChange={onChange} onExpired={props.onExpired}>
+          <RoutineEditor ranges={ranges} setRange={setRange} set={set} />
+        </AirconPatternProposal>
+      ) : def.routine === "timeRanges" && (!isTraditionalAircon || manualRoutine || !proposal?.canPropose) && (
+        <>
+          <RoutineEditor ranges={ranges} setRange={setRange} set={set} />
           {isTraditionalAircon && proposal?.canPropose && (
             <button
               type="button"
@@ -232,7 +218,7 @@ function ApplianceCard(props: {
               Bumalik sa tantya mula sa Bill History
             </button>
           )}
-        </div>
+        </>
       )}
 
       {def.routine === "usesPerWeek" && (
@@ -250,6 +236,30 @@ function ApplianceCard(props: {
       )}
     </li>
   );
+}
+
+function RoutineEditor({ ranges, setRange, set }: {
+  ranges: TimeRange[];
+  setRange: (index: number, patch: Partial<TimeRange>) => void;
+  set: (patch: Partial<ApplianceInput>) => void;
+}) {
+  return <div className="routine">
+    <span className="muted">Kailan bukas?</span>
+    {ranges.map((range, i) => <div className="row range" key={i}>
+      <input type="time" aria-label="Simula" value={range.start} onChange={(e) => setRange(i, { start: e.target.value })} />
+      <span>hanggang</span>
+      <input type="time" aria-label="Tapos" value={range.end} onChange={(e) => setRange(i, { end: e.target.value })} />
+      <select aria-label="Mga araw" value={range.days} onChange={(e) => setRange(i, { days: e.target.value as TimeRange["days"] })}>
+        {DAYS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
+      </select>
+      {ranges.length > 1 && <button type="button" className="ghost" aria-label="Alisin ang oras"
+        onClick={() => set({ timeRanges: ranges.filter((_, j) => j !== i) })}>×</button>}
+    </div>)}
+    {ranges.length < 6 && <button type="button" className="ghost"
+      onClick={() => set({ timeRanges: [...ranges, { start: "06:00", end: "08:00", days: "everyday" }] })}>
+      {ranges.length ? "+ Isa pang oras" : "Ilagay ang oras"}
+    </button>}
+  </div>;
 }
 
 function Survey(props: {
@@ -282,6 +292,7 @@ function Survey(props: {
             def={byType.get(a.type)!}
             value={a}
             household={props.household}
+            allowPattern={list.filter((entry) => entry.value.type === "aircon").length === 1}
             onChange={(next) => setList((current) => current.map((x) => x.id === id ? { ...x, value: next } : x))}
             onRemove={() => setList((current) => current.filter((x) => x.id !== id))}
           />
@@ -309,7 +320,8 @@ function Survey(props: {
           Idagdag
         </button>
       </div>
-      <button type="button" className="primary" disabled={props.saving || list.length === 0} onClick={() => props.onSave(list.map((a) => a.value))}>
+      <button type="button" className="primary" disabled={props.saving || list.length === 0
+        || list.some(({ value }) => value.type === "aircon" && !value.timeRanges?.length)} onClick={() => props.onSave(list.map((a) => a.value))}>
         {props.saving ? "Sine-save…" : "I-save at tingnan kung saan napupunta"}
       </button>
       {props.onCancel && (

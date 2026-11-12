@@ -16,6 +16,7 @@ import { HouseholdAccessGuard } from "../households/household-access.guard.js";
 import { SaveMidMonthReadingDto } from "./dto/save-mid-month-reading.dto.js";
 import { SaveUsagePlanDto } from "./dto/save-usage-plan.dto.js";
 import { UsagePlanService } from "./usage-plan.service.js";
+import { MissionPlanService } from "./mission-plan.service.js";
 
 function parseAirconSetting(value?: string): number | undefined {
   if (value === undefined || value === "") return undefined;
@@ -30,7 +31,7 @@ function parseAirconSetting(value?: string): number | undefined {
 @Controller("households/:sin")
 @UseGuards(SessionGuard, HouseholdAccessGuard)
 export class UsagePlanController {
-  constructor(private readonly usagePlan: UsagePlanService) {}
+  constructor(private readonly usagePlan: UsagePlanService, private readonly missionPlans: MissionPlanService) {}
 
   @Get("target")
   @Header("Cache-Control", "no-store")
@@ -42,6 +43,25 @@ export class UsagePlanController {
   @Header("Cache-Control", "no-store")
   missions(@Param("sin") sin: string, @Query("airconSetting") airconSetting?: string) {
     return this.usagePlan.missions(sin, parseAirconSetting(airconSetting));
+  }
+
+  /** The 5% Mission Plan (ADR-0007), created on first view after Household Setup. */
+  @Get("missions/plan")
+  @Header("Cache-Control", "no-store")
+  missionPlan(@Param("sin") sin: string) {
+    return this.missionPlans.plan(sin);
+  }
+
+  @Post("missions/plan/shuffle")
+  @Header("Cache-Control", "no-store")
+  shuffle(@Param("sin") sin: string) {
+    return this.missionPlans.shuffle(sin);
+  }
+
+  @Post("missions/:missionId/swap")
+  @Header("Cache-Control", "no-store")
+  swap(@Param("sin") sin: string, @Param("missionId") missionId: string) {
+    return this.missionPlans.swap(sin, missionId);
   }
 
   @Get("usage-plan")
