@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, ApiError, type HomeChargeLine, type Household, type LoginResult } from "./api/client";
+import { api, ApiError, setupApi, type HomeChargeLine, type Household, type LoginResult, type SetupStatus } from "./api/client";
+import { MissionsTab } from "./components/MissionsTab";
 import { ChargeChat } from "./components/ChargeChat";
 import { SignIn } from "./components/SignIn";
 import { LinkFlow } from "./components/LinkFlow";
@@ -13,7 +14,7 @@ import { Home } from "./components/Home";
 import { Rewards } from "./components/Rewards";
 import { BakitGanitoResult } from "./components/BakitGanitoResult";
 import { TabBar } from "./components/TabBar";
-import { stored, useHashTab } from "./lib/routes";
+import { stored, useHashRoute } from "./lib/routes";
 
 const EXPIRED = "Nag-expire ang session. Mag-sign in ulit.";
 
@@ -31,7 +32,9 @@ export function App() {
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
   const [asking, setAsking] = useState<{ line: HomeChargeLine; previousMonth: string | null } | null>(null);
-  const [tab, go] = useHashTab();
+  const [route, go] = useHashRoute();
+  const tab = route.tab;
+  const [setup, setSetup] = useState<SetupStatus | null>(null);
 
   const begin = useCallback((next: LoginResult, preferSin?: string) => {
     setSession(next);
@@ -64,6 +67,19 @@ export function App() {
     return () => window.clearTimeout(timer);
   }, [session, onExpired]);
 
+  // Household Setup decides the Missions tab and the Home save card; reloaded per Household.
+  const setupKey = session && selectedSin ? `${session.token}:${selectedSin}` : null;
+  useEffect(() => {
+    setSetup(null);
+    if (!session || !selectedSin) return;
+    const controller = new AbortController();
+    setupApi.status(session.token, selectedSin, controller.signal).then(setSetup).catch((err) => {
+      if (!controller.signal.aborted && err instanceof ApiError && err.status === 401) onExpired();
+    });
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setupKey, applianceVersion]);
+
   const select = (sin: string) => { setSelectedSin(sin); setAsking(null); stored.set("household", sin); };
   const selected: Household | undefined = session?.households.find((h) => h.sin === selectedSin);
 
@@ -95,7 +111,11 @@ export function App() {
       <main>
         {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
         {tab === "home" && <>
-          <Home key={`home:${key}`} token={session.token} household={selected} onExpired={onExpired} onSave={() => go("missions")}
+          <Home key={`home:${key}`} token={session.token} household={selected} onExpired={onExpired} onSave={() => go("missions", "save")}
+            saveCard={setup?.complete ? <button type="button" className="save-card" onClick={() => go("missions")}>
+              <span><strong>Your missions are ready</strong><span>Use 5% less electricity and earn points on your next bill.</span></span>
+              <span aria-hidden="true">→</span>
+            </button> : undefined}
             onAskCharge={(line, summary) => setAsking({
               line,
               previousMonth: summary.bakitGanito ? new Date(`${summary.bakitGanito.previousPeriod}-01T00:00:00`).toLocaleDateString("en-PH", { month: "long" }) : null,
@@ -105,10 +125,13 @@ export function App() {
           <BillHistory key={`history:${key}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <BakitGanitoResult r={r} />} />
           {selected.meter_type === "smart" && <SmartMeterUsage key={`usage:${key}`} token={session.token} household={selected} onExpired={onExpired} />}
         </>}
-        {tab === "missions" && (selected.meter_type === "traditional" ? <>
-          <UsagePlan key={`plan:${key}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />
-          <Forecast key={`forecast:${key}`} token={session.token} household={selected} onExpired={onExpired} />
-        </> : <section className="card"><h2>Missions</h2><p className="muted">Ang Missions para sa smart meter ay sinusukat din sa susunod na Bill.</p></section>)}
+        {tab === "missions" && <MissionsTab token={session.token} household={selected} sub={route.sub} go={go}
+          setup={setup} onSetup={setSetup} onExpired={onExpired}>
+          {selected.meter_type === "traditional" ? <>
+            <UsagePlan key={`plan:${key}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />
+            <Forecast key={`forecast:${key}`} token={session.token} household={selected} onExpired={onExpired} />
+          </> : <section className="card"><h2>Missions</h2><p className="muted">Ang Missions para sa smart meter ay sinusukat din sa susunod na Bill.</p></section>}
+        </MissionsTab>}
         {tab === "rewards" && <Rewards key={`rewards:${key}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => setRewardsVersion((v) => v + 1)} />}
         {tab === "account" && <>
           <HouseholdPicker households={session.households} selected={selected.sin} onSelect={select} onLogout={() => {

@@ -19,6 +19,17 @@ let historyRequest: (sin: string) => Promise<Response>;
 let loginHouseholds = households;
 let loginFails = false;
 let failHistory = false;
+const setupStatus = (done: boolean[]) => ({
+  steps: [
+    { key: "household", label: "Household info", done: done[0] },
+    { key: "appliances", label: "Appliances", done: done[1] },
+    { key: "routine", label: "Typical day", done: done[2] },
+  ],
+  doneCount: done.filter(Boolean).length, total: 3, complete: done.every(Boolean),
+  household: done[0] ? { size: 4 } : null, routine: done[2] ? { home: "eveningsWeekends", aircon: "sleeping" } : null,
+  hasAircon: true, welcomePoints: { points: 100, granted: done.every(Boolean), locked: done.every(Boolean) },
+});
+let setup = setupStatus([true, true, true]);
 let readingsRequest: (sin: string) => Promise<Response>;
 const usage = (sin: string) => ({
   sin, interval: "day", timeZone: "Asia/Manila",
@@ -34,12 +45,18 @@ beforeEach(() => {
   readingsRequest = async (sin) => response(usage(sin));
   loginHouseholds = households;
   loginFails = false; failHistory = false;
+  setup = setupStatus([true, true, true]);
   fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10", "2026-11"] });
     if (input === "/api/auth/email/start") return response({ sent: true, expiresInSeconds: 600 }, 202);
     if (input === "/api/auth/email/verify") return loginFails ? response({ error: "Mali o expired na ang code. Humingi ng bagong code." }, 401) : response({ token: "test-session" });
     if (input === "/api/households") return response(loginHouseholds);
     if (input === "/api/households/link") return response({ pending: null });
+    if (/^\/api\/households\/[^/]+\/setup$/.test(input)) return response(setup);
+    if (/^\/api\/households\/[^/]+\/setup\/household$/.test(input)) {
+      setup = setupStatus([true, setup.steps[1]!.done, setup.steps[2]!.done]);
+      return response(setup);
+    }
     if (/^\/api\/households\/[^/]+\/rewards$/.test(input)) return response({ sin: "x", balance: 0, tag: "sample rewards", disclaimer: "Sample.", catalog: [], history: [] });
     if (input === "/api/auth/logout") return new Response(null, { status: 204 });
     const match = /^\/api\/households\/([^/]+)\/bills$/.exec(input);
@@ -142,7 +159,7 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[1]!.sin);
     await screen.findByText("12.345 kWh");
     expect(screen.getByRole("cell", { name: "370" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Want to save on your next bill/ })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /Your missions are ready/ })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan")).toBe(false);
     await goTab("Missions");
     expect(screen.queryByRole("heading", { name: "Target at Missions" })).toBeNull();
@@ -322,5 +339,46 @@ describe("My Meralco PWA", () => {
     await screen.findByRole("heading", { name: "Sign in" });
     expect(screen.getByText(/Nag-expire ang session/)).toBeTruthy();
     expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
+  });
+
+  it("'Want to save?' opens rewards onboarding; 'Maybe later' returns to Home", async () => {
+    setup = setupStatus([false, false, false]);
+    render(<App />); await login();
+    fireEvent.click(await screen.findByRole("button", { name: /Want to save on your next bill/ }));
+    expect(await screen.findByRole("heading", { name: "Use less power. Get rewarded for it." })).toBeTruthy();
+    expect(window.location.hash).toBe("#/missions/save");
+    expect(screen.getByText(/unlock after your first verified savings/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Maybe later" }));
+    await screen.findByRole("button", { name: /Want to save on your next bill/ });
+    expect(window.location.hash).toBe("#/home");
+  });
+
+  it("the Missions tab shows the setup checklist until setup is complete, reachable onboarding included", async () => {
+    setup = setupStatus([false, false, false]);
+    render(<App />); await login();
+    await goTab("Missions");
+    expect(await screen.findByRole("heading", { name: "Set up your home" })).toBeTruthy();
+    expect(screen.getByText("0 of 3 complete · about 2 minutes")).toBeTruthy();
+    expect(screen.getByText("🔒 Your missions unlock after setup")).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Target at Missions" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Your household/ }));
+    expect(await screen.findByRole("heading", { name: "Who lives there?" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "More people" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(window.location.hash).toBe("#/missions/setup/appliances"));
+    const put = fetchMock.mock.calls.find(([url]) => url.endsWith("/setup/household"))!;
+    expect(JSON.parse(String(put[1]!.body))).toEqual({ size: 4 });
+    await act(async () => { window.location.hash = "/missions"; });
+    expect(await screen.findByText("1 of 3 complete · about 2 minutes")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "How it works" }));
+    expect(await screen.findByRole("heading", { name: "Use less power. Get rewarded for it." })).toBeTruthy();
+  });
+
+  it("checklist progress survives a reload (stored per Household on the server)", async () => {
+    setup = setupStatus([true, true, false]);
+    window.sessionStorage.setItem("kuryenteko.token", "test-session");
+    window.location.hash = "/missions";
+    render(<App />);
+    expect(await screen.findByText("2 of 3 complete · about 2 minutes")).toBeTruthy();
   });
 });
