@@ -11,8 +11,6 @@ export interface HouseholdLink {
 
 export interface HouseholdLinkRepository {
   forOwner(ownerId: string): Promise<HouseholdLink[]>;
-  /** The login that holds the active link for this Household, if any. */
-  activeOwner(sin: string): Promise<string | null>;
   save(link: HouseholdLink): Promise<void>;
   remove(ownerId: string, sin: string): Promise<void>;
 }
@@ -26,10 +24,6 @@ export class InMemoryHouseholdLinkRepository implements HouseholdLinkRepository 
 
   async forOwner(ownerId: string) {
     return structuredClone(this.links.filter((l) => l.ownerId === ownerId));
-  }
-
-  async activeOwner(sin: string) {
-    return this.links.find((l) => l.sin === sin && l.status === "active")?.ownerId ?? null;
   }
 
   async save(link: HouseholdLink) {

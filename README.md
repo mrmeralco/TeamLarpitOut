@@ -55,8 +55,9 @@ Optional ML service (bill OCR fallback when Gemini fails, and Meralco bill-guide
 - Sign up (like My Meralco): `POST /api/auth/signup` `{ email, phone: "+639…" }` → `202 { channel: "sms", sentTo, expiresInSeconds }` (a 6-digit code by SMS; `409` if the account already exists). `POST /api/auth/signup/resend` `{ email, channel: "sms" | "email" }` resends, or sends it by email instead. `POST /api/auth/signup/verify` `{ email, code }` confirms the mobile number and emails a verification link (`/#/create-password/<token>`, 24 h, single-use). `POST /api/auth/signup/link` `{ token }` → `{ email }`; `POST /api/auth/signup/password` `{ token, password }` (8+ characters, a letter and a number) → `{ token }` (signed in). Codes are stored hashed, expire after 10 minutes and lock after 5 wrong tries. The demo notifier logs only the code or link; with `AUTH_FIXED_CODE` every code is that value and the verify response carries a `demoLink`.
 - `POST /api/auth/signin` `{ email, password }` → `{ token }`, or one `401` for a wrong password, an unknown email or an unfinished sign-up.
 - `POST /api/auth/logout` (Bearer token) → `204`, revokes the session.
+- Sessions are stored in `public.sessions` (in memory without `DATABASE_URL`), as a SHA-256 of the token only, so they survive API restarts. Expiry slides: 30 days without use, renewed at most hourly, and never more than 90 days after sign-in. The PWA keeps the token in `localStorage`, so closing the app doesn't sign the user out.
 - `GET  /api/households` (Bearer token) → the login's active Households.
-- Account Linking (no CAN screen): a signed-in `POST /api/bills/scan` reads the Bill's CAN and adds `account`: `found` (masked CAN, area, Meter Type, bills on record; never amounts, kWh or the address), `alreadyLinked`, `canUnread`, `unknownAccount` or `ownedByAnother`. Nothing is linked until `POST /api/households/link/confirm` `{ scanToken, can? }` ("Yes, explain my bill"); `can` is accepted only when the scan could not read it.
+- Account Linking (no CAN screen): a signed-in `POST /api/bills/scan` reads the Bill's CAN and adds `account`: `found` (masked CAN, area, Meter Type, bills on record; never amounts, kWh or the address), `alreadyLinked` (this login already has it), `canUnread` or `unknownAccount`. Any number of logins may link the same Household. Nothing is linked until `POST /api/households/link/confirm` `{ scanToken, can? }` ("Yes, explain my bill"); `can` is accepted only when the scan could not read it.
 - `GET  /api/rate-schedules` → `{ periods }`
 - `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` (Bearer token) → effects, total (centavos)
 - `POST /api/bills/laman` `{ now: Bill, before?: Bill }` (Bearer token) → grouped charge lines, pass-through vs Meralco distribution split
@@ -97,7 +98,7 @@ The existing `PUT /api/households/:sin/appliances` accepts an optional `energyLa
 
 Scan errors: `400` missing photo, unsupported type or MIME; `413` oversized photo; `422` unreadable label or detected appliance mismatch; `503` missing vision configuration; `502` provider failure. Missing/expired login returns `401`, unknown/unlinked Households return the same `404`. A failed scan leaves answers/defaults usable. The browser cancels scans on retake, card removal, Household/session change, or logout, and ignores delayed results.
 
-Label scanning uses the same `GEMINI_API_KEY` / `GEMINI_MODEL` configuration as Bill scanning. Photos and scan drafts are not retained by the application. Only confirmed label values are saved with appliances in the current **in-memory, per-Household repository**, lost on server restart; no migration is required. Automated checks use an injected fake vision provider and do not call Gemini.
+Label scanning uses the same `GEMINI_API_KEY` / `GEMINI_MODEL` configuration as Bill scanning. Photos and scan drafts are not retained by the application. Only confirmed label values are saved with appliances in the per-Household repository (`public.appliances` when `DATABASE_URL` is set, otherwise in memory and lost on restart). Automated checks use an injected fake vision provider and do not call Gemini.
 
 ### Mock My Meralco login
 
@@ -124,7 +125,7 @@ Scanning and `POST /api/bakit-ganito` remain public. A scan grants no access to 
 
 ### Database (Supabase) and the real-Bill Household
 
-**Without `DATABASE_URL`** everything runs in memory as before. **With it**, logins (`public.accounts`), Household links (`public.household_links`) and the mock Meralco data (`meralco.*`: accounts by CAN, Bills with every printed group and rate component, payments) live in Supabase. Setup, appliances, Missions, readings and Points are still in memory; their tables are already in the migration. Tests never use the database.
+**Without `DATABASE_URL`** everything runs in memory as before. **With it**, logins (`public.accounts`), Household links (`public.household_links`) and the mock Meralco data (`meralco.*`: accounts by CAN, Bills with every printed group and rate component, payments) live in Supabase, as do Household Setup (`public.household_setup`), appliances (`public.appliances`), the Target and Mission Plan (`public.usage_plans`, `public.usage_plan_missions`), Mid-month Readings (`public.mid_month_readings`) and the Points ledger (`public.points_entries`), so they survive a server restart. Tests never use the database.
 
 1. Apply `supabase/migrations/*.sql` (Supabase SQL editor, or `supabase db push`).
 2. Set `DATABASE_URL` in `server/.env` (Transaction pooler, port 6543, `?sslmode=require`).

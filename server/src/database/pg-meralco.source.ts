@@ -10,9 +10,15 @@ type AccountRow = { can: string; sin: string; area: string; meter_type: MeralcoA
  * The mock Meralco system in Supabase's `meralco` schema: CAN lookup and each Household's Bills.
  * Read only; the app reaches it through the same seams as the in-memory mock, so a real Meralco
  * API can replace it later.
+ *
+ * Supabase is a ~200 ms round trip away and one Home load asks for the same Household's Bills
+ * several times, so `bills` runs its queries together and keeps the result for a short while
+ * (the schema is read only, so a cached copy can't go stale except through a reseed).
  */
 export class PgMeralcoSource implements BillSource, MeralcoAccountSource {
-  constructor(private readonly sql: Sql) {}
+  private readonly cache = new Map<string, { at: number; bills: Promise<Bill[]> }>();
+
+  constructor(private readonly sql: Sql, private readonly ttlMs = 5 * 60_000, private readonly now = () => Date.now()) {}
 
   async findByCan(can: string): Promise<MeralcoAccount | null> {
     const [row] = await this.sql<AccountRow[]>`select can, sin, area, meter_type from meralco.accounts where can = ${can}`;
@@ -24,10 +30,19 @@ export class PgMeralcoSource implements BillSource, MeralcoAccountSource {
     return row ? { can: row.can, sin: row.sin, area: row.area, meter_type: row.meter_type } : null;
   }
 
-  async bills(sin: string): Promise<Bill[]> {
-    const [account] = await this.sql<{ lifeline_eligible: boolean }[]>`select lifeline_eligible from meralco.accounts where sin = ${sin}`;
-    if (!account) return [];
-    const rows = await this.sql`
+  bills(sin: string): Promise<Bill[]> {
+    const hit = this.cache.get(sin);
+    if (hit && this.now() - hit.at < this.ttlMs) return hit.bills;
+    const bills = this.load(sin);
+    this.cache.set(sin, { at: this.now(), bills });
+    bills.catch(() => { if (this.cache.get(sin)?.bills === bills) this.cache.delete(sin); });
+    return bills;
+  }
+
+  private async load(sin: string): Promise<Bill[]> {
+    const [accounts, rows, paymentRows] = await Promise.all([
+      this.sql<{ lifeline_eligible: boolean }[]>`select lifeline_eligible from meralco.accounts where sin = ${sin}`,
+      this.sql`
       select b.period, b.period_start::text, b.period_end::text, b.billing_days, b.bill_date::text, b.due_date::text,
              b.meter_number, b.previous_reading, b.present_reading, b.multiplier, b.kwh::float8 as kwh, b.estimated,
              b.total_centavos::int8 as total, b.previous_balance_centavos::int8 as previous_balance,
@@ -38,10 +53,13 @@ export class PgMeralcoSource implements BillSource, MeralcoAccountSource {
                  'base', l.base, 'baseUnit', l.base_unit, 'price', l.price, 'priceUnit', l.price_unit,
                  'amount', l.amount_centavos) order by l.line_no)
                from meralco.bill_charge_lines l where l.bill_id = b.id), '[]'::json) as lines
-      from meralco.bills b where b.sin = ${sin} order by b.period`;
-    const payments = (await this.sql<{ for_period: string; posted_on: string; channel: string | null; amount: string }[]>`
-      select for_period, posted_on::text, channel, amount_centavos::text as amount from meralco.payments where sin = ${sin} order by posted_on`)
-      .map((p): MeralcoPayment => ({ forPeriod: p.for_period, postedOn: p.posted_on, channel: p.channel, amount: Number(p.amount) }));
+      from meralco.bills b where b.sin = ${sin} order by b.period`,
+      this.sql<{ for_period: string; posted_on: string; channel: string | null; amount: string }[]>`
+      select for_period, posted_on::text, channel, amount_centavos::text as amount from meralco.payments where sin = ${sin} order by posted_on`,
+    ]);
+    const account = accounts[0];
+    if (!account) return [];
+    const payments = paymentRows.map((p): MeralcoPayment => ({ forPeriod: p.for_period, postedOn: p.posted_on, channel: p.channel, amount: Number(p.amount) }));
     return rows.map((r) => toBill(toRecord(r), payments, account.lifeline_eligible));
   }
 }

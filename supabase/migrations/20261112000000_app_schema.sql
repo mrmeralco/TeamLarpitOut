@@ -3,8 +3,7 @@
 -- RLS is on with no policies: the browser's Supabase keys can read nothing; the API connects
 -- with the database role, which bypasses RLS.
 --
--- In use now: accounts, household_links. The other tables are ready for when their repositories
--- move off memory (they mirror the repository interfaces in server/src).
+-- All of these tables are used by the API when DATABASE_URL is set (server/src/database/pg-*.ts).
 
 create table public.accounts (
   owner_id       text primary key,                          -- "u_" + sha256(email), ownerIdForEmail()

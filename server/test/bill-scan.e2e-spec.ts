@@ -161,16 +161,6 @@ describe("POST /api/bills/scan", () => {
     expect(body.account).toBeDefined();
   });
 
-  it("POST /api/bills/simulate offers the smart meter sample when another login holds the traditional one", async () => {
-    const api = await harness({
-      accounts: DEMO_ACCOUNTS,
-      links: { "owner-a@example.test": [], "owner-b@example.test": ["1234567890"] },
-    });
-    const { status, body } = await api.userPost("/api/bills/simulate", {});
-    expect(status).toBe(200);
-    expect(body.account).toMatchObject({ status: "found", meterType: "smart", canMasked: "39•• ••• 213" });
-  });
-
   it("POST /api/bills/simulate offers the smart meter sample once the traditional one is linked here", async () => {
     const api = await harness({ accounts: DEMO_ACCOUNTS, links: { "owner-a@example.test": ["1234567890"] } });
     const { body } = await api.userPost("/api/bills/simulate", {});

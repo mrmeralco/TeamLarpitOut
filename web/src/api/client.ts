@@ -101,6 +101,7 @@ export interface DraftBill {
   previousReading?: number;
   presentReading?: number;
   chargeLines?: ChargeLine[];
+  totalAmount?: number;
   estimated?: boolean;
 }
 
@@ -119,8 +120,7 @@ export type ScannedAccount =
   | ({ status: "found" } & AccountSummary)
   | ({ status: "alreadyLinked"; householdSin: string } & AccountSummary)
   | { status: "canUnread" }
-  | { status: "unknownAccount"; canMasked: string }
-  | { status: "ownedByAnother"; canMasked: string; message: string };
+  | { status: "unknownAccount"; canMasked: string };
 
 export interface LinkCorrections { kwh?: number; billingDays?: number; totalAmount?: number }
 

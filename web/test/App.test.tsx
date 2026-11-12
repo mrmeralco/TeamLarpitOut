@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { App } from "../src/App";
+import { clearHomeCache } from "../src/components/Home";
 
 const households = [
   { sin: "1234567890", masked_address: "••• Caloocan City", meter_type: "traditional" },
@@ -42,7 +43,7 @@ const usage = (sin: string) => ({
 });
 
 beforeEach(() => {
-  window.sessionStorage.clear();
+  window.localStorage.clear();
   window.location.hash = "";
   homeRequest = async (sin) => response(homeBody(sin));
   readingsRequest = async (sin) => response(usage(sin));
@@ -109,7 +110,7 @@ beforeEach(() => {
   });
   vi.stubGlobal("fetch", fetchMock);
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearHomeCache(); });
 
 /** Home's Wrapped story is showing this Household's bill (the area is on the first slide). */
 const homeShows = (area: "Caloocan City" | "Quezon City") => screen.findByText(new RegExp(`· ${area} home`));
@@ -249,6 +250,17 @@ describe("My Meralco PWA", () => {
     await screen.findByRole("heading", { name: "Welcome back" });
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/auth/logout")).toBe(true));
   });
+  it("folds the sidebar into an icon rail and back, keeping every tab reachable", async () => {
+    render(<App />); await login(); await select(households[0]!.sin);
+    await screen.findByRole("heading", { name: /bill/i });
+    fireEvent.click(screen.getByRole("button", { name: "Collapse the sidebar" }));
+    expect(document.querySelector(".shell")!.classList.contains("nav-collapsed")).toBe(true);
+    const nav = within(screen.getByRole("navigation", { name: "Main" }));
+    expect(nav.getByRole("link", { name: "Missions" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Expand the sidebar" }));
+    expect(document.querySelector(".shell")!.classList.contains("nav-collapsed")).toBe(false);
+  });
+
   it("clears the session when a protected request returns 401", async () => {
     homeRequest = async () => expired();
     render(<App />); await signIn();
@@ -303,8 +315,8 @@ describe("My Meralco PWA", () => {
   });
 
   it("a reload keeps the session and the tab", async () => {
-    window.sessionStorage.setItem("kuryenteko.token", "test-session");
-    window.sessionStorage.setItem("kuryenteko.household", households[1]!.sin);
+    window.localStorage.setItem("kuryenteko.token", "test-session");
+    window.localStorage.setItem("kuryenteko.household", households[1]!.sin);
     window.location.hash = "/rewards";
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Rewards" })).toBeTruthy();
@@ -314,13 +326,26 @@ describe("My Meralco PWA", () => {
   });
 
   it("an expired stored session on reload returns to sign-in with the notice", async () => {
-    window.sessionStorage.setItem("kuryenteko.token", "stale");
+    window.localStorage.setItem("kuryenteko.token", "stale");
     const originalFetch = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (input, init) => input === "/api/households" ? expired() : originalFetch(input, init));
     render(<App />);
     await screen.findByRole("heading", { name: "Welcome back" });
     expect(screen.getByText(/Your session expired/)).toBeTruthy();
-    expect(window.sessionStorage.getItem("kuryenteko.token")).toBeNull();
+    expect(window.localStorage.getItem("kuryenteko.token")).toBeNull();
+  });
+
+  it("an unreachable server on reopen keeps the stored session for the next try", async () => {
+    window.localStorage.setItem("kuryenteko.token", "test-session");
+    const originalFetch = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input, init) => {
+      if (input === "/api/households") throw new TypeError("Failed to fetch");
+      return originalFetch(input, init);
+    });
+    render(<App />);
+    await screen.findByRole("heading", { name: "Welcome back" });
+    expect(screen.getByText(/couldn't reach Eelio/)).toBeTruthy();
+    expect(window.localStorage.getItem("kuryenteko.token")).toBe("test-session");
   });
 
   it("session expiry from any tab returns to sign-in with the notice", async () => {
@@ -368,7 +393,7 @@ describe("My Meralco PWA", () => {
 
   it("checklist progress survives a reload (stored per Household on the server)", async () => {
     setup = setupStatus([true, true, false]);
-    window.sessionStorage.setItem("kuryenteko.token", "test-session");
+    window.localStorage.setItem("kuryenteko.token", "test-session");
     window.location.hash = "/missions";
     render(<App />);
     expect(await screen.findByText("2 of 3 complete · about 2 minutes")).toBeTruthy();

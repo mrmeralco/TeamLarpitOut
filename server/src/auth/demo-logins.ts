@@ -10,7 +10,7 @@ export const DEMO_PASSWORD = "eelio-demo-2026";
  * Test logins for the real-Bill Household:
  * - the owner, already linked: Home, Bill History and "Bakit ganito?" (Aug vs Sep 2026) right away;
  * - a new user: scan the Bill → found → "Yes, explain my bill" links it;
- * - another user: scanning the same Bill → ownedByAnother (while the owner holds it).
+ * - another user: scanning the same Bill links it too (logins can share a Household).
  */
 export const DEMO_LOGINS = [
   { email: "bill-owner@example.com", phone: "+639170000001", ownsRealBill: true },

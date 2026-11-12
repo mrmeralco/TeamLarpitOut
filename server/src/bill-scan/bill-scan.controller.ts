@@ -43,13 +43,13 @@ export class BillScanController {
     if (!can && body?.meterType === "smart") {
       can = "3901567213";
     } else if (!can) {
-      // The traditional sample first; once this login can't link it (already linked here, or held
-      // by another login), the smart meter sample when it is still free.
       const previewTraditional = await this.linking.preview(request.auth.ownerId, "3901234482");
-      if (previewTraditional.status !== "found") {
+      if (previewTraditional.status === "alreadyLinked") {
         const previewSmart = await this.linking.preview(request.auth.ownerId, "3901567213");
-        if (previewSmart.status === "found") {
+        if (previewSmart.status !== "alreadyLinked") {
           can = "3901567213";
+        } else {
+          can = `39${Math.abs(request.auth.ownerId.split("").reduce((a, c) => (a << 5) - a + c.charCodeAt(0), 0) % 90000000 + 10000000)}`;
         }
       }
     }

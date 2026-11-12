@@ -4,7 +4,9 @@ import { HouseholdAccessGuard, type HouseholdRequest } from "../households/house
 import { VisionModule } from "../vision/vision.module.js";
 import { AppliancesModule } from "../appliances/appliances.module.js";
 import { SessionGuard } from "../auth/session.guard.js";
-import { SETUP_REPOSITORY } from "../common/injection-tokens.js";
+import { DATABASE, SETUP_REPOSITORY } from "../common/injection-tokens.js";
+import type { Sql } from "../database/database.module.js";
+import { PgSetupRepository } from "../database/pg-setup.repository.js";
 import { HouseholdsModule } from "../households/households.module.js";
 import { PointsModule } from "../points/points.module.js";
 import { AirconCheckQueryDto, SetupGridDto, SetupHouseholdDto, SetupRoutineDto } from "./dto/setup.dto.js";
@@ -62,7 +64,7 @@ export class SetupController {
 @Module({
   imports: [HouseholdsModule, AppliancesModule, PointsModule, VisionModule],
   controllers: [SetupController],
-  providers: [SetupService, { provide: SETUP_REPOSITORY, useFactory: () => new InMemorySetupRepository() }],
+  providers: [SetupService, { provide: SETUP_REPOSITORY, inject: [DATABASE], useFactory: (db: Sql | null) => (db ? new PgSetupRepository(db) : new InMemorySetupRepository()) }],
   exports: [SetupService],
 })
 export class SetupModule {}

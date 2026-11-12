@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ApiError, linkApi, scanBill, simulateBill, type DraftBill, type LinkCorrections, type ScanOutcome } from "../api/client";
 import { BackButton, Icon, ICON } from "./auth/AuthScreens";
+import { pesoValue } from "../lib/format";
 
 type ReadScan = Extract<ScanOutcome, { kind: "read" }>;
 
@@ -9,7 +10,9 @@ const month = (period?: string) => (period && /^\d{4}-\d{2}$/.test(period)
 const shortDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : "");
 const totalOf = (b: DraftBill | null | undefined) => {
   const lines = b?.chargeLines ?? [];
-  return lines.length ? `₱${Math.round(lines.reduce((s, l) => s + l.amount, 0)).toLocaleString("en-PH")}` : "";
+  const sum = lines.length ? lines.reduce((s, l) => s + l.amount, 0) : undefined;
+  const total = b?.totalAmount ?? sum;
+  return total !== undefined ? pesoValue(total) : "";
 };
 const GALLERY = "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM21 15l-5-5L5 21";
 const CARD = "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM7 9h10M7 13h6";
@@ -131,7 +134,7 @@ export function ScanBill({ token, onLinked, onExpired, onBack, onLogout }: {
 
   const account = scan.account;
   const canUnread = account?.status === "canUnread";
-  const blocked = account?.status === "ownedByAnother" || account?.status === "unknownAccount";
+  const blocked = account?.status === "unknownAccount";
   const isDemo = (account?.status === "found" || account?.status === "alreadyLinked") && account.demo === true;
   // Demo mode explains this Bill itself, so the kWh and billing days the scan missed must be typed in.
   const needed = isDemo ? scan.missing.flatMap((f) => (f === "kwh" ? ["kwh"] : f === "billingDays" ? ["days"] : [])) : [];
@@ -142,7 +145,7 @@ export function ScanBill({ token, onLinked, onExpired, onBack, onLogout }: {
     ? account.demo ? <span className="tag-warn">Demo account</span>
       : <span className="tag-ok">{account.status === "alreadyLinked" ? "Already linked" : "Read from your bill"}</span>
     : canUnread ? <span className="tag-warn">CAN not read</span>
-      : blocked ? <span className="tag-bad">{account?.status === "ownedByAnother" ? "Linked to another login" : "Account not found"}</span> : null;
+      : blocked ? <span className="tag-bad">Account not found</span> : null;
   const rows: { key: string; label: string; before: string; now: string }[] = [
     { key: "kwh", label: "Usage (kWh)", before: scan.before?.kwh !== undefined ? String(scan.before.kwh) : "", now: scan.now.kwh !== undefined ? String(scan.now.kwh) : "" },
     { key: "days", label: "Billing days", before: scan.before?.billingDays !== undefined ? String(scan.before.billingDays) : "", now: scan.now.billingDays !== undefined ? String(scan.now.billingDays) : "" },
@@ -176,7 +179,6 @@ export function ScanBill({ token, onLinked, onExpired, onBack, onLogout }: {
     </div>}
     {(account?.status === "found" || account?.status === "alreadyLinked") && account.demo &&
       <p className="notice-inline" role="status">Demo mode: this CAN isn't in the demo Meralco data. Confirming explains this bill as your latest bill; the months before it are sample {account.area} values, not your real history.</p>}
-    {account?.status === "ownedByAnother" && <p className="notice-inline" role="alert">{account.message}</p>}
     {account?.status === "unknownAccount" && <p className="notice-inline" role="alert">No Meralco account has this CAN. Retake the photo so the CAN is clear.</p>}
     <div className="compare">
       <div className="compare-head"><span /><span>{month(scan.before?.period)}</span><span>{month(scan.now.period)}</span></div>

@@ -1,0 +1,47 @@
+import { describe, expect, it } from "vitest";
+import type { Sql } from "../src/database/database.module.js";
+import { PgMeralcoSource } from "../src/database/pg-meralco.source.js";
+
+/** A stand-in for postgres.js: answers by the table each query reads, and counts the queries. */
+function fakeSql(opts: { fail?: boolean } = {}) {
+  const calls: string[] = [];
+  const sql = ((strings: TemplateStringsArray) => {
+    const text = strings.join("?");
+    calls.push(text);
+    if (opts.fail) return Promise.reject(new Error("connection lost"));
+    if (text.includes("from meralco.accounts")) return Promise.resolve([{ lifeline_eligible: false }]);
+    if (text.includes("from meralco.payments")) return Promise.resolve([]);
+    return Promise.resolve([{
+      period: "2026-09", period_start: "2026-08-15", period_end: "2026-09-14", billing_days: 31, bill_date: "2026-09-15", due_date: "2026-09-25",
+      meter_number: "M1", previous_reading: 100, present_reading: 373, multiplier: 1, kwh: 273, estimated: false,
+      total: 412300, previous_balance: 0, payments_credited: null, provenance: "seed", provenance_note: null, lines: [],
+    }]);
+  }) as unknown as Sql;
+  return { sql, calls };
+}
+
+describe("PgMeralcoSource.bills", () => {
+  it("runs one load's queries together and reuses the result while it is fresh", async () => {
+    let now = 0;
+    const { sql, calls } = fakeSql();
+    const source = new PgMeralcoSource(sql, 60_000, () => now);
+    const [a, b] = await Promise.all([source.bills("123"), source.bills("123")]);
+    expect(calls).toHaveLength(3);
+    expect(a).toBe(b);
+    expect(a.map((bill) => bill.period)).toEqual(["2026-09"]);
+    now = 59_000;
+    await source.bills("123");
+    expect(calls).toHaveLength(3);
+    now = 61_000;
+    await source.bills("123");
+    expect(calls).toHaveLength(6);
+  });
+
+  it("does not keep a failed load", async () => {
+    const failing = fakeSql({ fail: true });
+    const source = new PgMeralcoSource(failing.sql, 60_000, () => 0);
+    await expect(source.bills("123")).rejects.toThrow("connection lost");
+    await expect(source.bills("123")).rejects.toThrow("connection lost");
+    expect(failing.calls).toHaveLength(6);
+  });
+});

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Header, HttpCode, Inject, Injectable, Module, NotFoundException, Post, Req, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Header, HttpCode, Inject, Injectable, Module, NotFoundException, Post, Req, UseGuards } from "@nestjs/common";
 import { SessionGuard, type AuthenticatedRequest } from "../auth/session.guard.js";
 import type { BillSource } from "../bills/bill-source.js";
 import { BillsModule } from "../bills/bills.module.js";
@@ -6,7 +6,7 @@ import type { MeralcoAccount, MeralcoAccountSource } from "../bills/meralco-acco
 import { BILL_SOURCE, HOUSEHOLD_LINKS, MERALCO_ACCOUNTS } from "../common/injection-tokens.js";
 import type { HouseholdLinkRepository } from "../households/household-link.repository.js";
 import { HouseholdsModule } from "../households/households.module.js";
-import { maskCan, OWNED_BY_ANOTHER } from "../households/households.service.js";
+import { maskCan } from "../households/households.service.js";
 import { ScanContextModule } from "../vision/scan-context.module.js";
 import { ScanContextStore, tenDigits } from "../vision/scan-context.store.js";
 import { ConfirmLinkDto } from "./dto/link-household.dto.js";
@@ -20,8 +20,7 @@ export type ScannedAccount =
   | { status: "found"; canMasked: string; area: string; meterType: MeralcoAccount["meter_type"]; billsOnRecord: number; firstPeriod: string | null; lastPeriod: string | null; demo?: true }
   | { status: "alreadyLinked"; canMasked: string; householdSin: string; area: string; meterType: MeralcoAccount["meter_type"]; billsOnRecord: number; firstPeriod: string | null; lastPeriod: string | null; demo?: true }
   | { status: "canUnread" }
-  | { status: "unknownAccount"; canMasked: string }
-  | { status: "ownedByAnother"; canMasked: string; message: string };
+  | { status: "unknownAccount"; canMasked: string };
 
 /**
  * Account Linking without a CAN screen: the scan reads the CAN from the Bill (the Bill
@@ -73,10 +72,10 @@ export class AccountLinkingService {
       const summary = { ...(await this.summary(sample)), canMasked: maskCan(can), demo: true as const };
       return linked ? { status: "alreadyLinked", householdSin: sample.sin, ...summary } : { status: "found", ...summary };
     }
-    const owner = await this.links.activeOwner(account.sin);
-    if (owner !== null && owner !== ownerId) return { status: "ownedByAnother", canMasked: maskCan(can), message: OWNED_BY_ANOTHER };
+    // Any number of logins may link the same Household; "alreadyLinked" means this login has it.
+    const linked = (await this.links.forOwner(ownerId)).some((l) => l.sin === account.sin && l.status === "active");
     const summary = await this.summary(account);
-    return owner === ownerId ? { status: "alreadyLinked", householdSin: account.sin, ...summary } : { status: "found", ...summary };
+    return linked ? { status: "alreadyLinked", householdSin: account.sin, ...summary } : { status: "found", ...summary };
   }
 
   /** `scanned` is the confirmed Bill; only a demo Household uses it (as its latest Bill). */
@@ -91,8 +90,6 @@ export class AccountLinkingService {
       }
     }
     if (!account) throw new NotFoundException({ error: "No Meralco account has this CAN. Please check your Bill again.", reason: "unknownAccount" });
-    const owner = await this.links.activeOwner(account.sin);
-    if (owner !== null && owner !== ownerId) throw new ConflictException({ error: OWNED_BY_ANOTHER, reason: "ownedByAnother" });
     await this.links.save({ ownerId, sin: account.sin, can: account.can, status: "active" });
     return { status: "active" as const, householdSin: account.sin, canMasked: maskCan(account.can) };
   }
