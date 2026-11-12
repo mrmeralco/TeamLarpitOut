@@ -85,7 +85,12 @@ export function chargeFactsFor(history: Bill[], lineId: string, billCheck: Charg
 }
 
 const COMPLAINT = /reklamo|ireklamo|complain|complaint|dispute|kaso|kasuhan|refund|mag-?file|\bfile\b|i-?report|report (it|this)|\berc\b/i;
-const ON_TOPIC = /bill|singil|charge|rate|presyo|price|kwh|kuryente|bakit|why|how|paano|tumaas|bumaba|taas|baba|went|up|down|who|sino|nagtatakda|sets?|lower|babaan|bawasan|tipid|save|correct|tama|mali|wrong|meralco|bayad|pay|pass|tax|buwis|vat|generation|distribution|transmission|system loss|loss|supply|metering|ano|what|ito|this|mean|ibig/i;
+const ON_TOPIC = /bill|singil|charge|rate|presyo|price|kwh|kuryente|bakit|why|how|paano|tumaas|bumaba|taas|baba|went|up|down|higher|increase|decrease|who|sino|nagtatakda|sets?|lower|babaan|bawasan|tipid|save|correct|tama|mali|wrong|meralco|bayad|pay|pass|tax|buwis|vat|generation|distribution|transmission|system loss|loss|supply|metering|ano|what|ito|this|mean|ibig/i;
+
+const UP = "higher|up|increased?|tumaas|taas|mataas";
+const DOWN = "lower|down|decreased?|bumaba|baba|mababa";
+/** "Did it go higher or lower?" asks which way it moved (the "why" answer), not how to lower it. */
+const EITHER_WAY = new RegExp(`\\b(${UP})\\b.*\\b(or|o)\\b.*\\b(${DOWN})\\b|\\b(${DOWN})\\b.*\\b(or|o)\\b.*\\b(${UP})\\b`);
 
 export function classifyQuestion(question: string, facts: ChargeFacts): ChargeIntent {
   const q = question.toLowerCase();
@@ -93,6 +98,7 @@ export function classifyQuestion(question: string, facts: ChargeFacts): ChargeIn
   if (!ON_TOPIC.test(q) && !q.includes(facts.line.toLowerCase())) return "offTopic";
   if (/correct|tama|mali|wrong|tugma|accurate/.test(q)) return "correct";
   if (/who|sino|nagtatakda|sets?\b|decide|regulat/.test(q)) return "who";
+  if (EITHER_WAY.test(q)) return "why";
   if (/lower|babaan|bawasan|tipid|save|reduce|bawas/.test(q)) return "lower";
   return "why";
 }

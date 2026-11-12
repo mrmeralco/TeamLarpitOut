@@ -33,6 +33,8 @@ export const MISSION_REMINDER_REPOSITORY = Symbol("MISSION_REMINDER_REPOSITORY")
 export const MID_MONTH_READING_REPOSITORY = Symbol("MID_MONTH_READING_REPOSITORY");
 /** Words computed Missions for the household; never supplies a number. */
 export const COACH_PROVIDER = Symbol("COACH_PROVIDER");
+/** Answers the charge chat (RAG); its own Gemini key when GEMINI_CHAT_API_KEY is set, else COACH_PROVIDER. */
+export const CHAT_COACH_PROVIDER = Symbol("CHAT_COACH_PROVIDER");
 /** Per-Household points ledger and verified savings history. */
 export const POINTS_REPOSITORY = Symbol("POINTS_REPOSITORY");
 /** Outage records from Meralco (used to exclude brownouts from Points). */
