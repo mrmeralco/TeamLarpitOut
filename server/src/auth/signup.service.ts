@@ -19,6 +19,8 @@ export const maskEmail = (email: string) => {
   return `${user!.slice(0, 1)}${"•".repeat(Math.max(1, user!.length - 2))}${user!.length > 1 ? user!.slice(-1) : ""}@${domain}`;
 };
 
+const PHONE_IN_USE = "This mobile number is already used by another account. Use a different number.";
+
 const WRONG_CODE = "The code is wrong or expired. Ask for a new code.";
 const BAD_LINK = "This link is invalid or has already been used. Sign up again to get a new link.";
 
@@ -66,8 +68,16 @@ export class SignupService {
     if (existing?.passwordHash) {
       throw new ConflictException({ error: "An account with this email already exists. Sign in instead.", reason: "accountExists" });
     }
+    await this.assertPhoneFree(phone, email);
     await this.accounts.save({ email, phone, phoneVerified: false, passwordHash: null, createdAt: existing?.createdAt ?? new Date(this.clock.now()).toISOString() });
     return this.sendCode(email, phone, "sms");
+  }
+
+  /** One mobile number per account: refuse a number another login has already verified. */
+  private async assertPhoneFree(phone: string, email: string) {
+    if (await this.accounts.findVerifiedPhone(phone, email)) {
+      throw new ConflictException({ error: PHONE_IN_USE, reason: "phoneInUse" });
+    }
   }
 
   /** "Resend code" or "Send the code by email instead". */
@@ -89,6 +99,8 @@ export class SignupService {
     }
     this.codes.delete(email);
     const account = (await this.accounts.find(email))!;
+    // Two sign-ups may have started with the same number; only the first to verify keeps it.
+    await this.assertPhoneFree(account.phone, email);
     await this.accounts.save({ ...account, phoneVerified: true });
     const token = randomBytes(32).toString("base64url");
     for (const [k, v] of this.links) if (v.email === email || v.expiresAt <= this.clock.now()) this.links.delete(k);
