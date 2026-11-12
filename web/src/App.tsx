@@ -18,10 +18,10 @@ import { BakitGanitoResult } from "./components/BakitGanitoResult";
 import { TabBar } from "./components/TabBar";
 import { stored, useHashRoute } from "./lib/routes";
 
-const EXPIRED = "Nag-expire ang session. Mag-sign in ulit.";
+const EXPIRED = "Your session expired. Please sign in again.";
 
 /**
- * Signed out: sign-in → code → link CAN → scan → "Tama ba?", one screen at a time.
+ * Signed out: sign-in → code → link CAN → scan → "Is this right?", one screen at a time.
  * Signed in with an active Household: the app shell with Home · Missions · Rewards · Account.
  */
 export function App() {
@@ -90,11 +90,11 @@ export function App() {
   const select = (sin: string) => { setSelectedSin(sin); setAsking(null); stored.set("household", sin); };
   const selected: Household | undefined = session?.households.find((h) => h.sin === selectedSin);
 
-  if (restoring) return <main className="flow-screen"><p className="muted" role="status">Binubuksan…</p></main>;
+  if (restoring) return <main className="flow-screen"><p className="muted" role="status">Opening…</p></main>;
 
   if (!session) {
     return <main className="flow-screen">
-      <header><h1>Eelio</h1><p>Bakit ganito ang bill ko?</p></header>
+      <header><h1>Eelio</h1><p>Why is my bill like this?</p></header>
       {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
       <SignIn onLogin={(next) => { begin(next); setSessionNotice(null); }} />
     </main>;
@@ -144,7 +144,7 @@ export function App() {
             const token = session.token;
             end(null);
             void api.logout(token).catch((err) => {
-              if (!(err instanceof ApiError && err.status === 401)) setSessionNotice("Hindi makumpirma ang logout sa server. Na-clear na ang session sa device na ito; mag-e-expire ang token sa loob ng isang oras.");
+              if (!(err instanceof ApiError && err.status === 401)) setSessionNotice("We couldn't confirm the logout with the server. The session is cleared on this device; the token expires within an hour.");
             });
           }} />
           <button type="button" className="ghost wide" onClick={() => setLinking(true)}>+ Link another Household</button>

@@ -32,20 +32,20 @@ describe("smart meter usage", () => {
     expect(init?.signal).toBeInstanceOf(AbortSignal);
     expect(screen.getByText(/Synthetic demo data/).textContent).toContain("Fixed test simulation.");
     expect(screen.getByRole("img", { name: /Daily usage chart in kWh/ })).toBeTruthy();
-    fireEvent.click(screen.getByText("Tingnan ang readings table"));
+    fireEvent.click(screen.getByText("See the readings table"));
     const table = screen.getByRole("table");
     expect(within(table).getByRole("cell", { name: "12.345" })).toBeTruthy();
     expect(within(table).getByRole("cell", { name: "Partial" })).toBeTruthy();
     expect(within(table).getByRole("rowheader", { name: /Nov 2, 2026, 12:00 AM/ })).toBeTruthy();
-    expect(screen.getByText(/Partial: kulang/)).toBeTruthy();
+    expect(screen.getByText(/Partial: some hours are missing/)).toBeTruthy();
   });
 
   it.each([null, range])("handles empty readings with available=%j", async (available) => {
     fetchMock.mockResolvedValue(response(fixture({ available, range: available, readings: [] })));
     mount();
-    await screen.findByText("Wala pang usage readings sa saklaw na ito.");
+    await screen.findByText("No usage readings in this range yet.");
     expect(screen.queryByRole("img")).toBeNull();
-    expect(screen.queryByText(/kabuuan ng available/)).toBeNull();
+    expect(screen.queryByText(/total of the available/)).toBeNull();
     expect(screen.getByText(/Synthetic demo data/)).toBeTruthy();
   });
 
@@ -53,10 +53,10 @@ describe("smart meter usage", () => {
     let resolve!: (r: Response) => void;
     fetchMock.mockImplementationOnce(() => new Promise((r) => { resolve = r; }));
     mount();
-    expect(screen.getByRole("status").textContent).toMatch(/Kinukuha/);
+    expect(screen.getByRole("status").textContent).toMatch(/Loading/);
     await act(async () => resolve(response({ error: "Source unavailable" }, 502)));
     expect(screen.getByRole("alert").textContent).toBe("Source unavailable");
-    fireEvent.click(screen.getByRole("button", { name: "Subukan ulit ang readings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry readings" }));
     await screen.findByText("12.678 kWh");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -64,7 +64,7 @@ describe("smart meter usage", () => {
   it("handles a network failure", async () => {
     fetchMock.mockRejectedValue(new TypeError("fetch failed"));
     mount();
-    expect((await screen.findByRole("alert")).textContent).toBe("Hindi makuha ang smart meter readings. Subukan ulit.");
+    expect((await screen.findByRole("alert")).textContent).toBe("We couldn't get the smart meter readings. Please try again.");
   });
 
   it("expires the session on 401", async () => {
@@ -86,9 +86,9 @@ describe("smart meter usage", () => {
   });
 
   it.each([
-    { label: "Hour", interval: "hour", title: "Hourly", window: "24 oras", from: "2026-11-01T16:00:00Z", to: "2026-11-01T17:00:00Z", tick: "12:00 AM" },
-    { label: "Day", interval: "day", title: "Daily", window: "30 araw", from: "2026-11-01T16:00:00Z", to: "2026-11-02T16:00:00Z", tick: "Nov 2" },
-    { label: "Week", interval: "week", title: "Weekly", window: "12 linggo", from: "2026-11-01T16:00:00Z", to: "2026-11-08T16:00:00Z", tick: "Nov 2" },
+    { label: "Hour", interval: "hour", title: "Hourly", window: "24 hours", from: "2026-11-01T16:00:00Z", to: "2026-11-01T17:00:00Z", tick: "12:00 AM" },
+    { label: "Day", interval: "day", title: "Daily", window: "30 days", from: "2026-11-01T16:00:00Z", to: "2026-11-02T16:00:00Z", tick: "Nov 2" },
+    { label: "Week", interval: "week", title: "Weekly", window: "12 weeks", from: "2026-11-01T16:00:00Z", to: "2026-11-08T16:00:00Z", tick: "Nov 2" },
   ] as const)("requests the $interval preset and displays Manila labels and values", async ({ label, interval, title, window, from, to, tick }) => {
     fetchMock.mockImplementation(async (url) => {
       const requested = new URL(url, "http://localhost").searchParams.get("interval");
@@ -105,7 +105,7 @@ describe("smart meter usage", () => {
     // The server contract selects bounded windows from its advertised dates; never use the browser clock.
     expect(new URL(url, "http://localhost").searchParams.toString()).toBe(`interval=${interval}`);
     expect(screen.getByText("0.123 kWh")).toBeTruthy();
-    fireEvent.click(screen.getByText("Tingnan ang readings table"));
+    fireEvent.click(screen.getByText("See the readings table"));
     expect(screen.getByRole("rowheader").textContent).toContain("Nov 2, 2026, 12:00 AM");
     expect(screen.getByRole("cell", { name: "0.123" })).toBeTruthy();
   });
@@ -139,7 +139,7 @@ describe("smart meter usage", () => {
     expect(screen.queryByText("12.678 kWh")).toBeNull();
     await act(async () => resolve(response({ error: "Try again" }, 502)));
     fetchMock.mockResolvedValue(response(fixture({ interval: "week" })));
-    fireEvent.click(screen.getByRole("button", { name: "Subukan ulit ang readings" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry readings" }));
     await screen.findByRole("img", { name: /Weekly/ });
     expect(fetchMock.mock.calls.at(-1)![0]).toContain("interval=week");
     expect(screen.getByRole("button", { name: "Week" }).getAttribute("aria-pressed")).toBe("true");
@@ -156,8 +156,8 @@ describe("smart meter usage", () => {
     expect(chart.querySelectorAll("rect")).toHaveLength(1);
     expect(chart.innerHTML).not.toMatch(/NaN|Infinity/);
     expect(screen.getByText(`${value} kWh`)).toBeTruthy();
-    expect(screen.getByText(/Hindi ito buong linggo/)).toBeTruthy();
-    fireEvent.click(screen.getByText("Tingnan ang readings table"));
+    expect(screen.getByText(/Not a full week/)).toBeTruthy();
+    fireEvent.click(screen.getByText("See the readings table"));
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(screen.getByRole("cell", { name: String(value) })).toBeTruthy();
   });

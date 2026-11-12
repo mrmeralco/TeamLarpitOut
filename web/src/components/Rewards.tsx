@@ -89,7 +89,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
         </p>
       </div>
 
-      {loading && <p className="muted">Kinukuha ang Rewards catalog…</p>}
+      {loading && <p className="muted">Loading the Rewards catalog…</p>}
       {error && <p className="error">{error}</p>}
 
       {feedback && (
@@ -107,11 +107,11 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
             </div>
             {(data.lockedPoints ?? 0) > 0 && (
               <p className="small" data-testid="locked-points">
-                🔒 {data.lockedPoints} Welcome Points ay naka-lock hanggang sa unang Verified Savings sa susunod na Bill.
+                🔒 {data.lockedPoints} Welcome Points are locked until your first Verified Savings on a coming Bill.
               </p>
             )}
             <p className="muted">
-              1 Point bawat ₱1 ng Verified Savings. Gamitin sa sample rewards mula sa aming partners.
+              1 Point for every ₱1 of Verified Savings. Use them on sample rewards from our partners.
             </p>
           </div>
 
@@ -119,7 +119,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
             <div className="notice confirm confirmation-box" role="dialog" aria-labelledby="confirm-redeem-title">
               <h4 id="confirm-redeem-title">Confirm redemption</h4>
               <p>
-                Sigurado ka bang nais mong i-redeem ang <strong>{confirmingItem.name}</strong> para sa{" "}
+                Redeem <strong>{confirmingItem.name}</strong> for{" "}
                 <strong>{confirmingItem.pointsCost} Points</strong>?
               </p>
               <div className="row confirmation-actions">
@@ -129,7 +129,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
                   disabled={redeemingId !== null}
                   onClick={() => handleRedeem(confirmingItem)}
                 >
-                  {redeemingId === confirmingItem.id ? "Rineredeem…" : "Oo, I-redeem"}
+                  {redeemingId === confirmingItem.id ? "Redeeming…" : "Yes, redeem"}
                 </button>
                 <button
                   type="button"
@@ -137,7 +137,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
                   disabled={redeemingId !== null}
                   onClick={() => setConfirmingItem(null)}
                 >
-                  Kanselahin
+                  Cancel
                 </button>
               </div>
             </div>
@@ -175,7 +175,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
                     </div>
                     <div className="reward-progress-text">
                       <span>{item.progressPercent}% naipon</span>
-                      <small className="muted">Kailangan pa ng {item.pointsNeeded} pts</small>
+                      <small className="muted">{item.pointsNeeded} more pts needed</small>
                     </div>
                   </div>
                 )}

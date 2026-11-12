@@ -13,7 +13,7 @@ const verdictResponse = (total = 50000) => ({
   now: { period: "2026-10", kwh: 200, billingDays: 31, rebuiltTotal: 200000, printedTotal: null, estimated: false, extras: [], extrasTotal: 0 },
   effects: [], lines: [], habitMeasurable: true, total, printedChange: null, extrasChange: 0, unexplained: null,
 });
-const expired = () => response({ error: "Mag-sign in muna." }, 401);
+const expired = () => response({ error: "Please sign in first." }, 401);
 let fetchMock: Mock<(input: string, init?: RequestInit) => Promise<Response>>;
 let historyRequest: (sin: string) => Promise<Response>;
 let loginHouseholds = households;
@@ -49,7 +49,7 @@ beforeEach(() => {
   fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10", "2026-11"] });
     if (input === "/api/auth/email/start") return response({ sent: true, expiresInSeconds: 600 }, 202);
-    if (input === "/api/auth/email/verify") return loginFails ? response({ error: "Mali o expired na ang code. Humingi ng bagong code." }, 401) : response({ token: "test-session" });
+    if (input === "/api/auth/email/verify") return loginFails ? response({ error: "The code is wrong or expired. Ask for a new code." }, 401) : response({ token: "test-session" });
     if (input === "/api/households") return response(loginHouseholds);
     if (input === "/api/households/link") return response({ pending: null });
     if (/^\/api\/households\/[^/]+\/setup$/.test(input)) return response(setup);
@@ -65,7 +65,7 @@ beforeEach(() => {
     if (/^\/api\/households\/[^/]+\/rewards$/.test(input)) return response({ sin: "x", balance: 0, tag: "sample rewards", disclaimer: "Sample.", catalog: [], history: [] });
     if (input === "/api/auth/logout") return new Response(null, { status: 204 });
     const match = /^\/api\/households\/([^/]+)\/bills$/.exec(input);
-    if (match) return failHistory ? response({ error: "Hindi makuha ang Bill History. Subukan ulit." }, 502) : historyRequest(match[1]!);
+    if (match) return failHistory ? response({ error: "We couldn't get the Bill History. Please try again." }, 502) : historyRequest(match[1]!);
     const readingsMatch = /^\/api\/households\/([^/]+)\/readings\?interval=(hour|day|week)$/.exec(input);
     if (readingsMatch) return readingsRequest(readingsMatch[1]!);
     if (input === "/api/appliances/catalog") return response({ appliances: [] });
@@ -74,9 +74,9 @@ beforeEach(() => {
       meterType: input.includes(households[0]!.sin) ? "traditional" : "smart", canMasked: "39•• ••• 482", area: "Caloocan City",
       chargeLines: { featured: [], all: [] },
       bill: { period: "2026-10", amountDue: 10000, dueDate: null, billDate: null },
-      badge: { status: "green", label: "Tugma ang bill" }, bakitGanito: null, bakitGanitoUnavailable: "Kailangan ng dalawang Bill para maikumpara.",
-      tamaBa: { status: "green", label: "Tugma ang bill", failedChecks: 0, summary: "OK", screen: "tama-ba" },
-      action: { kind: "missions", label: "Tingnan ang Missions", screen: "missions" }, smartMeter: null,
+      badge: { status: "green", label: "Bill verified" }, bakitGanito: null, bakitGanitoUnavailable: "Two Bills are needed to compare.",
+      tamaBa: { status: "green", label: "Bill verified", failedChecks: 0, summary: "OK", screen: "tama-ba" },
+      action: { kind: "missions", label: "See Missions", screen: "missions" }, smartMeter: null,
     });
     if (/^\/api\/households\/[^/]+\/target$/.test(input)) return response({
       period: "2026-11", billingDays: 30, rateSchedulePeriod: "2026-11",
@@ -84,7 +84,7 @@ beforeEach(() => {
       options: [{ cut: 10, kwh: 207, pesos: 207000, savings: 23000 }],
     });
     if (/^\/api\/households\/[^/]+\/usage-plan$/.test(input)) return response({ active: false, plan: null });
-    if (/^\/api\/households\/[^/]+\/missions$/.test(input)) return response({ error: "Ilista muna ang mga appliance." }, 409);
+    if (/^\/api\/households\/[^/]+\/missions$/.test(input)) return response({ error: "List the appliances first." }, 409);
     if (input === "/api/bills/check") {
       return response({
         overall: "green",
@@ -95,7 +95,7 @@ beforeEach(() => {
           { key: "paymentReflection", title: "Payments", status: "pass", message: "OK" },
         ],
         failedChecks: [],
-        summary: "Lahat ng nasuring Meralco figures ay nagtutugma.",
+        summary: "All of Meralco's figures checked match.",
       });
     }
     if (/^\/api\/households\/[^/]+\/check$/.test(input)) {
@@ -108,7 +108,7 @@ beforeEach(() => {
           { key: "paymentReflection", title: "Payments", status: "pass", message: "OK" },
         ],
         failedChecks: [],
-        summary: "Lahat ng nasuring Meralco figures ay nagtutugma.",
+        summary: "All of Meralco's figures checked match.",
       });
     }
     throw new Error(`Unexpected request: ${input} ${init?.method ?? "GET"}`);
@@ -136,7 +136,7 @@ async function goTab(name: "Home" | "Missions" | "Rewards" | "Account") {
 /** The picker lives in Account; come back to Home after choosing. */
 async function select(sin: string) {
   await goTab("Account");
-  fireEvent.change(screen.getByLabelText("Piliin ang Household"), { target: { value: sin } });
+  fireEvent.change(screen.getByLabelText("Choose a Household"), { target: { value: sin } });
   await goTab("Home");
 }
 
@@ -176,7 +176,7 @@ describe("My Meralco PWA", () => {
     await goTab("Missions");
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
     await goTab("Account");
-    expect(await screen.findByRole("heading", { name: "Mga appliance sa bahay" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Appliances at home" })).toBeTruthy();
     expect(fetchMock.mock.calls.filter(([url]) => url.includes("/readings"))).toHaveLength(1);
   });
 
@@ -186,8 +186,8 @@ describe("My Meralco PWA", () => {
     await screen.findByText("Readings unavailable");
     expect(screen.getByRole("cell", { name: "370" })).toBeTruthy();
     readingsRequest = async () => expired();
-    fireEvent.click(screen.getByRole("button", { name: "Subukan ulit ang readings" }));
-    await screen.findByText(/Nag-expire ang session/);
+    fireEvent.click(screen.getByRole("button", { name: "Retry readings" }));
+    await screen.findByText(/Your session expired/);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
@@ -198,7 +198,7 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[1]!.sin);
     await waitFor(() => expect(resolve).toBeTypeOf("function"));
     const signal = fetchMock.mock.calls.find(([url]) => url.includes("/readings"))![1]!.signal!;
-    if (action === "logout") { await goTab("Account"); fireEvent.click(screen.getByRole("button", { name: "Mag-logout" })); }
+    if (action === "logout") { await goTab("Account"); fireEvent.click(screen.getByRole("button", { name: "Log out" })); }
     else await select(households[0]!.sin);
     expect(signal.aborted).toBe(true);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
@@ -213,7 +213,7 @@ describe("My Meralco PWA", () => {
     await select(households[0]!.sin);
     const table = await screen.findByRole("table");
     expect(within(table).getByRole("cell", { name: "230" })).toBeTruthy();
-    expect(screen.getByText(/Hindi ito totoong Bill History/)).toBeTruthy();
+    expect(screen.getByText(/This is not real Bill History/)).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
     expect(fetchMock.mock.calls.some(([url]) => url.includes("/readings"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url, init]) => url.includes("/households/") && new Headers(init?.headers).get("authorization") === "Bearer test-session")).toBe(true);
@@ -237,7 +237,7 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[0]!.sin);
     await waitFor(() => expect(resolveHistory).toBeTypeOf("function"));
     await goTab("Account");
-    fireEvent.click(screen.getByRole("button", { name: "Mag-logout" }));
+    fireEvent.click(screen.getByRole("button", { name: "Log out" }));
     await act(async () => resolveHistory(response(history(230))));
     await screen.findByRole("heading", { name: "Sign in" });
     expect(screen.queryByRole("table")).toBeNull();
@@ -257,14 +257,14 @@ describe("My Meralco PWA", () => {
     await screen.findByRole("cell", { name: "370" });
     await act(async () => resolveExplanation(response(verdictResponse(11111))));
     expect(screen.queryByText("₱111.11")).toBeNull();
-    expect(screen.queryByRole("heading", { name: "Bakit ganito?" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Why this bill?" })).toBeNull();
   });
 
   it("clears the session when a protected request returns 401", async () => {
     historyRequest = async () => expired();
     render(<App />); await enterCode();
-    await screen.findByText(/Nag-expire ang session/);
-    expect(screen.queryByRole("heading", { name: "Mga Household mo" })).toBeNull();
+    await screen.findByText(/Your session expired/);
+    expect(screen.queryByRole("heading", { name: "Your Households" })).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
 
@@ -276,14 +276,14 @@ describe("My Meralco PWA", () => {
     expect(document.querySelector('input[type="file"]')).toBeNull();
     await enterCode();
     await screen.findByRole("heading", { name: "Link your Meralco account" });
-    expect(screen.queryByLabelText("Piliin ang Household")).toBeNull();
+    expect(screen.queryByLabelText("Choose a Household")).toBeNull();
   });
 
   it("signs in with an emailed code and shows a wrong-code error", async () => {
     loginFails = true;
     render(<App />);
     await enterCode("000000");
-    await screen.findByText("Mali o expired na ang code. Humingi ng bagong code.");
+    await screen.findByText("The code is wrong or expired. Ask for a new code.");
     expect(fetchMock.mock.calls.find(([url]) => url === "/api/auth/email/start")![1]!.body).toBe(JSON.stringify({ email: "demo@example.com" }));
     expect(screen.getByText(/resend code in 0:30/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Use a different email" }));
@@ -293,10 +293,10 @@ describe("My Meralco PWA", () => {
   it("supports retry after a history error without keeping stale data", async () => {
     failHistory = true;
     render(<App />); await login(); await select(households[0]!.sin);
-    await screen.findByText("Hindi makuha ang Bill History. Subukan ulit.");
+    await screen.findByText("We couldn't get the Bill History. Please try again.");
     expect(screen.queryByRole("table")).toBeNull();
     failHistory = false;
-    fireEvent.click(screen.getByRole("button", { name: "Subukan ulit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     await screen.findByRole("cell", { name: "230" });
   });
 
@@ -311,7 +311,7 @@ describe("My Meralco PWA", () => {
     await goTab("Rewards");
     expect(await screen.findByRole("heading", { name: "Rewards" })).toBeTruthy();
     await goTab("Account");
-    expect(screen.getByRole("heading", { name: "Mga Household mo" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Your Households" })).toBeTruthy();
     const tabs = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
     expect(tabs.map((t) => t.textContent)).toEqual(["Home", "Missions", "Rewards", "Account"]);
     expect(tabs.filter((t) => t.getAttribute("aria-current") === "page").map((t) => t.textContent)).toEqual(["Account"]);
@@ -325,7 +325,7 @@ describe("My Meralco PWA", () => {
     expect(await screen.findByRole("heading", { name: "Rewards" })).toBeTruthy();
     expect(within(screen.getByRole("navigation", { name: "Main" })).getByRole("link", { name: "Rewards" }).getAttribute("aria-current")).toBe("page");
     await goTab("Account");
-    expect((screen.getByLabelText("Piliin ang Household") as HTMLSelectElement).value).toBe(households[1]!.sin);
+    expect((screen.getByLabelText("Choose a Household") as HTMLSelectElement).value).toBe(households[1]!.sin);
   });
 
   it("an expired stored session on reload returns to sign-in with the notice", async () => {
@@ -334,7 +334,7 @@ describe("My Meralco PWA", () => {
     fetchMock.mockImplementation(async (input, init) => input === "/api/households" ? expired() : originalFetch(input, init));
     render(<App />);
     await screen.findByRole("heading", { name: "Sign in" });
-    expect(screen.getByText(/Nag-expire ang session/)).toBeTruthy();
+    expect(screen.getByText(/Your session expired/)).toBeTruthy();
     expect(window.sessionStorage.getItem("kuryenteko.token")).toBeNull();
   });
 
@@ -344,7 +344,7 @@ describe("My Meralco PWA", () => {
     fetchMock.mockImplementation(async (input, init) => /\/(target|usage-plan|forecast|missions|plan)$/.test(input) ? expired() : originalFetch(input, init));
     await goTab("Missions");
     await screen.findByRole("heading", { name: "Sign in" });
-    expect(screen.getByText(/Nag-expire ang session/)).toBeTruthy();
+    expect(screen.getByText(/Your session expired/)).toBeTruthy();
     expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
   });
 

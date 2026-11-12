@@ -206,7 +206,7 @@ label.missing input, label.missing select { border-color: var(--up); }
 label.estimated em { color: var(--primary); }
 label.estimated input { border-color: var(--primary); border-style: dashed; }
 
-/* Ano'ng laman */
+/* What's on my bill */
 .split { margin-bottom: 12px; }
 .split small { color: var(--muted-foreground); line-height: 1.8; }
 .bar.two { display: flex; height: 10px; }
@@ -289,7 +289,7 @@ label.check input { width: auto; accent-color: var(--primary); }
 .smart-meter-usage th small { display: block; font-weight: normal; }
 .smart-meter-usage summary:focus-visible, .smart-meter-usage button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
-/* Bill Checks (Tama ba ito?) */
+/* Bill Checks (Is it right?) */
 .bill-checks { margin-top: 16px; }
 .status-badge {
   font-size: 0.8rem;

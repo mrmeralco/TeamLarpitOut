@@ -5,7 +5,7 @@ import { BillChangeRequestDto } from "./dto/bill-change-request.dto.js";
 import { SessionGuard } from "../auth/session.guard.js";
 import { HouseholdAccessGuard } from "../households/household-access.guard.js";
 
-/** "Bakit ganito?": why the Bill changed. */
+/** "Why this bill?": why the Bill changed. */
 @Controller()
 export class BillChangeController {
   constructor(private readonly billChange: BillChangeService) {}

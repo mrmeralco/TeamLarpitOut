@@ -18,7 +18,7 @@ const summary = (over: Partial<HomeSummary> = {}): HomeSummary => ({
   meterType: "traditional", canMasked: "39•• ••• 482", area: "Caloocan City",
   chargeLines: { featured, all: [...featured, line("supply", "Supply", 1638, 0, "Meralco"), line("other-x", "Mystery", 500, null, null)] },
   bill: { period: "2026-10", amountDue: 681700, dueDate: "2026-11-24", billDate: null },
-  badge: { status: "green", label: "Tugma ang bill" },
+  badge: { status: "green", label: "Bill verified" },
   bakitGanito: {
     sentence: "Tumaas.", total: 93700, screen: "bakit-ganito", previousPeriod: "2026-09", addsUp: true, habit: 57700, lines: [],
     effects: [
@@ -27,8 +27,8 @@ const summary = (over: Partial<HomeSummary> = {}): HomeSummary => ({
     ],
   },
   bakitGanitoUnavailable: null,
-  tamaBa: { status: "green", label: "Tugma ang bill", failedChecks: 0, summary: "OK", screen: "tama-ba" },
-  action: { kind: "missions", label: "Tingnan ang Missions", screen: "missions" },
+  tamaBa: { status: "green", label: "Bill verified", failedChecks: 0, summary: "OK", screen: "tama-ba" },
+  action: { kind: "missions", label: "See Missions", screen: "missions" },
   smartMeter: null,
   ...over,
 });
@@ -66,19 +66,19 @@ describe("Home tab", () => {
     expect(onAsk.mock.calls[1]![0].id).toBe("other-x");
   });
 
-  it("moves 'Itanong kay Meralco' and the copyable summary to the top on a red badge", async () => {
+  it("moves 'Ask Meralco' and the copyable summary to the top on a red badge", async () => {
     respond(summary({
-      badge: { status: "red", label: "May hindi tugma" },
-      tamaBa: { status: "red", label: "May hindi tugma", failedChecks: 1, summary: "Total ₱3,000 vs lines ₱2,690", screen: "tama-ba" },
-      action: { kind: "askMeralco", label: "Itanong kay Meralco", screen: "tama-ba", summary: "Total ₱3,000 vs lines ₱2,690" },
+      badge: { status: "red", label: "Something doesn't match" },
+      tamaBa: { status: "red", label: "Something doesn't match", failedChecks: 1, summary: "Total ₱3,000 vs lines ₱2,690", screen: "tama-ba" },
+      action: { kind: "askMeralco", label: "Ask Meralco", screen: "tama-ba", summary: "Total ₱3,000 vs lines ₱2,690" },
     }));
     render(<Home token="t" household={household} onExpired={() => {}} />);
     const ask = await screen.findByRole("alert");
-    expect(ask.textContent).toContain("Itanong kay Meralco");
+    expect(ask.textContent).toContain("Ask Meralco");
     expect(ask.textContent).toContain("Total ₱3,000 vs lines ₱2,690");
     const order = [...document.querySelectorAll(".home2 > *")].map((el) => el.className);
     expect(order.indexOf("card home-ask")).toBeLessThan(order.indexOf("card home-due"));
-    expect(within(ask).getByRole("button", { name: "Kopyahin ang buod" })).toBeTruthy();
+    expect(within(ask).getByRole("button", { name: "Copy summary" })).toBeTruthy();
   });
 
   it("the save card opens rewards onboarding with the Habit Effect, or shows the plan summary once set up", async () => {

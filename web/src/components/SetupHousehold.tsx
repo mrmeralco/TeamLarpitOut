@@ -11,7 +11,7 @@ export function SetupHousehold({ token, sin, status, onSaved, onBack, onExpired 
   async function save() {
     setBusy(true); setError(null);
     try { onSaved(await setupApi.household(token, sin, size)); }
-    catch (err) { if (err instanceof ApiError && err.status === 401) onExpired(); else setError(err instanceof Error ? err.message : "Hindi ma-save."); }
+    catch (err) { if (err instanceof ApiError && err.status === 401) onExpired(); else setError(err instanceof Error ? err.message : "Couldn't save."); }
     finally { setBusy(false); }
   }
   return (

@@ -76,7 +76,7 @@ function IntervalReadings({ token, sin, interval, onExpired }: { token: string; 
     }).catch((error: unknown) => {
       if (!active) return;
       if (error instanceof ApiError && error.status === 401) onExpired();
-      else setState({ status: "error", message: error instanceof ApiError ? error.message : "Couldn't get the smart meter readings. Please try again." });
+      else setState({ status: "error", message: error instanceof ApiError ? error.message : "We couldn't get the smart meter readings. Please try again." });
     });
     return () => { active = false; controller.abort(); };
   }, [token, sin, interval, attempt, onExpired]);

@@ -8,7 +8,7 @@ import type { BillSource } from "../bills/bill-source.js";
 import { BILL_SOURCE, RATE_SCHEDULES, WEATHER_PROVIDER } from "../common/injection-tokens.js";
 import type { WeatherProvider } from "../weather/weather-provider.interface.js";
 
-/** "Bakit ganito?": the Bill Change split into four effects (ADR-0001). All amounts in centavos. */
+/** "Why this bill?": the Bill Change split into four effects (ADR-0001). All amounts in centavos. */
 @Injectable()
 export class BillChangeService {
   constructor(

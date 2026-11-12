@@ -3,23 +3,23 @@ import type { BakitGanito as BakitGanitoData, ExtraLineItem } from "../api/clien
 import { monthLabel, peso } from "../lib/format";
 
 const EFFECT_HINT: Record<string, string> = {
-  rate: "Nagbago ang singil kada kWh. Hindi mo ito kontrolado.",
-  billingDays: "Mas mahaba o maikli ang billing period.",
-  weather: "Epekto ng init ng panahon (tantya). Pindutin para sa detalye.",
-  habit: "Ang bahaging galing sa sariling gamit ng bahay.",
+  rate: "The rate per kWh changed. You can't control this.",
+  billingDays: "The billing period was longer or shorter.",
+  weather: "The effect of hotter or cooler weather (estimate). Tap for details.",
+  habit: "The part that came from your household's own use.",
 };
 
 const LINE_HINT: Record<string, (l: ExtraLineItem) => string> = {
   lifeline: (l) =>
     l.status === "gained"
-      ? "Nakuha mo ang lifeline discount ngayong buwan."
+      ? "You got the lifeline discount this month."
       : l.status === "lost"
-        ? "Nawala ang lifeline discount kasi lumampas ang gamit sa limit."
-        : "Nagbago ang laki ng lifeline discount mo.",
+        ? "You lost the lifeline discount because usage went over the limit."
+        : "Your lifeline discount changed.",
   catchUp: (l) =>
     (l.kwh ?? 0) >= 0
-      ? `Tantya lang ang nakaraang Bill. Mga ${l.kwh} kWh dito ay gamit pa noong nakaraang buwan.`
-      : `Sobra ang tantya noong nakaraang buwan. Ibinawas dito ang mga ${Math.abs(l.kwh ?? 0)} kWh.`,
+      ? `Last month's Bill was only an estimate. About ${l.kwh} kWh here were used last month.`
+      : `Last month was over-estimated. About ${Math.abs(l.kwh ?? 0)} kWh were taken off here.`,
 };
 
 export function BakitGanitoResult({ r }: { r: BakitGanitoData }) {
@@ -34,12 +34,12 @@ export function BakitGanitoResult({ r }: { r: BakitGanitoData }) {
   const sensitivitySource = weatherEffect?.sensitivitySource ?? r.weatherDetail?.source ?? "cooling_appliance_estimate";
   const weatherTapText =
     sensitivitySource === "history"
-      ? `bawat mas mainit na araw ≈ +${sensitivity} kWh mula sa sariling mga Bill`
-      : `bawat mas mainit na araw ≈ +${sensitivity} kWh (Cooling Appliance estimate)`;
+      ? `each hotter day ≈ +${sensitivity} kWh, from your own Bills`
+      : `each hotter day ≈ +${sensitivity} kWh (Cooling Appliance estimate)`;
 
   return (
     <section className="card result" aria-live="polite">
-      <h2>Bakit ganito?</h2>
+      <h2>Why this bill?</h2>
       <p className="lede">
         {monthLabel(r.before.period)} {peso(r.before.rebuiltTotal)} → {monthLabel(r.now.period)} {peso(r.now.rebuiltTotal)}
       </p>
@@ -79,7 +79,7 @@ export function BakitGanitoResult({ r }: { r: BakitGanitoData }) {
                   : isWeather && weatherExpanded
                     ? weatherTapText
                     : e.key === "habit" && !r.habitMeasurable
-                      ? "Hindi pa masukat: tantya ang nakaraang Bill, kaya pinagsama ang dalawang buwan."
+                      ? "Can't be measured yet: last month's Bill was an estimate, so the two months are combined."
                       : EFFECT_HINT[e.key]}
               </small>
             </li>
@@ -87,20 +87,20 @@ export function BakitGanitoResult({ r }: { r: BakitGanitoData }) {
         })}
         <li className="total">
           <div className="effect-head">
-            <span>Kabuuang pagbabago</span>
+            <span>Total change</span>
             <strong>{peso(r.total, true)}</strong>
           </div>
           <small>
             {reconciled
-              ? "✓ Tugma sa totoong pagbabago ng Bill"
-              : `May ${peso(r.unexplained!, true)} na hindi maipaliwanag mula sa mga singil. Titingnan ito sa Bill Checks.`}
+              ? "✓ Matches the actual change in the Bill"
+              : `${peso(r.unexplained!, true)} can't be explained by the charges. See Bill Checks.`}
           </small>
         </li>
       </ul>
       {extras.length > 0 && (
         <div className="extras">
-          <h3>Hindi kasama sa paliwanag</h3>
-          <p className="muted">Mga credit, refund, adjustment at balanse. Hiwalay ito sa gamit at singil ng buwan.</p>
+          <h3>Not part of the explanation</h3>
+          <p className="muted">Credits, refunds, adjustments and balances. These are separate from the month's use and charges.</p>
           <ul>
             {extras.map((x, i) => (
               <li key={i} className="effect-head">
@@ -113,9 +113,9 @@ export function BakitGanitoResult({ r }: { r: BakitGanitoData }) {
           </ul>
           {r.printedChange !== null && (
             <small className="muted">
-              Naka-print na pagbabago: {peso(r.printedChange, true)} = {peso(r.total, true)} sa itaas{" "}
-              {r.extrasChange >= 0 ? "+" : "−"} {peso(Math.abs(r.extrasChange))} na credits/adjustments
-              {r.unexplained ? ` + ${peso(r.unexplained, true)} na hindi maipaliwanag` : ""}
+              Printed change: {peso(r.printedChange, true)} = {peso(r.total, true)} above{" "}
+              {r.extrasChange >= 0 ? "+" : "−"} {peso(Math.abs(r.extrasChange))} in credits/adjustments
+              {r.unexplained ? ` + ${peso(r.unexplained, true)} unexplained` : ""}
             </small>
           )}
         </div>

@@ -35,13 +35,13 @@ export function BillHistory({ token, household, onExpired, renderExplanation }: 
           } catch (err) {
             if (!active) return;
             if (err instanceof ApiError && err.status === 401) onExpired();
-            else setExplanationError(err instanceof Error ? err.message : "Hindi makuha ang paliwanag.");
+            else setExplanationError(err instanceof Error ? err.message : "Couldn't get the explanation.");
           }
         }
       } catch (err) {
         if (!active) return;
         if (err instanceof ApiError && err.status === 401) onExpired();
-        else setError(err instanceof Error ? err.message : "Hindi makuha ang Bill History.");
+        else setError(err instanceof Error ? err.message : "Couldn't get the Bill History.");
       }
     }
     void load();
@@ -51,17 +51,17 @@ export function BillHistory({ token, household, onExpired, renderExplanation }: 
     <section className="card history" aria-busy={!bills && !error}>
       <h2>Bill History · {maskSin(household.sin)}</h2>
       <p className="muted">{household.masked_address} · {household.meter_type === "smart" ? "Smart meter" : "Traditional meter"}</p>
-      {!bills && !error && <p role="status">Kinukuha ang Bill History…</p>}
-      {error && <><p className="error" role="alert">{error}</p><button className="ghost" onClick={() => setAttempt((n) => n + 1)}>Subukan ulit</button></>}
-      {bills && !bills.length && <p>Wala pang Bill History para sa Household na ito.</p>}
+      {!bills && !error && <p role="status">Loading Bill History…</p>}
+      {error && <><p className="error" role="alert">{error}</p><button className="ghost" onClick={() => setAttempt((n) => n + 1)}>Try again</button></>}
+      {bills && !bills.length && <p>No Bill History for this Household yet.</p>}
       {bills && bills.length > 0 && <>
         {bills.some((b) => b.provenance?.kind === "generated" || b.provenance?.kind === "sample") &&
-          <p className="notice warn">Demo data: may synthetic Bills. Hindi ito totoong Bill History mula sa Meralco.</p>}
+          <p className="notice warn">Demo data: includes synthetic Bills. This is not real Bill History from Meralco.</p>}
         <div className="table-scroll"><table>
-          <caption>{bills.length} Bills · pinakaluma hanggang pinakabago</caption>
-          <thead><tr><th scope="col">Buwan</th><th scope="col">kWh</th><th scope="col">Araw</th><th scope="col">Singil</th></tr></thead>
+          <caption>{bills.length} Bills · oldest to newest</caption>
+          <thead><tr><th scope="col">Month</th><th scope="col">kWh</th><th scope="col">Days</th><th scope="col">Charges</th></tr></thead>
           <tbody>{bills.map((b) => <tr key={b.period}>
-            <th scope="row">{monthLabel(b.period)}<small>{b.provenance?.kind === "sample" ? "Sample" : b.provenance?.kind === "generated" ? "Generated" : b.provenance?.kind === "real-derived" ? "Mula sa Bill" : "Hindi tinukoy"}</small></th>
+            <th scope="row">{monthLabel(b.period)}<small>{b.provenance?.kind === "sample" ? "Sample" : b.provenance?.kind === "generated" ? "Generated" : b.provenance?.kind === "real-derived" ? "From a Bill" : "Not specified"}</small></th>
             <td>{b.kwh.toLocaleString("en-PH")}</td><td>{b.billingDays}</td>
             <td>{b.chargeLines?.length ? peso(b.chargeLines.reduce((sum, l) => sum + Math.round(l.amount * 100), 0)) : "—"}</td>
           </tr>)}</tbody>

@@ -270,13 +270,13 @@ export async function scanBill(photo: File, token: string): Promise<ScanOutcome>
   try {
     res = await fetch("/api/bills/scan", { method: "POST", body: form, headers: { Authorization: `Bearer ${token}` } });
   } catch {
-    return { kind: "unavailable", error: "Hindi maabot ang server. I-type na lang ang Bill." };
+    return { kind: "unavailable", error: "We couldn't reach the server. Please try again." };
   }
   const body = await res.json().catch(() => ({}));
   if (res.ok) return { kind: "read", ...body };
-  if (res.status === 401) return { kind: "unavailable", error: "HTTP 401: Mag-sign in muna." };
+  if (res.status === 401) return { kind: "unavailable", error: "HTTP 401: Please sign in first." };
   if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
-  return { kind: "unavailable", error: body.error ?? `Hindi nabasa ang litrato (HTTP ${res.status}).` };
+  return { kind: "unavailable", error: body.error ?? `We couldn't read the photo (HTTP ${res.status}).` };
 }
 
 export interface BillBreakdownRow {

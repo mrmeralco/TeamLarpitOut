@@ -3,7 +3,7 @@ import type { ChargeLine } from "./bill.js";
 /**
  * Printed lines that are not part of the month's energy charges: credits,
  * refunds, adjustments and balances carried over. They are listed apart from
- * "Bakit ganito?" so they never distort the four effects.
+ * "Why this bill?" so they never distort the four effects.
  */
 
 export type ExtraKind = "priorBalance" | "refund" | "credit" | "adjustment";

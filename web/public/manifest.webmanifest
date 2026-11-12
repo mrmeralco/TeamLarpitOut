@@ -1,7 +1,7 @@
 {
   "name": "Eelio",
   "short_name": "Eelio",
-  "description": "Bakit ganito ang bill ko?",
+  "description": "Why is my bill like this?",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

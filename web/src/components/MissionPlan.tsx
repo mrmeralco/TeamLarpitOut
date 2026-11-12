@@ -29,7 +29,7 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
 
   useEffect(() => {
     const controller = new AbortController();
-    missionPlanApi.get(token, household.sin, controller.signal).then(setPlan).catch((err) => { if (!controller.signal.aborted) fail(err, "Hindi makuha ang Missions."); });
+    missionPlanApi.get(token, household.sin, controller.signal).then(setPlan).catch((err) => { if (!controller.signal.aborted) fail(err, "Couldn't get the Missions."); });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, household.sin]);
@@ -40,7 +40,7 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
       const next = await missionPlanApi.shuffle(token, household.sin);
       setPlan(next);
       if (next.changed === false) setNote("This is the only plan that fits your home right now.");
-    } catch (err) { fail(err, "Hindi ma-shuffle ngayon."); } finally { setBusy(false); }
+    } catch (err) { fail(err, "Couldn't shuffle right now."); } finally { setBusy(false); }
   }
 
   async function swap(id: string) {
@@ -51,11 +51,11 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
       onBack();
       const added = next.missions.find((m) => m.id === next.swapped?.in);
       if (added) setNote(`Swapped in: ${added.title}`);
-    } catch (err) { fail(err, "Hindi mapalitan ngayon."); } finally { setBusy(false); }
+    } catch (err) { fail(err, "Couldn't swap right now."); } finally { setBusy(false); }
   }
 
   if (error && !plan) return <section className="card"><p className="error" role="alert">{error}</p></section>;
-  if (!plan) return <section className="card"><p className="muted" role="status">Kinukuha ang Missions…</p></section>;
+  if (!plan) return <section className="card"><p className="muted" role="status">Loading Missions…</p></section>;
 
   const open = missionId ? plan.missions.find((m) => m.id === missionId) : undefined;
   if (open) return <MissionDetail plan={plan} mission={open} sin={household.sin} busy={busy} error={error} onBack={onBack} onSwap={() => void swap(open.id)} />;

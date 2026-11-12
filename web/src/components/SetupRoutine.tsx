@@ -27,7 +27,7 @@ export function SetupRoutine({ token, sin, status, onSaved, onBack, onExpired, a
     if (!home) return;
     setBusy(true); setError(null);
     try { onSaved(await setupApi.routine(token, sin, home, status.hasAircon ? aircon : null)); }
-    catch (err) { if (err instanceof ApiError && err.status === 401) onExpired(); else setError(err instanceof Error ? err.message : "Hindi ma-save."); }
+    catch (err) { if (err instanceof ApiError && err.status === 401) onExpired(); else setError(err instanceof Error ? err.message : "Couldn't save."); }
     finally { setBusy(false); }
   }
   return (

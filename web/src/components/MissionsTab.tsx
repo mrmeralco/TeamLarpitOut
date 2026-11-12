@@ -23,7 +23,7 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
   /** The Mission Plan, shown once setup is complete. */
   children: React.ReactNode;
 }) {
-  if (!setup) return <section className="card"><p className="muted" role="status">Kinukuha ang setup…</p></section>;
+  if (!setup) return <section className="card"><p className="muted" role="status">Loading setup…</p></section>;
   const toChecklist = () => go("missions");
   const nextStep = (s: SetupStatus) => s.steps.find((x) => !x.done)?.key;
   const advance = (s: SetupStatus) => {
