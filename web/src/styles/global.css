@@ -779,17 +779,410 @@ button.wide { width: 100%; margin-top: 10px; }
 .sheet-grip { display: none; }
 
 /* Sign up / sign in / scan: brand panel + the screen as a card. */
-.auth-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100vh; background: var(--background); }
-.auth-aside {
-  display: flex; flex-direction: column; justify-content: center; gap: 32px; padding: 64px clamp(32px, 6vw, 96px);
-  background: linear-gradient(160deg, var(--brand-soft), var(--background));
-  border-right: 1px solid var(--border);
+.auth-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  min-height: 100vh;
+  background: var(--background);
+  overflow-x: hidden;
 }
-.auth-aside-copy h2 { margin: 0 0 12px; font-size: clamp(2rem, 3vw, 2.6rem); line-height: 1.12; letter-spacing: -0.03em; }
-.auth-aside-copy p { margin: 0; max-width: 46ch; font-size: 1.05rem; line-height: 1.55; color: var(--muted-foreground); }
-.auth-aside .features { font-size: 15px; gap: 14px; }
+.auth-aside {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px clamp(32px, 6vw, 80px);
+  background: radial-gradient(circle at 50% 46%, #FDEEE3 0%, var(--background) 72%);
+  border-right: 1px solid var(--border);
+  position: relative;
+  overflow: visible;
+}
+.auth-aside-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 440px;
+  position: relative;
+}
+.auth-mascot-track {
+  position: relative;
+  width: 240px;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  cursor: pointer;
+}
+.auth-mascot-runner {
+  position: relative;
+  width: 235px;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  animation: eelio-flight-x 2.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+.auth-mascot-y {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: eelio-flight-y 2.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: transform;
+}
+.auth-mascot-float {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: eelio-idle-float 4.2s ease-in-out 2.95s infinite;
+  will-change: transform;
+}
+.auth-mascot-glow {
+  position: absolute;
+  width: 270px;
+  height: 270px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.42) 0%, rgba(194, 80, 12, 0.14) 48%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(24px);
+  pointer-events: none;
+  animation:
+    eelio-glow-pulse 2.95s ease-out 0s 1 both,
+    eelio-idle-glow 4.2s ease-in-out 2.95s infinite;
+}
+.auth-mascot-trail {
+  position: absolute;
+  left: 45%;
+  top: 50%;
+  width: 195px;
+  height: 64px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.55) 0%, rgba(194, 80, 12, 0.2) 55%, transparent 100%);
+  filter: blur(12px);
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  animation: eelio-dash-trail 2.95s ease-out both;
+}
+.auth-mascot-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 52%;
+  will-change: transform, opacity;
+}
+.auth-mascot-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform-origin: 50% 52%;
+  filter: drop-shadow(0 18px 26px rgba(194, 80, 12, 0.25));
+  pointer-events: none;
+  user-select: none;
+  will-change: opacity;
+}
+
+/* Stage 1: 4-frame Peek sequence over top edge of form card (0% -> 24% of 2.95s) */
+.auth-mascot-stage.stage-peek {
+  animation: eelio-stage-peek 2.95s ease-in-out 0s 1 both;
+}
+.auth-mascot-frame.peek-frame-1 { animation: eelio-peek-f1 2.95s steps(1, end) 0s 1 both; }
+.auth-mascot-frame.peek-frame-2 { animation: eelio-peek-f2 2.95s steps(1, end) 0s 1 both; }
+.auth-mascot-frame.peek-frame-3 { animation: eelio-peek-f3 2.95s steps(1, end) 0s 1 both; }
+.auth-mascot-frame.peek-frame-4 { animation: eelio-peek-f4 2.95s steps(1, end) 0s 1 both; }
+
+/* Stage 2: 6-frame 18fps Undulating Swim Dash along the 3-arrow flight path (21% -> 83% of 2.95s) */
+.auth-mascot-stage.stage-swim {
+  animation: eelio-stage-swim 2.95s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 both;
+}
+.auth-mascot-frame.swim-frame-1 { animation: eelio-cycle-6 0.36s steps(1, end) 0.00s infinite; }
+.auth-mascot-frame.swim-frame-2 { animation: eelio-cycle-6 0.36s steps(1, end) -0.30s infinite; }
+.auth-mascot-frame.swim-frame-3 { animation: eelio-cycle-6 0.36s steps(1, end) -0.24s infinite; }
+.auth-mascot-frame.swim-frame-4 { animation: eelio-cycle-6 0.36s steps(1, end) -0.18s infinite; }
+.auth-mascot-frame.swim-frame-5 { animation: eelio-cycle-6 0.36s steps(1, end) -0.12s infinite; }
+.auth-mascot-frame.swim-frame-6 { animation: eelio-cycle-6 0.36s steps(1, end) -0.06s infinite; }
+
+/* Stage 3: 6-frame Seamless Fin-Waving + Breathing at destination (79% -> 100% + continuous loop) */
+.auth-mascot-stage.stage-wave {
+  animation: eelio-stage-wave 2.95s cubic-bezier(0.22, 1, 0.36, 1) 0s 1 both;
+}
+.auth-mascot-frame.wave-frame-1 { animation: eelio-cycle-6 0.72s steps(1, end) 0.00s infinite; }
+.auth-mascot-frame.wave-frame-2 { animation: eelio-cycle-6 0.72s steps(1, end) -0.60s infinite; }
+.auth-mascot-frame.wave-frame-3 { animation: eelio-cycle-6 0.72s steps(1, end) -0.48s infinite; }
+.auth-mascot-frame.wave-frame-4 { animation: eelio-cycle-6 0.72s steps(1, end) -0.36s infinite; }
+.auth-mascot-frame.wave-frame-5 { animation: eelio-cycle-6 0.72s steps(1, end) -0.24s infinite; }
+.auth-mascot-frame.wave-frame-6 { animation: eelio-cycle-6 0.72s steps(1, end) -0.12s infinite; }
+
+/* Discrete 6-frame stepper (exact 1/6th duty cycle -> zero semi-transparent ghosting!) */
+@keyframes eelio-cycle-6 {
+  0%       { opacity: 1; }
+  16.6667% { opacity: 0; }
+  100%     { opacity: 0; }
+}
+
+.auth-aside-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.auth-aside-brand {
+  margin: 0 0 12px;
+  font-size: clamp(2.4rem, 3.8vw, 3.2rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: var(--foreground);
+  line-height: 1.1;
+  animation: eelio-brand-reveal 0.55s cubic-bezier(0.22, 1, 0.36, 1) 2.58s both;
+}
+.auth-aside-tagline {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.4vw, 1.25rem);
+  line-height: 1.55;
+  color: var(--muted-foreground);
+  max-width: 34ch;
+  animation: eelio-tagline-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) 2.74s both;
+}
+
+@keyframes eelio-brand-reveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes eelio-tagline-reveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* Decoupled X and Y 3-Arrow Flight Spline (2.95s):
+ *   Beat 0 (0% -> 22%): Eelio peeks out from behind the top edge of the form card (4-frame peek)
+ *   Arrow 1 (22% -> 44%): Rises from top of form card (45vw, -36px) up-left to apex (28vw, -185px)
+ *   Arrow 2 (44% -> 64%): Swoops down-left from apex (28vw, -185px) to center divider (22vw, 10px)
+ *   Arrow 3 (64% -> 100%): Swims horizontally left from center divider (22vw, 10px) into (0, 0)
+ */
+@keyframes eelio-flight-x {
+  0%, 21% {
+    transform: translate3d(45vw, 0, 0);
+    animation-timing-function: cubic-bezier(0.32, 0.08, 0.52, 0.92);
+  }
+  44% {
+    transform: translate3d(28vw, 0, 0);
+    animation-timing-function: cubic-bezier(0.35, 0.15, 0.55, 0.85);
+  }
+  64% {
+    transform: translate3d(22vw, 0, 0);
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  88% {
+    transform: translate3d(-4px, 0, 0);
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes eelio-flight-y {
+  0% {
+    transform: translate3d(0, 18px, 0) scale(0.86);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  7%, 21% {
+    /* Peeking over the top edge of the form card */
+    transform: translate3d(0, -36px, 0) scale(0.92);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  44% {
+    /* Smooth parabolic apex of Arrow 1 */
+    transform: translate3d(0, -185px, 0) scale(0.96);
+    animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  }
+  64% {
+    /* Smooth valley at center vertical divider (tip of Arrow 2 / start of Arrow 3) */
+    transform: translate3d(0, 10px, 0) scale(0.99);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  85% {
+    transform: translate3d(0, -3px, 0) scale(1.01);
+    animation-timing-function: ease-in-out;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Stage 1 (Peek): 4 progressive frames rising over the top edge of the form card */
+@keyframes eelio-stage-peek {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.94);
+  }
+  3%, 20% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  24%, 100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+}
+
+@keyframes eelio-peek-f1 { 0% { opacity: 1; } 6%, 100%  { opacity: 0; } }
+@keyframes eelio-peek-f2 { 0%, 6%  { opacity: 0; } 6.01%, 12% { opacity: 1; } 12.01%, 100% { opacity: 0; } }
+@keyframes eelio-peek-f3 { 0%, 12% { opacity: 0; } 12.01%, 17% { opacity: 1; } 17.01%, 100% { opacity: 0; } }
+@keyframes eelio-peek-f4 { 0%, 17% { opacity: 0; } 17.01%, 25% { opacity: 1; } 25.01%, 100% { opacity: 0; } }
+
+/* Stage 2 (Swim): Smoothly banks along Arrow 1 (+24deg up-left), Arrow 2 (-34deg down-left), and Arrow 3 (0deg straight left) */
+@keyframes eelio-stage-swim {
+  0%, 19% {
+    opacity: 0;
+    transform: rotate(22deg) scale(0.92);
+  }
+  23%, 39% {
+    /* Climbing up-left along Arrow 1 */
+    opacity: 1;
+    transform: rotate(24deg) scale(1);
+  }
+  45% {
+    /* Smoothly banking at the top apex */
+    opacity: 1;
+    transform: rotate(-10deg) scale(1);
+  }
+  50%, 60% {
+    /* Diving down-left along Arrow 2 toward the center divider */
+    opacity: 1;
+    transform: rotate(-34deg) scale(1.02, 0.98);
+  }
+  66%, 77% {
+    /* Swimming straight horizontal-left along Arrow 3 */
+    opacity: 1;
+    transform: rotate(0deg) scale(1.03, 0.97);
+  }
+  82%, 100% {
+    opacity: 0;
+    transform: rotate(6deg) scale(0.94);
+  }
+}
+
+/* Stage 3 (Wave): Smooth arrival settle into continuous 6-frame waving & breathing */
+@keyframes eelio-stage-wave {
+  0%, 78% {
+    opacity: 0;
+    transform: scale(0.94) translateY(4px);
+  }
+  84% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-2px);
+  }
+  90%, 100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes eelio-idle-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+@keyframes eelio-idle-glow {
+  0%, 100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes eelio-dash-trail {
+  0%, 58% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.3);
+  }
+  63%, 76% {
+    opacity: 0.9;
+    transform: translateY(-50%) scaleX(1.15);
+  }
+  82%, 100% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.2);
+  }
+}
+
+@keyframes eelio-glow-pulse {
+  0% {
+    opacity: 0.35;
+    transform: scale(0.75);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-mascot-runner,
+  .auth-mascot-y,
+  .auth-mascot-float,
+  .auth-mascot-glow,
+  .auth-mascot-trail,
+  .auth-mascot-stage,
+  .auth-mascot-frame,
+  .auth-aside-brand,
+  .auth-aside-tagline {
+    animation: none !important;
+  }
+  .auth-mascot-stage.stage-peek,
+  .auth-mascot-stage.stage-swim,
+  .auth-mascot-frame.wave-frame-2,
+  .auth-mascot-frame.wave-frame-3,
+  .auth-mascot-frame.wave-frame-4,
+  .auth-mascot-frame.wave-frame-5,
+  .auth-mascot-frame.wave-frame-6 {
+    opacity: 0 !important;
+  }
+  .auth-mascot-stage.stage-wave,
+  .auth-mascot-frame.wave-frame-1,
+  .auth-aside-brand,
+  .auth-aside-tagline {
+    opacity: 1 !important;
+  }
+}
 .auth-panel { display: flex; align-items: center; justify-content: center; padding: 48px 32px; }
 .auth-panel > .screen {
+  position: relative;
+  z-index: 3;
   width: 100%; max-width: 460px; min-height: 0; padding: 32px 36px;
   border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow-raised); background: var(--card);
 }
@@ -803,7 +1196,10 @@ button.wide { width: 100%; margin-top: 10px; }
 @media (max-width: 1080px) {
   .shell { grid-template-columns: 212px minmax(0, 1fr); }
   main { padding: 28px 28px 40px; }
-  .auth-aside { padding: 48px 40px; }
+  .auth-aside { padding: 40px 32px; }
+  .auth-mascot-track { width: 200px; height: 220px; }
+  .auth-mascot-runner { width: 185px; height: 205px; }
+  .auth-mascot-glow { width: 220px; height: 220px; }
 }
 @media (max-width: 900px) {
   .plan-grid { grid-template-columns: minmax(0, 1fr); }
