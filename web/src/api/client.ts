@@ -1,6 +1,12 @@
 export interface ChargeLine {
   label: string;
   amount: number;
+  rate?: number;
+}
+
+export interface PaymentRecord {
+  date: string;
+  amount: number;
 }
 
 export interface BillInput {
@@ -8,11 +14,38 @@ export interface BillInput {
   kwh: number;
   billingDays: number;
   chargeLines: ChargeLine[];
+  totalAmount?: number;
+  billDate?: string;
   dueDate?: string;
+  meterSerialNumber?: string;
   previousReading?: number;
   presentReading?: number;
+  payments?: PaymentRecord[];
+  paymentsCredited?: number;
   estimated?: boolean;
   lifelineEligible?: boolean;
+}
+
+export interface DisagreeingFigures {
+  labelA: string;
+  valueA: string | number;
+  labelB: string;
+  valueB: string | number;
+}
+
+export interface SingleCheckResult {
+  key: "lineSum" | "readingContinuity" | "rateSchedule" | "paymentReflection";
+  title: string;
+  status: "pass" | "fail" | "skipped";
+  message: string;
+  discrepancy?: DisagreeingFigures;
+}
+
+export interface BillChecksResult {
+  overall: "green" | "red";
+  checks: SingleCheckResult[];
+  failedChecks: SingleCheckResult[];
+  summary: string;
 }
 
 export interface Household {
@@ -115,6 +148,22 @@ export const api = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ before, now }),
     }).then((r) => json<BakitGanito>(r)),
+  billChecks: (
+    now: BillInput,
+    before?: BillInput,
+    options?: { tolerancePesos?: number; payments?: PaymentRecord[] },
+  ) =>
+    fetch("/api/bills/check", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ now, before, ...options }),
+    }).then((r) => json<BillChecksResult>(r)),
+  householdBillChecks: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/check`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal,
+    }).then((r) => json<BillChecksResult>(r)),
 };
 
 export interface DraftBill {
