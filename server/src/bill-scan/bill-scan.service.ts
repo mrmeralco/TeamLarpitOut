@@ -61,6 +61,13 @@ export function toScanResult(raw: RawBillReading): ScanResult {
   if (!raw?.readable) return { status: "unreadable", problem: raw?.problem || unreadable };
 
   const billingDays = num(raw.billingDays, 1);
+  const rawAny = raw as RawBillReading & { totalAmount?: number | null; chargesTotal?: number | null };
+  const rawTotal = typeof rawAny.totalAmount === "number" && Number.isFinite(rawAny.totalAmount)
+    ? rawAny.totalAmount
+    : typeof rawAny.chargesTotal === "number" && Number.isFinite(rawAny.chargesTotal)
+      ? rawAny.chargesTotal
+      : undefined;
+
   const now: DraftBill = {
     period: str(raw.period, PERIOD),
     kwh: num(raw.kwh),
@@ -69,6 +76,7 @@ export function toScanResult(raw: RawBillReading): ScanResult {
     previousReading: num(raw.previousReading),
     presentReading: num(raw.presentReading),
     chargeLines: chargeLines(raw.chargeLines),
+    ...(rawTotal !== undefined ? { totalAmount: rawTotal } : {}),
     ...(raw.estimated === true ? { estimated: true } : {}),
   };
 

@@ -25,8 +25,8 @@ export const wholePeso = (centavos: number, signed = true) => {
   const s = `₱${Math.round(Math.abs(centavos) / 100).toLocaleString("en-PH")}`;
   return centavos < 0 ? `−${s}` : signed && centavos > 0 ? `+${s}` : s;
 };
-/** Whole pesos without a sign, for sentences that already say "more" or "less". */
-export const plainPeso = (centavos: number) => wholePeso(Math.abs(centavos), false);
+/** Pesos formatted to 2 decimal places without a sign, for sentences that already say "more" or "less". */
+export const plainPeso = (centavos: number) => peso(Math.abs(centavos), false);
 export function greeting(now = new Date()) {
   const h = now.getHours();
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -49,7 +49,7 @@ function CountUp({ centavos, signed = false }: { centavos: number; signed?: bool
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [centavos, animate]);
-  return <span aria-hidden="true">{wholePeso(shown, signed)}</span>;
+  return <span aria-hidden="true">{peso(shown, signed)}</span>;
 }
 
 function ChargeButton({ line, rank, share, onAsk }: { line: HomeChargeLine; rank?: number; share?: number; onAsk?: (line: HomeChargeLine) => void }) {
@@ -62,8 +62,8 @@ function ChargeButton({ line, rank, share, onAsk }: { line: HomeChargeLine; rank
         <span>{line.goesTo ?? "Charge"}{share !== undefined ? ` · ${Math.round(share * 100)}%` : ""}</span>
       </span>
       <span className="wr-charge-amount">
-        <strong>{wholePeso(line.amount, false)}</strong>
-        {line.change !== null && line.change !== 0 && <span className={line.change > 0 ? "up" : "down"}>{wholePeso(line.change)}</span>}
+        <strong>{peso(line.amount)}</strong>
+        {line.change !== null && line.change !== 0 && <span className={line.change > 0 ? "up" : "down"}>{peso(line.change, true)}</span>}
       </span>
     </button>
   );
@@ -159,7 +159,7 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
                 <span className="wr-rank" aria-hidden="true">{i + 1}</span>
                 <span className="wr-reason-name">{effectLabel(p)}</span>
                 <span className="wr-reason-bar" aria-hidden="true"><span className={p.amount > 0 ? "up" : "down"} style={{ width: `${(Math.abs(p.amount) / max) * 100}%` }} /></span>
-                <strong className={p.amount > 0 ? "up" : "down"}>{wholePeso(p.amount)}</strong>
+                <strong className={p.amount > 0 ? "up" : "down"}>{peso(p.amount, true)}</strong>
               </li>
             ))}
           </ol>
@@ -207,12 +207,12 @@ export function HomeWrapped({ data, onAskCharge, onSave, saveCard, onClose }: {
         </div>
         <p className="wr-eyebrow">Your next move</p>
         <h2 className="wr-title">{change && change.habit > 0
-          ? `${wholePeso(change.habit, false)} came from how you used power. Win it back next month.`
+          ? `${peso(change.habit)} came from how you used power. Win it back next month.`
           : "Use a little less next month and earn points."}</h2>
         {saveCard ?? (
           <button type="button" className="wr-cta" onClick={onSave}>
             <span><strong>Want to save on your next bill?</strong>
-              <span>{change && change.habit > 0 ? `${wholePeso(change.habit, false)} came from usage. Cut it and earn points.` : "Use a little less and earn points on your next bill."}</span>
+              <span>{change && change.habit > 0 ? `${peso(change.habit)} came from usage. Cut it and earn points.` : "Use a little less and earn points on your next bill."}</span>
             </span>
             <span aria-hidden="true">→</span>
           </button>
