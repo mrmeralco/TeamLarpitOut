@@ -64,7 +64,7 @@ describe("POST /api/bills/scan-linkage", () => {
     const api = await harness({ vision: reading });
     const scanToken = (await api.upload("/api/bills/scan")).body.scanToken;
     const first = await api.login();
-    const other = await api.login("owner-b@example.test", "test-password-b");
+    const other = await api.login("owner-b@example.test");
     expect((await api.post("/api/bills/scan-linkage", { scanToken }, first)).body.status).toBe("linked");
     expect((await api.post("/api/bills/scan-linkage", { scanToken }, other)).body).toEqual({ status: "unlinked" });
     await api.post("/api/auth/logout", {}, first);

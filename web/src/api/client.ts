@@ -152,9 +152,15 @@ async function json<T>(res: Response): Promise<T> {
 }
 
 export const api = {
-  login: (email: string, password: string) => fetch("/api/auth/login", {
-    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }),
-  }).then((r) => json<LoginResult>(r)),
+  startSignIn: (email: string) => fetch("/api/auth/email/start", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }),
+  }).then((r) => json<{ sent: true; expiresInSeconds: number }>(r)),
+  verifySignIn: (email: string, code: string) => fetch("/api/auth/email/verify", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, code }),
+  }).then((r) => json<{ token: string }>(r)),
+  households: (token: string, signal?: AbortSignal) => fetch("/api/households", {
+    headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
+  }).then((r) => json<Household[]>(r)),
   logout: async (token: string) => {
     const res = await fetch("/api/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) await json(res);

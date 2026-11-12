@@ -1,10 +1,11 @@
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { DAY_MS, HOUR_MS, type HourlyReading, type ReadingRange } from "../src/domain/meter-reading.js";
-import { mockMyMeralcoSource } from "../src/bills/myMeralcoSource.js";
+import { DEMO_ACCOUNTS } from "../src/bills/meralco-accounts.js";
 import { MockReadingSource } from "../src/smart-meter/mock-reading-source.provider.js";
 import { inMemoryReadingSource, type ReadingSource } from "../src/smart-meter/reading-source.interface.js";
-import { harness, testLogins } from "./utils/test-harness.js";
+import { ownerIdForEmail } from "../src/auth/auth.service.js";
+import { harness, testAccounts, testLogins } from "./utils/test-harness.js";
 
 const SMART = "9876543210";
 const OTHER_SMART = "1111111111";
@@ -154,35 +155,37 @@ describe("GET /api/households/:sin/readings", () => {
 
   it("checks current server membership and Meter Type, and denies expired sessions", async () => {
     const source = sourceSpy();
-    const base = mockMyMeralcoSource(testLogins);
     let meterType: "smart" | "traditional" = "traditional";
-    let linked = true;
     let now = 0;
-    const api = await harness({ readingSource: source, clock: { now: () => now }, myMeralco: {
-      login: base.login,
-      households: async () => linked ? [{ sin: SMART, masked_address: "••• City", meter_type: meterType }] : [],
+    const account = () => ({ can: "1000000002", sin: SMART, area: "City", meter_type: meterType });
+    const api = await harness({ readingSource: source, clock: { now: () => now }, meralco: {
+      findByCan: async () => account(),
+      household: async (sin) => sin === SMART ? account() : null,
     } });
     const token = await api.login();
     expect((await api.get(path(), token)).status).toBe(422);
     meterType = "smart";
-    linked = false;
+    const link = (await api.links.forOwner(ownerIdForEmail(testLogins[0]!.email))).find((l) => l.sin === SMART)!;
+    await api.links.remove(link.ownerId, SMART);
     expect((await api.get(path(), token)).status).toBe(404);
-    linked = true;
+    await api.links.save(link);
     now = 60 * 60 * 1000;
     expect((await api.get(path(), token)).status).toBe(401);
     expect(source.describe).not.toHaveBeenCalled();
   });
 
   it("isolates two smart Households across repeated switching and source failures", async () => {
-    const accounts = structuredClone(testLogins);
-    accounts[0]!.households.push({ sin: OTHER_SMART, masked_address: "••• Other", meter_type: "smart" });
+    const accounts = [...testAccounts, { can: "1000000009", sin: OTHER_SMART, area: "Other", meter_type: "smart" as const }];
     const memory = inMemoryReadingSource({ [SMART]: hours(FROM, 24), [OTHER_SMART]: hours(FROM, 24, 2000) });
     let fail = false;
     const source: ReadingSource = { describe: memory.describe, readings: async (sin, range) => {
       if (fail && sin === OTHER_SMART) throw new Error("private upstream failure details");
       return memory.readings(sin, range);
     } };
-    const api = await harness({ myMeralco: mockMyMeralcoSource(accounts), readingSource: source });
+    const api = await harness({
+      accounts, readingSource: source,
+      links: { [testLogins[0]!.email]: [...testLogins[0]!.households.map((h) => h.sin), OTHER_SMART], [testLogins[1]!.email]: ["5555555555"] },
+    });
     const token = await api.login();
     const first = await api.get(path(), token);
     const second = await api.get(path(undefined, OTHER_SMART), token);
@@ -194,7 +197,7 @@ describe("GET /api/households/:sin/readings", () => {
     expect(await api.get(path(undefined, OTHER_SMART), token)).toEqual({
       status: 502, body: { error: "Hindi makuha ang smart meter readings. Subukan ulit." },
     });
-    const otherOwner = await api.login("owner-b@example.test", "test-password-b");
+    const otherOwner = await api.login("owner-b@example.test");
     expect((await api.get(path(), otherOwner)).status).toBe(404);
   });
 
@@ -237,8 +240,8 @@ describe("default mock smart meter source", () => {
     expect((await source.describe("unknown")).available).toBeNull();
     expect(await source.readings("unknown", subset)).toEqual([]);
 
-    const api = await harness({ readingSource: source, myMeralco: mockMyMeralcoSource() });
-    const token = await api.login("demo@example.com", "kuryenteko-demo");
+    const api = await harness({ readingSource: source, accounts: DEMO_ACCOUNTS, links: { "demo@example.com": DEMO_ACCOUNTS.map((a) => a.sin) } });
+    const token = await api.login("demo@example.com");
     for (const [interval, duration] of [["hour", DAY_MS], ["day", 30 * DAY_MS], ["week", 84 * DAY_MS]] as const) {
       const response = await api.get(path({ interval }), token);
       expect(response.status).toBe(200);

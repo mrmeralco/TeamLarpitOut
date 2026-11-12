@@ -5,7 +5,14 @@
 export const RATE_SCHEDULES = Symbol("RATE_SCHEDULES");
 export const BILL_SOURCE = Symbol("BILL_SOURCE");
 export const VISION_PROVIDER = Symbol("VISION_PROVIDER");
-export const MY_MERALCO_SOURCE = Symbol("MY_MERALCO_SOURCE");
+/** Mock Meralco account API, keyed by Customer Account Number. */
+export const MERALCO_ACCOUNTS = Symbol("MERALCO_ACCOUNTS");
+/** Which login each Household is linked to (pending or active). */
+export const HOUSEHOLD_LINKS = Symbol("HOUSEHOLD_LINKS");
+/** Delivers email sign-in codes (demo: logs the code). */
+export const EMAIL_SENDER = Symbol("EMAIL_SENDER");
+/** Makes 6-digit sign-in codes (fixed in test mode). */
+export const SIGN_IN_CODE_GENERATOR = Symbol("SIGN_IN_CODE_GENERATOR");
 export const WEATHER_PROVIDER = Symbol("WEATHER_PROVIDER");
 export const READING_SOURCE = Symbol("READING_SOURCE");
 /** Injectable time source for session expiry. */

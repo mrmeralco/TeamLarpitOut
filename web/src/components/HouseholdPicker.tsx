@@ -13,6 +13,6 @@ export function HouseholdPicker({ households, selected, onSelect, onLogout }: {
           {maskSin(h.sin)} · {h.masked_address} · {h.meter_type === "smart" ? "Smart meter" : "Traditional meter"}
         </option>)}
       </select>
-    </label> : <p>Walang naka-link na Household sa My Meralco login na ito.</p>}
+    </label> : <p>Wala pang naka-link na Household.</p>}
   </section>;
 }

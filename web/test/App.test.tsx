@@ -13,7 +13,7 @@ const verdictResponse = (total = 50000) => ({
   now: { period: "2026-10", kwh: 200, billingDays: 31, rebuiltTotal: 200000, printedTotal: null, estimated: false, extras: [], extrasTotal: 0 },
   effects: [], lines: [], habitMeasurable: true, total, printedChange: null, extrasChange: 0, unexplained: null,
 });
-const expired = () => response({ error: "Mag-login muna gamit ang My Meralco." }, 401);
+const expired = () => response({ error: "Mag-sign in muna." }, 401);
 let fetchMock: Mock<(input: string, init?: RequestInit) => Promise<Response>>;
 let historyRequest: (sin: string) => Promise<Response>;
 let loginHouseholds = households;
@@ -36,7 +36,9 @@ beforeEach(() => {
   loginFails = false; failHistory = false;
   fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10", "2026-11"] });
-    if (input === "/api/auth/login") return loginFails ? response({ error: "Hindi tama ang email o password." }, 401) : response({ token: "test-session", households: loginHouseholds });
+    if (input === "/api/auth/email/start") return response({ sent: true, expiresInSeconds: 600 }, 202);
+    if (input === "/api/auth/email/verify") return loginFails ? response({ error: "Mali o expired na ang code. Humingi ng bagong code." }, 401) : response({ token: "test-session" });
+    if (input === "/api/households") return response(loginHouseholds);
     if (input === "/api/auth/logout") return new Response(null, { status: 204 });
     const match = /^\/api\/households\/([^/]+)\/bills$/.exec(input);
     if (match) return failHistory ? response({ error: "Hindi makuha ang Bill History. Subukan ulit." }, 502) : historyRequest(match[1]!);
@@ -93,10 +95,15 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-async function login() {
+async function enterCode(code = "123456") {
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "demo@example.com" } });
-  fireEvent.change(screen.getByLabelText("Password"), { target: { value: "kuryenteko-demo" } });
-  fireEvent.click(screen.getByRole("button", { name: "Mag-login" }));
+  fireEvent.click(screen.getByRole("button", { name: "Send code" }));
+  await screen.findByRole("heading", { name: "Check your email" });
+  fireEvent.change(screen.getByLabelText("Verification code"), { target: { value: code } });
+  fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+}
+async function login() {
+  await enterCode();
   await screen.findByRole("heading", { name: "Mga Household mo" });
 }
 function select(sin: string) { fireEvent.change(screen.getByLabelText("Piliin ang Household"), { target: { value: sin } }); }
@@ -204,7 +211,7 @@ describe("My Meralco PWA", () => {
     await waitFor(() => expect(resolveHistory).toBeTypeOf("function"));
     fireEvent.click(screen.getByRole("button", { name: "Mag-logout" }));
     await act(async () => resolveHistory(response(history(230))));
-    await screen.findByRole("heading", { name: "Mag-login gamit ang My Meralco" });
+    await screen.findByRole("heading", { name: "Sign in" });
     expect(screen.queryByRole("table")).toBeNull();
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/auth/logout")).toBe(true));
   });
@@ -236,18 +243,19 @@ describe("My Meralco PWA", () => {
   it("handles an empty Household list", async () => {
     loginHouseholds = [];
     render(<App />); await login();
-    expect(screen.getByText(/Walang naka-link na Household/)).toBeTruthy();
+    expect(screen.getByText(/Wala pang naka-link na Household/)).toBeTruthy();
     expect(screen.queryByLabelText("Piliin ang Household")).toBeNull();
   });
 
-  it("shows a login error and keeps the quick-verdict entry point available", async () => {
+  it("signs in with an emailed code and shows a wrong-code error", async () => {
     loginFails = true;
     render(<App />);
-    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "wrong@example.test" } });
-    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "wrong" } });
-    fireEvent.click(screen.getByRole("button", { name: "Mag-login" }));
-    await screen.findByText("Hindi tama ang email o password.");
-    expect(screen.getByRole("button", { name: /I-scan ang Bill/ })).toBeTruthy();
+    await enterCode("000000");
+    await screen.findByText("Mali o expired na ang code. Humingi ng bagong code.");
+    expect(fetchMock.mock.calls.find(([url]) => url === "/api/auth/email/start")![1]!.body).toBe(JSON.stringify({ email: "demo@example.com" }));
+    expect(screen.getByText(/resend code in 0:30/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Use a different email" }));
+    expect(screen.getByRole("heading", { name: "Sign in" })).toBeTruthy();
   });
 
   it("supports retry after a history error without keeping stale data", async () => {

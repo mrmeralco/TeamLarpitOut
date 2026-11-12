@@ -462,11 +462,7 @@ describe("GET /api/households/:sin/check", () => {
       bills: { [sin]: bills },
     });
 
-    const loginRes = await api.post("/api/auth/login", {
-      email: testLogins[0].email,
-      password: testLogins[0].password,
-    });
-    const token = loginRes.body.token;
+    const token = await api.login();
 
     const { status, body } = await api.get(`/api/households/${sin}/check`, token);
     expect(status).toBe(200);
@@ -527,11 +523,7 @@ describe("GET /api/households/:sin/check", () => {
       weather,
     });
 
-    const loginRes = await api.post("/api/auth/login", {
-      email: testLogins[0].email,
-      password: testLogins[0].password,
-    });
-    const token = loginRes.body.token;
+    const token = await api.login();
 
     // 1. Initial check: yellow badge because of usage outlier
     const res1 = await api.get(`/api/households/${sin}/check`, token);

@@ -50,6 +50,10 @@ pnpm typecheck
 
 ## API
 
+- `POST /api/auth/email/start` `{ email }` → `202 { sent, expiresInSeconds }`: sends a 6-digit code (demo sender logs only the code; `AUTH_FIXED_CODE` makes every code that value). Same answer for every email.
+- `POST /api/auth/email/verify` `{ email, code }` → `{ token }`, or `401` for a wrong, used or expired (10 min) code. Codes are stored hashed and work once; 5 wrong tries lock the code until a new start. A new login has no Households until one is linked.
+- `POST /api/auth/logout` (Bearer token) → `204`, revokes the session.
+- `GET  /api/households` (Bearer token) → the login's active Households.
 - `GET  /api/rate-schedules` → `{ periods }`
 - `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` → effects, total (centavos)
 - `POST /api/bills/laman` `{ now: Bill, before?: Bill }` → grouped charge lines, pass-through vs Meralco distribution split

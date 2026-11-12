@@ -106,7 +106,7 @@ describe("GET /api/households/:sin/home", () => {
     expect((await api.get(`/api/households/${TRADITIONAL}/home`)).status).toBe(401);
     expect((await api.get(`/api/households/${FOREIGN}/home`, token)).status).toBe(404);
     expect((await api.get(`/api/households/${SMART}/home`, token)).status).toBe(404);
-    const tokenB = await api.login(testLogins[1]!.email, testLogins[1]!.password);
+    const tokenB = await api.login(testLogins[1]!.email);
     expect((await api.get(`/api/households/${TRADITIONAL}/home`, tokenB)).status).toBe(404);
   });
 });

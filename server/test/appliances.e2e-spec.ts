@@ -220,7 +220,7 @@ describe("Household appliances", () => {
 
     // owner-b cannot read owner-a's list either.
     await api.put(`/api/households/${SIN}/appliances`, survey, token);
-    const tokenB = await api.login(testLogins[1]!.email, testLogins[1]!.password);
+    const tokenB = await api.login(testLogins[1]!.email);
     expect((await api.get(`/api/households/${SIN}/appliances`, tokenB)).status).toBe(404);
   });
 

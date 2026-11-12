@@ -223,7 +223,7 @@ describe("Household usage plan (Target + Missions for one billing period)", () =
   it("is only for the Household's owner", async () => {
     const { api, token } = await setup();
     await api.put(`/api/households/${SIN}/usage-plan`, { cut: 10, missionIds: ["ref-medium"] }, token);
-    const tokenB = await api.login(testLogins[1]!.email, testLogins[1]!.password);
+    const tokenB = await api.login(testLogins[1]!.email);
     expect((await api.get(`/api/households/${SIN}/usage-plan`, tokenB)).status).toBe(404);
     expect((await api.put(`/api/households/${FOREIGN_SIN}/usage-plan`, { cut: 10, missionIds: ["ref-medium"] }, token)).status).toBe(404);
   });

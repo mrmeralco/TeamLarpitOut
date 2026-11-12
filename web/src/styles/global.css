@@ -586,3 +586,11 @@ button.wide { width: 100%; margin-top: 10px; }
   border-radius: var(--radius);
   border: 1px solid var(--border);
 }
+
+/* Sign-in and link flow (one screen at a time) */
+.flow h2 { font-size: 1.5rem; letter-spacing: -0.02em; margin: 4px 0 6px; }
+.flow form { display: flex; flex-direction: column; gap: 12px; }
+.back { min-width: 44px; min-height: 44px; margin-left: -12px; border: 0; background: none; color: var(--foreground); font-size: 1.6rem; cursor: pointer; }
+.link { border: 0; background: none; padding: 0; color: var(--primary); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }
+.otp { font-size: 1.4rem; letter-spacing: 0.5em; text-align: center; font-weight: 600; }
+.small { font-size: 0.85rem; }

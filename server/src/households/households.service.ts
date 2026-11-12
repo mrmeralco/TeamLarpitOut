@@ -1,23 +1,32 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { MyMeralcoSource } from "../bills/myMeralcoSource.js";
-import { MY_MERALCO_SOURCE } from "../common/injection-tokens.js";
+import { toHousehold, type MeralcoAccountSource } from "../bills/meralco-accounts.js";
+import { HOUSEHOLD_LINKS, MERALCO_ACCOUNTS } from "../common/injection-tokens.js";
 import type { Household, HouseholdChange } from "../domain/household.js";
+import type { HouseholdLinkRepository } from "./household-link.repository.js";
 
 @Injectable()
 export class HouseholdsService {
   private readonly changes = new Map<string, HouseholdChange[]>();
 
-  constructor(@Inject(MY_MERALCO_SOURCE) private readonly meralco: MyMeralcoSource) {}
+  constructor(
+    @Inject(MERALCO_ACCOUNTS) private readonly meralco: MeralcoAccountSource,
+    @Inject(HOUSEHOLD_LINKS) private readonly links: HouseholdLinkRepository,
+  ) {}
 
+  /** Active Households of this login, with masked addresses and Meter Types from Meralco. */
   async list(ownerId: string): Promise<Household[]> {
-    const list = await this.meralco.households(ownerId);
-    return list.map((h) => {
-      const hhChanges = this.changes.get(h.sin);
-      return {
-        ...h,
+    const out: Household[] = [];
+    for (const link of await this.links.forOwner(ownerId)) {
+      if (link.status !== "active") continue;
+      const account = await this.meralco.household(link.sin);
+      if (!account) continue;
+      const hhChanges = this.changes.get(link.sin);
+      out.push({
+        ...toHousehold(account),
         ...(hhChanges && hhChanges.length > 0 ? { changes: structuredClone(hhChanges) } : {}),
-      };
-    });
+      });
+    }
+    return out;
   }
 
   async getChanges(sin: string): Promise<HouseholdChange[]> {

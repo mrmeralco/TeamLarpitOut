@@ -14,7 +14,7 @@ import {
   type ExtraLineItem,
   type ScanOutcome,
 } from "./api/client";
-import { MyMeralcoLogin } from "./components/MyMeralcoLogin";
+import { SignIn } from "./components/SignIn";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
@@ -372,7 +372,7 @@ export function App() {
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const selected = session?.households.find((h) => h.sin === selectedSin);
   const onExpired = useCallback(() => {
-    setSession(null); setSelectedSin(""); setSessionNotice("Nag-expire ang session. Mag-login ulit gamit ang My Meralco.");
+    setSession(null); setSelectedSin(""); setSessionNotice("Nag-expire ang session. Mag-sign in ulit.");
   }, []);
   useEffect(() => {
     if (!session) return;
@@ -498,7 +498,7 @@ export function App() {
         void api.logout(token).catch((err) => {
           if (!(err instanceof ApiError && err.status === 401)) setSessionNotice("Hindi makumpirma ang logout sa server. Na-clear na ang session sa device na ito; mag-e-expire ang token sa loob ng isang oras.");
         });
-      }} /> : <MyMeralcoLogin onLogin={(next) => { setSession(next); setSelectedSin(""); setSessionNotice(null); }} />}
+      }} /> : <SignIn onLogin={(next) => { setSession(next); setSelectedSin(""); setSessionNotice(null); }} />}
       {session && selected && <Home key={`home:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />}
       {session && selected && <BillHistory key={`${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <Result r={r} />} />}
       {session && selected?.meter_type === "smart" && <SmartMeterUsage key={`usage:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />}
