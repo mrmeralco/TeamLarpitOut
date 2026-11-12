@@ -32,7 +32,7 @@ Capitalised terms (Bill, Meter Type, Bill Check, Habit Effect, Verified Savings,
 | Is the bill right? | **Bill Checks** compare Meralco's own figures only; red → "Itanong kay Meralco" + copyable summary. **The app never files complaints** |
 | Bill explanation | Personal, line by line, on a redrawn Bill (beyond Meralco's general "Understand your bill" page) |
 | Appliances *(rev)* | Part of Household Setup: **tap the appliances you have** (with counts) and pick **one routine** for the whole home; typical kWh per appliance; total calibrated to the Bill. Aircon photo optional ([ADR-0006](../adr/0006-setup-by-tapping-appliances-and-one-routine.md)) |
-| Missions *(rev)* | Goal: **use 5% less electricity** this period. Code computes candidate Missions across all appliances; AI picks a plan of up to five that reaches ~5%, words it, and can shuffle or swap ([ADR-0007](../adr/0007-missions-as-a-five-percent-plan.md)). One billing period, verified by the next Bill. **Smart meter:** same plan, verified at the next Bill (daily window checks deferred, #18 closed) |
+| Missions *(rev)* | Goal: **use 5% less electricity** this period. Code computes candidate Missions across all appliances; AI picks a plan of up to five that reaches ~5%, words it, and can shuffle or swap ([ADR-0007](../adr/0007-missions-as-a-five-percent-plan.md)). One billing period, verified by the next Bill. **Smart meter:** same plan, verified every day from readings ([ADR-0008](../adr/0008-smart-meter-earns-daily-points.md)) |
 | Points | **1 point = ₱1 of Verified Savings**: weather- and days-adjusted, never self-reported, brownouts excluded |
 | Rewards | **Partner-funded** catalog (load, e-wallet, vouchers), sample items in the demo. Never a Meralco bill discount |
 | Forecast | Range from history + weather forecast; narrows with a Mid-month Reading (traditional, typed) or updates daily (smart meter) |
@@ -122,13 +122,13 @@ Code computes every value; the AI only picks the wording. Each `rate` without a 
 | Full loads only for washing | `loads_cut × kwh_per_load` | — (monthly only) | Label / survey |
 | Ref at medium setting, not max | `ref_kwh × r_ref` | — (monthly only) | `r_ref`: **assumption** |
 
-Missions marked "monthly only" are offered to smart meter homes too, verified at the Bill like traditional.
+Missions marked "monthly only" are offered to smart meter homes too; their savings show up in the day's total like every other Mission (ADR-0008).
 
 ### 2.6 Points and Rewards
 
 - **1 point = ₱1 of Verified Savings.** A Mission's peso value is also its expected points.
 - **Traditional:** at the next Bill, `points = cost(baseline) − cost(actual)` if positive, with the Baseline adjusted for weather and billing days.
-- **Smart meter:** at the next Bill, same as traditional. *(Future work: per Mission, daily `(baseline_window_kWh − actual_window_kWh) × ₱/kWh` for days the window condition is met; #18 closed for the hackathon.)*
+- **Smart meter ([ADR-0008](../adr/0008-smart-meter-earns-daily-points.md)):** every complete day after Missions start, `points = (expected_kWh(day's heat) − actual_kWh) × ₱/kWh` if positive; expected use is learned from the 28 days before the start. The Bill gives smart meter homes no Points. *(Future work: per-Mission window checks.)*
 - **Never self-reported.** Tapping "tapos na" earns nothing.
 - **Welcome Points (ADR-0004):** finishing Household Setup grants 100 pts once per Household, shown at once but locked until the first Verified Savings. Setup is the locked state of the Missions tab (household info, appliance tap grid, routine), reached from "Want to save on your next bill?"; Missions stay locked behind it.
 - **Brownouts excluded:** days (smart meter) or periods (traditional, from Meralco's record) with a recorded outage don't count.
@@ -228,7 +228,7 @@ smart meter:             projected recomputed daily from readings
 
 # ---------- Points ----------
 traditional: points = max(0, cost(baseline_kwh, days, sched) - cost(kwh_actual, days, sched))   # at next Bill
-smart meter: same as traditional, at the next Bill        # daily window Points: future work (#18)
+smart meter: points = max(0, (expected_kwh(cdd_day) - kwh_day) * per_kwh_rate)        # every complete day (ADR-0008); no Bill Points
 # self-reports earn nothing; outage periods excluded
 ```
 

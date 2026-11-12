@@ -400,11 +400,14 @@ export interface PointsHistoryEntry {
   id: string;
   sin?: string;
   period: string;
+  /** Smart meter daily entries only: the day the savings were measured (YYYY-MM-DD). */
+  day?: string;
   points: number;
   savedPesos: number;
   savedKwh: number;
   baselineKwh: number;
   actualKwh: number;
+  /** "bill_verified" (traditional, per Bill), "meter_verified" (smart meter, per day), "welcome", "redemption". */
   source: string;
   hasOutage: boolean;
   excludedReason?: string | null;
@@ -445,6 +448,8 @@ export interface RewardsCatalogResult {
   tag: string;
   disclaimer: string;
   catalog: CatalogRewardItem[];
+  /** Latest Points earned, newest first. */
+  earned?: PointsHistoryEntry[];
   redemptions: PointsHistoryEntry[];
 }
 

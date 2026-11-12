@@ -10,6 +10,7 @@ export class InMemoryPointsRepository implements PointsRepository {
 
   async addEntry(sin: string, entry: PointsEntry): Promise<void> {
     const list = this.byHousehold.get(sin) ?? [];
+    if (list.some((e) => e.id === entry.id)) return;
     list.push(structuredClone(entry));
     this.byHousehold.set(sin, list);
   }

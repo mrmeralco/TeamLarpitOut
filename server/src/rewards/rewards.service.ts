@@ -37,6 +37,8 @@ export class RewardsService {
     });
 
     const redemptions = pointsData.history.filter((e) => e.source === "redemption");
+    /** Latest Points earned (Bill, smart meter day or Welcome), newest first. */
+    const earned = pointsData.history.filter((e) => e.source !== "redemption").slice(0, 10);
 
     return {
       sin,
@@ -46,6 +48,7 @@ export class RewardsService {
       tag: "sample rewards" as const,
       disclaimer: "Partner-funded sample rewards. Not a deduction or discount on your Meralco bill.",
       catalog,
+      earned,
       redemptions,
     };
   }
@@ -59,7 +62,7 @@ export class RewardsService {
     const pointsData = await this.usagePlan.getPoints(sin);
     if (pointsData.balance >= reward.pointsCost && pointsData.spendable < reward.pointsCost) {
       throw new BadRequestException({
-        error: `${pointsData.lockedPoints} Welcome Points are locked until your first Verified Savings on a coming Bill.`,
+        error: `${pointsData.lockedPoints} Welcome Points are locked until your first Verified Savings.`,
         reason: "welcomePointsLocked",
         balance: pointsData.balance,
         lockedPoints: pointsData.lockedPoints,

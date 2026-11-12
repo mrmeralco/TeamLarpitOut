@@ -8,8 +8,10 @@ const STEP_TEXT: Record<SetupStatus["steps"][number]["key"], { title: string; hi
 };
 
 /** The locked state of the Missions tab (mockup screen 9): a persistent checklist, never a dismissable dialog. */
-export function SetupChecklist({ status, onStep, onIntro }: {
+export function SetupChecklist({ status, onStep, onIntro, smart = false }: {
   status: SetupStatus;
+  /** Smart meter homes earn daily, not at the next bill (ADR-0008). */
+  smart?: boolean;
   onStep: (key: SetupStatus["steps"][number]["key"]) => void;
   onIntro: () => void;
 }) {
@@ -17,7 +19,7 @@ export function SetupChecklist({ status, onStep, onIntro }: {
     <section className="setup" aria-labelledby="setup-title">
       <span className="muted small">Manage your usage</span>
       <h2 id="setup-title">Save on next month's bill and get rewarded</h2>
-      <p className="muted small">Every ₱1 you save, verified on your next bill, earns 1 point you can redeem for load, e-wallet credit and vouchers. <button type="button" className="link" onClick={onIntro}>How it works</button></p>
+      <p className="muted small">Every ₱1 you save, verified {smart ? "every day by your smart meter" : "on your next bill"}, earns 1 point you can redeem for load, e-wallet credit and vouchers. <button type="button" className="link" onClick={onIntro}>How it works</button></p>
       <div className="card setup-card">
         <div className="card-head">
           <div>

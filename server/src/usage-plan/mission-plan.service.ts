@@ -73,18 +73,19 @@ export class MissionPlanService {
       targetPesos: goal.targetPesos,
       airconSetting: null,
       missions: plan.missions.map((m) => ({ id: m.id, title: plan.wording[m.id]?.title ?? m.title, kwhSaved: m.kwhSaved, pesoValue: m.pesoValue })),
-      createdAt: new Date().toISOString(),
       source: plan.source,
       wording: plan.wording,
       shown: [...shown, plan.missions.map((m) => m.id)],
+      ...(await this.usagePlan.planStartedAt(sin)),
     };
     return this.plans.save(sin, stored);
   }
 
-  private present(period: string, goal: Awaited<ReturnType<MissionPlanService["candidates"]>>["goal"], candidates: Candidate[], stored: UsagePlan, extra: Record<string, unknown> = {}) {
+  private async present(sin: string, period: string, goal: Awaited<ReturnType<MissionPlanService["candidates"]>>["goal"], candidates: Candidate[], stored: UsagePlan, extra: Record<string, unknown> = {}) {
     const byId = new Map(candidates.map((c) => [c.id, c]));
     const missions = stored.missions.map((m) => byId.get(m.id)).filter((c): c is Candidate => Boolean(c));
     const covered = planCoverage(missions);
+    const smart = await this.usagePlan.isSmartMeter(sin);
     return {
       currency: "PHP-centavos",
       period,
@@ -107,7 +108,9 @@ export class MissionPlanService {
         basis: m.basis,
         assumptions: m.assumptions,
       })),
-      points: "Points are counted on your whole bill, not per mission: at the next Bill, savings below the weather- and days-adjusted Baseline earn 1 point per ₱1.",
+      points: smart
+        ? "Points are counted on your whole day, not per mission: every day, smart meter savings below your usual use for that day's heat earn 1 point per ₱1."
+        : "Points are counted on your whole bill, not per mission: at the next Bill, savings below the weather- and days-adjusted Baseline earn 1 point per ₱1.",
       ...extra,
     };
   }
@@ -119,7 +122,7 @@ export class MissionPlanService {
     if (!stored || stored.period !== target.period || !stored.missions.every((m) => candidates.some((c) => c.id === m.id))) {
       stored = await this.save(sin, target.period, goal, await this.pick(candidates, [], () => fallbackPlan(candidates)), []);
     }
-    return this.present(target.period, goal, candidates, stored);
+    return this.present(sin, target.period, goal, candidates, stored);
   }
 
   /** Another combination when one exists; otherwise the same plan with `changed: false`. */
@@ -148,10 +151,10 @@ export class MissionPlanService {
     const next = await this.pick(candidates, avoid, () => fallback ?? none);
     const nextIds = next.missions.map((m) => m.id);
     if (!next.missions.length || [...nextIds].sort().join(",") === [...currentIds].sort().join(",")) {
-      return this.present(target.period, goal, candidates, current, { changed: false });
+      return this.present(sin, target.period, goal, candidates, current, { changed: false });
     }
     const stored = await this.save(sin, target.period, goal, next, fallback ? shown : []);
-    return this.present(target.period, goal, candidates, stored, { changed: true });
+    return this.present(sin, target.period, goal, candidates, stored, { changed: true });
   }
 
   /** Replaces one Mission and keeps the others. */
@@ -173,6 +176,6 @@ export class MissionPlanService {
     wording[replacement.id] = { title: replacement.title, why: replacement.why };
     const plan: Plan = { missions, wording, covered: planCoverage(missions), source: current.source === "ai" ? "ai" : "fallback" };
     const stored = await this.save(sin, target.period, goal, plan, current.shown ?? []);
-    return this.present(target.period, goal, candidates, stored, { swapped: { out: missionId, in: replacement.id } });
+    return this.present(sin, target.period, goal, candidates, stored, { swapped: { out: missionId, in: replacement.id } });
   }
 }

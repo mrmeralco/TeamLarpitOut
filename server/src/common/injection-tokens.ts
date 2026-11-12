@@ -39,3 +39,5 @@ export const SETUP_REPOSITORY = Symbol("SETUP_REPOSITORY");
 export const DATABASE = Symbol("DATABASE");
 /** Retrieval over Meralco's public bill guide (the ML service's /rag/search). */
 export const KNOWLEDGE_SOURCE = Symbol("KNOWLEDGE_SOURCE");
+/** Wall clock for Mission Plans and daily Points (see common/clock.ts). */
+export const CLOCK = Symbol("CLOCK");

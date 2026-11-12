@@ -6,7 +6,7 @@ import { findAppliance, UNKNOWN } from "../domain/appliance-catalog.js";
 import type { Household } from "../domain/household.js";
 import { appliancesFromGrid, GRID_TYPES, gridCatalog, MAX_PER_TYPE, routineHours, type GridType } from "../domain/routine-presets.js";
 import { VisionUnavailableError, type BillImage, type VisionProvider } from "../vision/vision-provider.interface.js";
-import { WELCOME_POINTS } from "../domain/welcome-points.js";
+import { hasVerifiedSavings, WELCOME_POINTS } from "../domain/welcome-points.js";
 import type { PointsRepository } from "../usage-plan/points-repository.interface.js";
 import type { AirconPattern, HomePattern, SetupRecord, SetupRepository } from "./setup-repository.js";
 
@@ -49,7 +49,7 @@ export class SetupService {
     if (complete && !record.completedAt) await this.complete(sin, record);
     const entries = await this.points.getEntries(sin);
     const welcome = entries.find((e) => e.source === "welcome");
-    const unlocked = entries.some((e) => e.source === "bill_verified" && e.points > 0);
+    const unlocked = hasVerifiedSavings(entries);
     return {
       steps,
       doneCount,
