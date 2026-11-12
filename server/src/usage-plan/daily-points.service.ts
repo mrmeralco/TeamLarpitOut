@@ -45,18 +45,24 @@ export class DailyPointsService {
    * yesterday, that has no entry yet. Today is still running, so it waits for tomorrow. A day
    * missing readings or heat is left for a later visit; a reading or weather failure adds nothing.
    */
-  async settle(sin: string, perKwhRate: number): Promise<void> {
-    const plan = await this.plans.find(sin);
+  async settle(sin: string, perKwhRate: number, opts?: { recalculate?: boolean }): Promise<void> {
+    let plan = await this.plans.find(sin);
     if (!plan) return;
-    const startDay = manilaDate(Date.parse(plan.startedAt ?? plan.createdAt));
-    const first = addDays(startDay, 1);
     const end = manilaDate(this.clock.now());
+    const monthFirst = `${end.slice(0, 7)}-01`;
+    let startDay = manilaDate(Date.parse(plan.startedAt ?? plan.createdAt));
+    if (plan.source && startDay >= end && monthFirst < end) {
+      const monthStartIso = `${monthFirst}T00:00:00+08:00`;
+      plan = await this.plans.save(sin, { ...plan, startedAt: monthStartIso });
+      startDay = monthFirst;
+    }
+    const first = addDays(startDay, 1);
     if (first >= end) return;
 
     const settled = new Set(
       (await this.points.getEntries(sin)).filter((e) => e.source === "meter_verified").map((e) => e.day),
     );
-    if (datesBetween(first, end).every((date) => settled.has(date))) return;
+    if (!opts?.recalculate && datesBetween(first, end).every((date) => settled.has(date))) return;
 
     const referenceFrom = addDays(startDay, -REFERENCE_DAYS);
     let usage: Map<string, number>;
@@ -82,7 +88,7 @@ export class DailyPointsService {
     if (!reference) return;
 
     for (const day of complete(first, end)) {
-      if (settled.has(day.date)) continue;
+      if (!opts?.recalculate && settled.has(day.date)) continue;
       const hasOutage = await this.outages.hasOutageOn(sin, day.date);
       const result = computeDailySavings({ day, reference, perKwhRate, hasOutage });
       const label = dayLabel(day.date);
