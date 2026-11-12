@@ -10,7 +10,7 @@ import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
 import { Appliances } from "./components/Appliances";
-import { UsagePlan } from "./components/UsagePlan";
+import { MissionPlan, PlanSummaryCard } from "./components/MissionPlan";
 import { Forecast } from "./components/Forecast";
 import { Home } from "./components/Home";
 import { Rewards } from "./components/Rewards";
@@ -119,10 +119,7 @@ export function App() {
         {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
         {tab === "home" && <>
           <Home key={`home:${key}`} token={session.token} household={selected} onExpired={onExpired} onSave={() => go("missions", "save")}
-            saveCard={setup?.complete ? <button type="button" className="save-card" onClick={() => go("missions")}>
-              <span><strong>Your missions are ready</strong><span>Use 5% less electricity and earn points on your next bill.</span></span>
-              <span aria-hidden="true">→</span>
-            </button> : undefined}
+            saveCard={setup?.complete ? <PlanSummaryCard token={session.token} sin={selected.sin} onOpen={() => go("missions")} /> : undefined}
             onAskCharge={(line, summary) => setAsking({
               line,
               previousMonth: summary.bakitGanito ? new Date(`${summary.bakitGanito.previousPeriod}-01T00:00:00`).toLocaleDateString("en-PH", { month: "long" }) : null,
@@ -136,10 +133,10 @@ export function App() {
           setup={setup} onSetup={(s) => { setSetup(s); setApplianceVersion((v) => v + 1); }} onExpired={onExpired}
           appliancesStep={(done, back) => setup && <SetupAppliances token={session.token} sin={selected.sin} status={setup} onSaved={done} onBack={back} onExpired={onExpired} />}
           routineAgreement={(aircon) => <AirconAgreement token={session.token} sin={selected.sin} aircon={aircon} />}>
-          {selected.meter_type === "traditional" ? <>
-            <UsagePlan key={`plan:${key}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />
-            <Forecast key={`forecast:${key}`} token={session.token} household={selected} onExpired={onExpired} />
-          </> : <section className="card"><h2>Missions</h2><p className="muted">Ang Missions para sa smart meter ay sinusukat din sa susunod na Bill.</p></section>}
+          <MissionPlan key={`plan:${key}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired}
+            missionId={route.sub[0] === "m" ? route.sub[1] : undefined} onOpen={(id) => go("missions", "m", id)} onBack={() => go("missions")}>
+            {selected.meter_type === "traditional" && <Forecast key={`forecast:${key}`} token={session.token} household={selected} onExpired={onExpired} />}
+          </MissionPlan>
         </MissionsTab>}
         {tab === "rewards" && <Rewards key={`rewards:${key}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => setRewardsVersion((v) => v + 1)} />}
         {tab === "account" && <>

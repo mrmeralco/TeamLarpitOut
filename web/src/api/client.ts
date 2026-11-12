@@ -753,3 +753,41 @@ export const setupApi = {
       method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ home, aircon }),
     }).then((r) => json<SetupStatus>(r)),
 };
+
+export interface PlanMission {
+  id: string;
+  title: string;
+  why: string;
+  how: string[];
+  appliance: string;
+  kwhSaved: number;
+  /** Centavos. */
+  pesoValue: number;
+  /** Percent of the Baseline (the goal is 5). */
+  percent: number;
+  /** Share of the 5% goal. */
+  share: number;
+  effort: "Easy" | "Medium";
+  basis: "physics" | "assumption";
+  assumptions: { key: string; label: string; value: number }[];
+}
+export interface MissionPlan {
+  period: string;
+  goal: { cut: number; kwh: number; pesos: number; baselineKwh: number; targetKwh: number; targetPesos: number };
+  covered: number;
+  coveredPercent: number;
+  source: "ai" | "fallback";
+  missions: PlanMission[];
+  points: string;
+  changed?: boolean;
+  swapped?: { out: string; in: string };
+}
+
+const missionPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/missions`;
+export const missionPlanApi = {
+  get: (token: string, sin: string, signal?: AbortSignal) => fetch(`${missionPath(sin)}/plan`, authed(token, signal)).then((r) => json<MissionPlan>(r)),
+  shuffle: (token: string, sin: string) =>
+    fetch(`${missionPath(sin)}/plan/shuffle`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then((r) => json<MissionPlan>(r)),
+  swap: (token: string, sin: string, id: string) =>
+    fetch(`${missionPath(sin)}/${encodeURIComponent(id)}/swap`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then((r) => json<MissionPlan>(r)),
+};

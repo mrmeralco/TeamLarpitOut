@@ -53,6 +53,11 @@ beforeEach(() => {
     if (input === "/api/households") return response(loginHouseholds);
     if (input === "/api/households/link") return response({ pending: null });
     if (/^\/api\/households\/[^/]+\/setup$/.test(input)) return response(setup);
+    if (/^\/api\/households\/[^/]+\/missions\/plan$/.test(input)) return response({
+      period: "2026-11", goal: { cut: 5, kwh: 31, pesos: 34100, baselineKwh: 620, targetKwh: 589, targetPesos: 600000 }, covered: 1, coveredPercent: 5,
+      source: "fallback", points: "Points are counted on your whole bill.",
+      missions: [{ id: "aircon-off-1h", title: "Turn off the aircon 1 hour earlier", why: "Why.", how: ["Do it."], appliance: "aircon", kwhSaved: 18.6, pesoValue: 20800, percent: 3, share: 0.6, effort: "Easy", basis: "physics", assumptions: [] }],
+    });
     if (/^\/api\/households\/[^/]+\/setup\/household$/.test(input)) {
       setup = setupStatus([true, setup.steps[1]!.done, setup.steps[2]!.done]);
       return response(setup);
@@ -159,15 +164,17 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[1]!.sin);
     await screen.findByText("12.345 kWh");
     expect(screen.getByRole("cell", { name: "370" })).toBeTruthy();
-    expect(await screen.findByRole("button", { name: /Your missions are ready/ })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /Your plan: use 5% less electricity/ })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan")).toBe(false);
     await goTab("Missions");
-    expect(screen.queryByRole("heading", { name: "Target at Missions" })).toBeNull();
+    // Smart meter Households get the same 5% plan (ADR-0007), without the typed-reading Forecast.
+    expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => url === `/api/households/${households[1]!.sin}/forecast`)).toBe(false);
     await select(households[0]!.sin);
     expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
     await screen.findByRole("cell", { name: "230" });
     await goTab("Missions");
-    expect(await screen.findByRole("heading", { name: "Target at Missions" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
     await goTab("Account");
     expect(await screen.findByRole("heading", { name: "Mga appliance sa bahay" })).toBeTruthy();
     expect(fetchMock.mock.calls.filter(([url]) => url.includes("/readings"))).toHaveLength(1);
@@ -299,7 +306,7 @@ describe("My Meralco PWA", () => {
     expect(window.location.hash).toBe("");
     await screen.findByRole("cell", { name: "230" });
     await goTab("Missions");
-    expect(await screen.findByRole("heading", { name: "Target at Missions" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
     await goTab("Rewards");
     expect(await screen.findByRole("heading", { name: "Rewards" })).toBeTruthy();
@@ -334,7 +341,7 @@ describe("My Meralco PWA", () => {
   it("session expiry from any tab returns to sign-in with the notice", async () => {
     render(<App />); await login();
     const originalFetch = fetchMock.getMockImplementation()!;
-    fetchMock.mockImplementation(async (input, init) => /\/(target|usage-plan|forecast|missions)$/.test(input) ? expired() : originalFetch(input, init));
+    fetchMock.mockImplementation(async (input, init) => /\/(target|usage-plan|forecast|missions|plan)$/.test(input) ? expired() : originalFetch(input, init));
     await goTab("Missions");
     await screen.findByRole("heading", { name: "Sign in" });
     expect(screen.getByText(/Nag-expire ang session/)).toBeTruthy();
@@ -360,7 +367,7 @@ describe("My Meralco PWA", () => {
     expect(await screen.findByRole("heading", { name: "Set up your home" })).toBeTruthy();
     expect(screen.getByText("0 of 3 complete · about 2 minutes")).toBeTruthy();
     expect(screen.getByText("🔒 Your missions unlock after setup")).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Target at Missions" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Use 5% less electricity" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Your household/ }));
     expect(await screen.findByRole("heading", { name: "Who lives there?" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "More people" }));
