@@ -93,7 +93,8 @@ export function ScanBill({ token, onLinked, onExpired, onBack }: {
   const blocked = account?.status === "ownedByAnother" || account?.status === "unknownAccount";
   const ready = !blocked && (!canUnread || typedCan.replace(/\D/g, "").length === 10);
   const tag = account?.status === "found" || account?.status === "alreadyLinked"
-    ? <span className="tag-ok">{account.status === "alreadyLinked" ? "Already linked" : "Read from your bill"}</span>
+    ? account.demo ? <span className="tag-warn">Demo account</span>
+      : <span className="tag-ok">{account.status === "alreadyLinked" ? "Already linked" : "Read from your bill"}</span>
     : canUnread ? <span className="tag-warn">CAN not read</span>
       : blocked ? <span className="tag-bad">{account?.status === "ownedByAnother" ? "Linked to another login" : "Account not found"}</span> : null;
   const rows: { key: string; label: string; before: string; now: string }[] = [
@@ -127,6 +128,8 @@ export function ScanBill({ token, onLinked, onExpired, onBack }: {
       <label className="field-label" htmlFor="typed-can">Type the CAN printed on this bill</label>
       <input id="typed-can" className="input-lg" inputMode="numeric" maxLength={20} value={typedCan} onChange={(e) => setTypedCan(e.target.value.replace(/[^\d\s-]/g, ""))} />
     </div>}
+    {(account?.status === "found" || account?.status === "alreadyLinked") && account.demo &&
+      <p className="notice-inline" role="status">Demo mode: this CAN isn't in the demo Meralco data, so confirming opens the sample {account.area} household. Its bills are sample values, not your bill.</p>}
     {account?.status === "ownedByAnother" && <p className="notice-inline" role="alert">{account.message}</p>}
     {account?.status === "unknownAccount" && <p className="notice-inline" role="alert">No Meralco account has this CAN. Retake the photo so the CAN is clear.</p>}
     <div className="compare">
