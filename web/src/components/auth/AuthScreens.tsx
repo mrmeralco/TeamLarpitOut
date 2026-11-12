@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api, type CodeSent } from "../../api/client";
+import { EelioMascot } from "./EelioMascot";
 
 /** Icons drawn as in the mockup (stroke, currentColor). */
 const ICON = {
@@ -55,7 +56,10 @@ export function SignUp({ onCodeSent, onSignIn }: { onCodeSent: (email: string, s
   }
 
   return <form className="screen top" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-    <Brand />
+    <div className="auth-hero">
+      <Brand />
+      <EelioMascot className="auth-mascot-mobile" />
+    </div>
     <div className="screen-intro">
       <h1 className="big">Create your account</h1>
       <p className="lead">See why your bill changed, check it against Meralco's own figures, and earn rewards when you use less.</p>
@@ -257,7 +261,6 @@ export function SignIn({ notice, onSignedIn, onSignUp }: { notice?: string | nul
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
-  const [forgot, setForgot] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -269,7 +272,10 @@ export function SignIn({ notice, onSignedIn, onSignUp }: { notice?: string | nul
   }
 
   return <form className="screen top" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-    <Brand />
+    <div className="auth-hero">
+      <Brand />
+      <EelioMascot className="auth-mascot-mobile" />
+    </div>
     <div className="screen-intro spaced">
       <h1 className="big">Welcome back</h1>
       <p className="lead">Sign in to see your latest bill, your missions and your points.</p>
@@ -278,15 +284,11 @@ export function SignIn({ notice, onSignedIn, onSignUp }: { notice?: string | nul
     <div className="screen-bottom">
       <label className="field-label" htmlFor="signin-email">Gmail address</label>
       <input id="signin-email" className="input-lg" type="email" autoComplete="username" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
-      <div className="label-row">
-        <label className="field-label" htmlFor="signin-password">Password</label>
-        <button type="button" className="link small" onClick={() => setForgot((v) => !v)}>Forgot password?</button>
-      </div>
+      <label className="field-label" htmlFor="signin-password">Password</label>
       <div className="pw-wrap">
         <input id="signin-password" className="input-lg" type={show ? "text" : "password"} autoComplete="current-password" required maxLength={128} value={password} onChange={(e) => setPassword(e.target.value)} />
-        <button type="button" className="pw-toggle" aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} onClick={() => setShow((v) => !v)}><Icon d={ICON.eye} /></button>
+        <button type="button" className="pw-toggle" tabIndex={-1} aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} onClick={() => setShow((v) => !v)}><Icon d={ICON.eye} /></button>
       </div>
-      {forgot && <p className="small muted" role="status">Password reset isn't available in the demo yet.</p>}
       {error && <p className="error" role="alert">{error}</p>}
       <button className="btn-primary" disabled={busy || !email.trim() || !password}>{busy ? "Signing in…" : "Sign in"}</button>
       <p className="screen-switch">Don't have an account? <button type="button" className="link" onClick={onSignUp}>Sign up</button></p>

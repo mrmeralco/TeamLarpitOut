@@ -114,8 +114,6 @@ describe("Sign in", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "rosa2026x" } });
     fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
     await waitFor(() => expect(onSignedIn).toHaveBeenCalledWith("session"));
-    fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
-    await act(async () => {});
-    expect(screen.getByText(/Password reset isn't available in the demo yet/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Forgot password?" })).toBeNull();
   });
 });
