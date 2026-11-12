@@ -1,15 +1,24 @@
 import {
   BadGatewayException,
   BadRequestException,
+  Body,
   Controller,
+  Header,
   HttpCode,
   Module,
   Post,
+  Req,
   ServiceUnavailableException,
   UnprocessableEntityException,
   UploadedFile,
   UseInterceptors,
+  UseGuards,
 } from "@nestjs/common";
+import { SessionGuard, type AuthenticatedRequest } from "../auth/session.guard.js";
+import { HouseholdsModule } from "../households/households.module.js";
+import { HouseholdsService } from "../households/households.service.js";
+import { ScanContextStore } from "./scan-context.store.js";
+import { ScanLinkageDto } from "./scan-linkage.dto.js";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { VISION_PROVIDER } from "../tokens.js";
 import { BillScanService } from "./bill-scan.service.js";
@@ -21,14 +30,26 @@ const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "ima
 
 @Controller("bills")
 export class BillScanController {
-  constructor(private readonly scanner: BillScanService) {}
+  constructor(private readonly scanner: BillScanService, private readonly contexts: ScanContextStore, private readonly households: HouseholdsService) {}
+
+  @Post("scan-linkage")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  @UseGuards(SessionGuard)
+  async linkage(@Body() body: ScanLinkageDto, @Req() request: AuthenticatedRequest) {
+    const sin = this.contexts.sin(body.scanToken);
+    if (sin === null) return { status: "unknown" };
+    const linked = (await this.households.list(request.auth.ownerId)).some((h) => h.sin === sin);
+    return linked ? { status: "linked", householdSin: sin } : { status: "unlinked" };
+  }
 
   /**
-   * Read a Bill photo into an editable draft. Stateless: nothing is saved or
-   * decoded here; the client sends the confirmed Bill to /api/bakit-ganito.
+   * Read a Bill photo into an editable draft. Only a short-lived identity
+   * reference is retained; no image or Bill is saved or decoded here.
    */
   @Post("scan")
   @HttpCode(200)
+  @Header("Cache-Control", "no-store")
   @UseInterceptors(FileInterceptor("photo", { limits: { fileSize: MAX_BYTES } }))
   async scan(@UploadedFile() photo?: Express.Multer.File) {
     if (!photo) throw new BadRequestException({ error: "Walang litrato (field: photo)" });
@@ -52,7 +73,8 @@ export class BillScanController {
 }
 
 @Module({
+  imports: [HouseholdsModule],
   controllers: [BillScanController],
-  providers: [BillScanService, { provide: VISION_PROVIDER, useFactory: () => new GeminiVisionProvider() }],
+  providers: [BillScanService, ScanContextStore, { provide: VISION_PROVIDER, useFactory: () => new GeminiVisionProvider() }],
 })
 export class VisionModule {}

@@ -1,0 +1,1600 @@
+{
+  "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending.",
+  "climateSource": "Invented seasonal CDD values for the demo; not Open-Meteo observations.",
+  "households": [
+    {
+      "sin": "1234567890",
+      "bills": [
+        {
+          "period": "2025-12",
+          "kwh": 202,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1363.72
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 209.07
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 125.44
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 276.98
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 99.99
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 65.25
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 45.73
+            },
+            {
+              "label": "FIT-All",
+              "amount": 16.93
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.32
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 199.37
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-01-10",
+          "previousReading": 10000,
+          "presentReading": 10202,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-01",
+          "kwh": 199,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1354.89
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 205.96
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 123.58
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 272.87
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 98.51
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 64.28
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 45.05
+            },
+            {
+              "label": "FIT-All",
+              "amount": 16.68
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.32
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 196.41
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-02-10",
+          "previousReading": 10202,
+          "presentReading": 10401,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-02",
+          "kwh": 201,
+          "billingDays": 28,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1380.07
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 208.04
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 124.82
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 275.61
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 99.5
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 64.92
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 45.51
+            },
+            {
+              "label": "FIT-All",
+              "amount": 16.84
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.32
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 198.39
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-03-10",
+          "previousReading": 10401,
+          "presentReading": 10602,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-03",
+          "kwh": 257,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1779.31
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 266
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 159.6
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 352.4
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 127.22
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 83.01
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 58.18
+            },
+            {
+              "label": "FIT-All",
+              "amount": 21.54
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.41
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 253.66
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-04-10",
+          "previousReading": 10602,
+          "presentReading": 10859,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-04",
+          "kwh": 285,
+          "billingDays": 30,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1989.56
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 294.97
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 176.99
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 390.79
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 141.07
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 92.06
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 64.52
+            },
+            {
+              "label": "FIT-All",
+              "amount": 23.88
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.46
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 281.3
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-05-10",
+          "previousReading": 10859,
+          "presentReading": 11144,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-05",
+          "kwh": 304,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2139.67
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 314.64
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 188.78
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 416.84
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 150.48
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 98.19
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 68.83
+            },
+            {
+              "label": "FIT-All",
+              "amount": 25.48
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.49
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 300.05
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-06-10",
+          "previousReading": 11144,
+          "presentReading": 11448,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-06",
+          "kwh": 261,
+          "billingDays": 30,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1852
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 270.14
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 162.08
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 357.88
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 129.2
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 84.3
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 59.09
+            },
+            {
+              "label": "FIT-All",
+              "amount": 21.87
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.42
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 257.61
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-07-10",
+          "previousReading": 11448,
+          "presentReading": 11709,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-07",
+          "kwh": 257,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1838.4
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 266
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 159.6
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 352.4
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 127.22
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 83.01
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 58.18
+            },
+            {
+              "label": "FIT-All",
+              "amount": 21.54
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.41
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 253.66
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-08-10",
+          "previousReading": 11709,
+          "presentReading": 11966,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-08",
+          "kwh": 253,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1824.31
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 261.85
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 157.11
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 346.91
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 125.24
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 81.72
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 57.28
+            },
+            {
+              "label": "FIT-All",
+              "amount": 21.2
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.4
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 249.71
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-09-10",
+          "previousReading": 11966,
+          "presentReading": 12219,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-09",
+          "kwh": 220,
+          "billingDays": 30,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1580.04
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 227.7
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 136.62
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 301.66
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 108.9
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 71.06
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 49.81
+            },
+            {
+              "label": "FIT-All",
+              "amount": 18.44
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.35
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 217.14
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-10-10",
+          "previousReading": 12219,
+          "presentReading": 12439,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        },
+        {
+          "period": "2026-10",
+          "kwh": 250,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1862.75
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 261.75
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 161.38
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 342.8
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 123.75
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 80.75
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 56.6
+            },
+            {
+              "label": "FIT-All",
+              "amount": 20.95
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.4
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 255.38
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-11-10",
+          "previousReading": 12439,
+          "presentReading": 12689,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        },
+        {
+          "period": "2026-11",
+          "kwh": 230,
+          "billingDays": 30,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 1615.29
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 232.76
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 139.15
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 315.38
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 113.85
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 74.29
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 52.07
+            },
+            {
+              "label": "FIT-All",
+              "amount": 19.27
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.37
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 222.18
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-12-10",
+          "previousReading": 12689,
+          "presentReading": 12919,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        }
+      ]
+    },
+    {
+      "sin": "9876543210",
+      "bills": [
+        {
+          "period": "2025-12",
+          "kwh": 315,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2126.6
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 326.02
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 195.62
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 431.93
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 155.93
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 101.75
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 71.32
+            },
+            {
+              "label": "FIT-All",
+              "amount": 26.4
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.5
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 310.9
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-01-10",
+          "previousReading": 20000,
+          "presentReading": 20315,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-01",
+          "kwh": 309,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2103.83
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 319.82
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 191.89
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 423.7
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 152.96
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 99.81
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 69.96
+            },
+            {
+              "label": "FIT-All",
+              "amount": 25.89
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.49
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 304.98
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-02-10",
+          "previousReading": 20315,
+          "presentReading": 20624,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-02",
+          "kwh": 318,
+          "billingDays": 28,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2183.39
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 329.13
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 197.48
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 436.04
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 157.41
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 102.71
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 72
+            },
+            {
+              "label": "FIT-All",
+              "amount": 26.65
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.51
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 313.87
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-03-10",
+          "previousReading": 20624,
+          "presentReading": 20942,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-03",
+          "kwh": 414,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2866.29
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 428.49
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 257.09
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 567.68
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 204.93
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 133.72
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 93.73
+            },
+            {
+              "label": "FIT-All",
+              "amount": 34.69
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.66
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 408.62
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-04-10",
+          "previousReading": 20942,
+          "presentReading": 21356,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-04",
+          "kwh": 467,
+          "billingDays": 30,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 3260.08
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 483.35
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 290.01
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 640.35
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 231.17
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 150.84
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 105.73
+            },
+            {
+              "label": "FIT-All",
+              "amount": 39.13
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.75
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 460.93
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-05-10",
+          "previousReading": 21356,
+          "presentReading": 21823,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-05",
+          "kwh": 501,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 3526.24
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 518.54
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 311.12
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 686.97
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 248
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 161.82
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 113.43
+            },
+            {
+              "label": "FIT-All",
+              "amount": 41.98
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.8
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 494.49
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-06-10",
+          "previousReading": 21823,
+          "presentReading": 22324,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-06",
+          "kwh": 425,
+          "billingDays": 30,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 3015.71
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 439.87
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 263.93
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 582.76
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 210.38
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 137.28
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 96.22
+            },
+            {
+              "label": "FIT-All",
+              "amount": 35.62
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.68
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 419.48
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-07-10",
+          "previousReading": 22324,
+          "presentReading": 22749,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-07",
+          "kwh": 414,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2961.47
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 428.49
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 257.09
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 567.68
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 204.93
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 133.72
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 93.73
+            },
+            {
+              "label": "FIT-All",
+              "amount": 34.69
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.66
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 408.62
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-08-10",
+          "previousReading": 22749,
+          "presentReading": 23163,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-08",
+          "kwh": 408,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2941.97
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 422.28
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 253.37
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 559.45
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 201.96
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 131.78
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 92.37
+            },
+            {
+              "label": "FIT-All",
+              "amount": 34.19
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.65
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 402.7
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-09-10",
+          "previousReading": 23163,
+          "presentReading": 23571,
+          "provenance": {
+            "kind": "generated",
+            "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending."
+          }
+        },
+        {
+          "period": "2026-09",
+          "kwh": 350,
+          "billingDays": 30,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2513.7
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 362.25
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 217.35
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 479.92
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 173.25
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 113.05
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 79.24
+            },
+            {
+              "label": "FIT-All",
+              "amount": 29.33
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.56
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 345.45
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-10-10",
+          "previousReading": 23571,
+          "presentReading": 23921,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        },
+        {
+          "period": "2026-10",
+          "kwh": 400,
+          "billingDays": 31,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2980.4
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 418.8
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 258.2
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 548.48
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 198
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 129.2
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 90.56
+            },
+            {
+              "label": "FIT-All",
+              "amount": 33.52
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.64
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 408.6
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-11-10",
+          "previousReading": 23921,
+          "presentReading": 24321,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        },
+        {
+          "period": "2026-11",
+          "kwh": 370,
+          "billingDays": 30,
+          "chargeLines": [
+            {
+              "label": "Generation Charge",
+              "amount": 2598.51
+            },
+            {
+              "label": "Transmission Charge",
+              "amount": 374.44
+            },
+            {
+              "label": "System Loss Charge",
+              "amount": 223.85
+            },
+            {
+              "label": "Distribution Charge",
+              "amount": 507.34
+            },
+            {
+              "label": "Supply Charge (per kWh)",
+              "amount": 183.15
+            },
+            {
+              "label": "Metering Charge (per kWh)",
+              "amount": 119.51
+            },
+            {
+              "label": "Universal Charges",
+              "amount": 83.77
+            },
+            {
+              "label": "FIT-All",
+              "amount": 31.01
+            },
+            {
+              "label": "Subsidies",
+              "amount": 0.59
+            },
+            {
+              "label": "VAT (per kWh lines)",
+              "amount": 357.42
+            },
+            {
+              "label": "Supply Charge (per customer)",
+              "amount": 16.38
+            },
+            {
+              "label": "Metering Charge (per customer)",
+              "amount": 5
+            },
+            {
+              "label": "VAT (per customer lines)",
+              "amount": 2.57
+            }
+          ],
+          "dueDate": "2026-12-10",
+          "previousReading": 24321,
+          "presentReading": 24691,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -8,6 +8,21 @@ export interface BillInput {
   kwh: number;
   billingDays: number;
   chargeLines: ChargeLine[];
+  dueDate?: string;
+  previousReading?: number;
+  presentReading?: number;
+}
+
+export interface Household {
+  sin: string;
+  masked_address: string;
+  meter_type: "traditional" | "smart";
+}
+export interface LoginResult { token: string; households: Household[] }
+export interface HistoryBill extends BillInput { provenance?: { kind: string; note: string } }
+export type ScanLinkage = { status: "linked"; householdSin: string } | { status: "unlinked" | "unknown" };
+export class ApiError extends Error {
+  constructor(public readonly status: number, message: string) { super(message); }
 }
 
 export interface Effect {
@@ -34,12 +49,29 @@ export interface BakitGanito {
 }
 
 async function json<T>(res: Response): Promise<T> {
-  const body = await res.json();
-  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, body.error ?? (Array.isArray(body.message) ? body.message.join(" ") : body.message) ?? `HTTP ${res.status}`);
   return body as T;
 }
 
 export const api = {
+  login: (email: string, password: string) => fetch("/api/auth/login", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }),
+  }).then((r) => json<LoginResult>(r)),
+  logout: async (token: string) => {
+    const res = await fetch("/api/auth/logout", { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await json(res);
+  },
+  history: (token: string, sin: string, signal?: AbortSignal) => fetch(`/api/households/${encodeURIComponent(sin)}/bills`, {
+    headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
+  }).then((r) => json<HistoryBill[]>(r)),
+  householdExplanation: (token: string, sin: string, signal?: AbortSignal) => fetch(`/api/households/${encodeURIComponent(sin)}/bakit-ganito`, {
+    headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
+  }).then((r) => json<BakitGanito>(r)),
+  scanLinkage: (token: string, scanToken: string, signal?: AbortSignal) => fetch("/api/bills/scan-linkage", {
+    method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({ scanToken }), signal,
+  }).then((r) => json<ScanLinkage>(r)),
   periods: () => fetch("/api/rate-schedules").then((r) => json<{ periods: string[] }>(r)),
   bakitGanito: (before: BillInput, now: BillInput) =>
     fetch("/api/bakit-ganito", {
@@ -67,6 +99,7 @@ export type ScanOutcome =
       estimated: string[];
       missing: string[];
       serviceIdMasked: string | null;
+      scanToken: string;
     }
   | { kind: "unreadable"; problem: string }
   | { kind: "unavailable"; error: string };

@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { Bill, ChargeLine } from "../domain/bill.js";
 import { VISION_PROVIDER } from "../tokens.js";
 import type { BillImage, RawBillReading, VisionProvider } from "./vision.js";
+import { ScanContextStore } from "./scan-context.store.js";
 
 export type DraftBill = Partial<Bill>;
 
@@ -94,9 +95,11 @@ export function toScanResult(raw: RawBillReading): ScanResult {
 
 @Injectable()
 export class BillScanService {
-  constructor(@Inject(VISION_PROVIDER) private readonly vision: VisionProvider) {}
+  constructor(@Inject(VISION_PROVIDER) private readonly vision: VisionProvider, private readonly contexts: ScanContextStore) {}
 
-  async scan(image: BillImage): Promise<ScanResult> {
-    return toScanResult(await this.vision.readBill(image));
+  async scan(image: BillImage) {
+    const raw = await this.vision.readBill(image);
+    const result = toScanResult(raw);
+    return result.status === "read" ? { ...result, scanToken: this.contexts.create(raw.serviceIdNumber) } : result;
   }
 }

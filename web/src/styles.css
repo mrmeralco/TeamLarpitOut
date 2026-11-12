@@ -120,3 +120,13 @@ label.missing em, label.missing span { color: var(--up); }
 label.missing input, label.missing select { border-color: var(--up); }
 label.estimated em { color: var(--brand); }
 label.estimated input { border-color: var(--brand); border-style: dashed; }
+
+.demo-login { margin-top: 12px; overflow-wrap: anywhere; }
+.history .notice { border-left: 3px solid var(--brand); padding: 8px 10px; font-size: .85rem; }
+.table-scroll { overflow-x: auto; }
+.history table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.history caption { text-align: left; color: var(--muted); margin-bottom: 10px; }
+.history th, .history td { padding: 10px 5px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.history th:first-child { text-align: left; }
+.history small { display: block; color: var(--muted); font-weight: normal; }
+.history tbody th { font-weight: 500; }

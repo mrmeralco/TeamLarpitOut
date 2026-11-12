@@ -1,0 +1,136 @@
+{
+  "note": "Synthetic demo Bills and climate inputs. Real recent Bills, historical CDD and verified published rates are pending.",
+  "climateSource": "Invented seasonal CDD values for the demo; not Open-Meteo observations.",
+  "months": [
+    {
+      "period": "2025-12",
+      "billingDays": 31,
+      "cddPerDay": 3.2
+    },
+    {
+      "period": "2026-01",
+      "billingDays": 31,
+      "cddPerDay": 3.1
+    },
+    {
+      "period": "2026-02",
+      "billingDays": 28,
+      "cddPerDay": 3.8
+    },
+    {
+      "period": "2026-03",
+      "billingDays": 31,
+      "cddPerDay": 4.8
+    },
+    {
+      "period": "2026-04",
+      "billingDays": 30,
+      "cddPerDay": 5.9
+    },
+    {
+      "period": "2026-05",
+      "billingDays": 31,
+      "cddPerDay": 6.2
+    },
+    {
+      "period": "2026-06",
+      "billingDays": 30,
+      "cddPerDay": 5.2
+    },
+    {
+      "period": "2026-07",
+      "billingDays": 31,
+      "cddPerDay": 4.8
+    },
+    {
+      "period": "2026-08",
+      "billingDays": 31,
+      "cddPerDay": 4.7
+    },
+    {
+      "period": "2026-09",
+      "billingDays": 30,
+      "cddPerDay": 4.6
+    },
+    {
+      "period": "2026-10",
+      "billingDays": 31,
+      "cddPerDay": 4.3
+    },
+    {
+      "period": "2026-11",
+      "billingDays": 30,
+      "cddPerDay": 3.9
+    }
+  ],
+  "households": [
+    {
+      "sin": "1234567890",
+      "startReading": 10000,
+      "coolingSensitivity": 1.1,
+      "recentBills": [
+        {
+          "period": "2026-09",
+          "kwh": 220,
+          "billingDays": 30,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        },
+        {
+          "period": "2026-10",
+          "kwh": 250,
+          "billingDays": 31,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        },
+        {
+          "period": "2026-11",
+          "kwh": 230,
+          "billingDays": 30,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        }
+      ]
+    },
+    {
+      "sin": "9876543210",
+      "startReading": 20000,
+      "coolingSensitivity": 2.0,
+      "recentBills": [
+        {
+          "period": "2026-09",
+          "kwh": 350,
+          "billingDays": 30,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        },
+        {
+          "period": "2026-10",
+          "kwh": 400,
+          "billingDays": 31,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        },
+        {
+          "period": "2026-11",
+          "kwh": 370,
+          "billingDays": 30,
+          "provenance": {
+            "kind": "sample",
+            "note": "Invented recent Bill anchor; replace with a sanitized real Bill."
+          }
+        }
+      ]
+    }
+  ]
+}

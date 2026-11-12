@@ -41,3 +41,35 @@ pnpm typecheck
 - `GET  /api/households/:sin/bakit-ganito` → same, from the Household's two latest Bills in the Bill source
 
 `Bill = { period: "YYYY-MM", kwh, billingDays, chargeLines?: [{ label, amount }] }`
+
+### Mock My Meralco login
+
+This is a simulated login; use only the public demo credentials `demo@example.com` / `kuryenteko-demo`.
+
+- `POST /api/auth/login` `{ email, password }` → `{ token, households }` (200). Invalid input returns 400; wrong credentials return 401.
+- `GET /api/households` → `[{ sin, masked_address, meter_type }]`, where Meter Type is `traditional` or `smart` and comes from the mock record.
+- `POST /api/auth/logout` → 204; revokes the current token.
+
+Send `Authorization: Bearer <token>` for the Household list, logout and `GET /api/households/:sin/bakit-ganito`. Missing, invalid, expired or revoked tokens return 401. Unknown and unlinked Service ID Numbers both return the same 404; membership is checked on every Household request. Tokens expire after one hour and are held in memory, so restarting the API signs everyone out. Login and protected data responses use `Cache-Control: no-store`.
+
+The demo login links two synthetic Households (`1234567890`, traditional; `9876543210`, smart). The PWA shows masked Service ID Numbers and addresses. Pick a Household to load its 12-Bill History and the latest Bill Change; no upload is required. Tokens are kept only in memory in the PWA, so refreshing requires login again. Switching Household or logging out immediately clears the displayed history and cancels pending requests. The UI clears its session on 401 and after one hour.
+
+Scanning and `POST /api/bakit-ganito` remain public. A scan grants no access to Household data. `MY_MERALCO_SOURCE` is the injectable login/Household seam; the API test harness replaces it independently of `BILL_SOURCE` and `VISION_PROVIDER`.
+
+### Bill History and demo data
+
+- `GET /api/households/:sin/bills` → up to twelve `Bill` objects, oldest first, including optional `provenance: { kind, note }`. Requires the same bearer token and ownership checks as the Household explanation route; source failures return 502 without reusing another Household's data.
+- The current two demo histories cover December 2025–November 2026. Each has three invented recent samples and nine generated months. **None are represented as real Bills.** The PWA labels both sample and generated months.
+- `server/src/data/meralco-demo-seed.json` records recent anchors, synthetic climate inputs and provenance. `server/src/data/meralco-demo.json` is the generated fixture. The extra Rate Schedule rows for older months are explicitly synthetic extrapolations in the existing single Rate Schedule table.
+- Real sanitized recent Bills, historical CDD observations and verified published Rate Schedules are still needed to satisfy the real-data demo requirement. Replace the inputs and their provenance before presenting the history as real-derived. Every decoded month must have a schedule; missing schedules still return 422.
+- Regenerate deterministically with `pnpm --filter @kuryenteko/server build` followed by `node server/scripts/generate-bill-history.mjs`. The script reuses the actual `costLines()` implementation, preserves supplied recent Bill fields and rejects missing schedules or nonconsecutive periods.
+- `HouseholdStore` holds isolated snapshots under each Service ID Number. Restarting recreates the demo fixture; there is no database migration. Future appliance, Mission, typed-reading and Points records must use the same Household boundary, with ownership checked before access. Their feature behavior is outside this ticket.
+
+### Scan linkage
+
+A successful public `POST /api/bills/scan` now includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized Service ID Number is retained server-side, with a maximum of 1,000 active references; no photo or scanned Bill is saved. Complete ten-digit identifiers are required for matching; whitespace and hyphens are accepted. Missing or partial identifiers cannot identify a Household.
+
+- `POST /api/bills/scan-linkage` `{ scanToken }`, with `Authorization: Bearer <login token>`, returns `{ status: "linked", householdSin }`, `{ status: "unlinked" }` or `{ status: "unknown" }`.
+- Matching uses the full identifier and the current login's linked Households, never a masked suffix or a client-supplied SIN. Invalid input returns 400; missing/expired login returns 401; expired or unknown references return the same 404. A scan reference cannot be used as a login token.
+- The PWA resolves linkage after the existing “Tama ba?” confirmation, including when login happens after the scan. Unlinked Bills keep their quick verdict with “Hindi naka-link ang account na ito sa My Meralco mo.” A linked scan offers its matching Household explicitly; it never automatically saves or assigns a Bill. Choosing another linked Household in the picker separately opens that Household's own history.
+- `pnpm test` runs the backend HTTP suite plus frontend DOM tests for login, stale responses, Household switching, logout, expiry, errors and scan linkage. Manual browser verification requires a connected browser.

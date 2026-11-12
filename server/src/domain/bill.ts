@@ -15,4 +15,6 @@ export interface Bill {
   dueDate?: string;
   previousReading?: number;
   presentReading?: number;
+  /** Fixture provenance, never inferred from a photo. */
+  provenance?: { kind: string; note: string };
 }

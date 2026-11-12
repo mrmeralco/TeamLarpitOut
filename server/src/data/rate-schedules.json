@@ -2,6 +2,195 @@
   "_note": "The one Rate Schedule table (ADR-0001). SAMPLE values shaped like a Meralco residential bill; replace with the real charge lines from the team's Bills and Meralco's published schedule. Per-kWh rates are pesos per kWh; fixed amounts are pesos per customer per month. VAT is listed as its own lines.",
   "schedules": [
     {
+      "period": "2025-12",
+      "_note": "Synthetic demo schedule, extrapolated from the September sample. Not published Meralco data.",
+      "perKwh": [
+        {"code": "generation", "label": "Generation Charge", "rate": 6.7511, "passThrough": true},
+        {"code": "transmission", "label": "Transmission Charge", "rate": 1.035, "passThrough": true},
+        {"code": "system_loss", "label": "System Loss Charge", "rate": 0.621, "passThrough": true},
+        {"code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false},
+        {"code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.495, "passThrough": false},
+        {"code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.323, "passThrough": false},
+        {"code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true},
+        {"code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true},
+        {"code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true},
+        {"code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.987, "passThrough": true}
+      ],
+      "fixed": [
+        {"code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38},
+        {"code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.0},
+        {"code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57}
+      ]
+    },
+    {
+      "period": "2026-01",
+      "_note": "Synthetic demo schedule, extrapolated from the September sample. Not published Meralco data.",
+      "perKwh": [
+        {"code": "generation", "label": "Generation Charge", "rate": 6.8085, "passThrough": true},
+        {"code": "transmission", "label": "Transmission Charge", "rate": 1.035, "passThrough": true},
+        {"code": "system_loss", "label": "System Loss Charge", "rate": 0.621, "passThrough": true},
+        {"code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false},
+        {"code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.495, "passThrough": false},
+        {"code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.323, "passThrough": false},
+        {"code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true},
+        {"code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true},
+        {"code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true},
+        {"code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.987, "passThrough": true}
+      ],
+      "fixed": [
+        {"code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38},
+        {"code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.0},
+        {"code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57}
+      ]
+    },
+    {
+      "period": "2026-02",
+      "_note": "Synthetic demo schedule, extrapolated from the September sample. Not published Meralco data.",
+      "perKwh": [
+        {"code": "generation", "label": "Generation Charge", "rate": 6.866, "passThrough": true},
+        {"code": "transmission", "label": "Transmission Charge", "rate": 1.035, "passThrough": true},
+        {"code": "system_loss", "label": "System Loss Charge", "rate": 0.621, "passThrough": true},
+        {"code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false},
+        {"code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.495, "passThrough": false},
+        {"code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.323, "passThrough": false},
+        {"code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true},
+        {"code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true},
+        {"code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true},
+        {"code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.987, "passThrough": true}
+      ],
+      "fixed": [
+        {"code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38},
+        {"code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.0},
+        {"code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57}
+      ]
+    },
+    {
+      "period": "2026-03",
+      "_note": "Synthetic demo schedule, extrapolated from the September sample. Not published Meralco data.",
+      "perKwh": [
+        {"code": "generation", "label": "Generation Charge", "rate": 6.9234, "passThrough": true},
+        {"code": "transmission", "label": "Transmission Charge", "rate": 1.035, "passThrough": true},
+        {"code": "system_loss", "label": "System Loss Charge", "rate": 0.621, "passThrough": true},
+        {"code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false},
+        {"code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.495, "passThrough": false},
+        {"code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.323, "passThrough": false},
+        {"code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true},
+        {"code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true},
+        {"code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true},
+        {"code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.987, "passThrough": true}
+      ],
+      "fixed": [
+        {"code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38},
+        {"code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.0},
+        {"code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57}
+      ]
+    },
+    {
+      "period": "2026-04",
+      "_note": "Synthetic demo schedule, extrapolated from the September sample. Not published Meralco data.",
+      "perKwh": [
+        {"code": "generation", "label": "Generation Charge", "rate": 6.9809, "passThrough": true},
+        {"code": "transmission", "label": "Transmission Charge", "rate": 1.035, "passThrough": true},
+        {"code": "system_loss", "label": "System Loss Charge", "rate": 0.621, "passThrough": true},
+        {"code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false},
+        {"code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.495, "passThrough": false},
+        {"code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.323, "passThrough": false},
+        {"code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true},
+        {"code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true},
+        {"code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true},
+        {"code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.987, "passThrough": true}
+      ],
+      "fixed": [
+        {"code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38},
+        {"code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.0},
+        {"code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57}
+      ]
+    },
+    {
+      "period": "2026-05",
+      "_note": "Synthetic demo schedule, extrapolated from the September sample. Not published Meralco data.",
+      "perKwh": [
+        {"code": "generation", "label": "Generation Charge", "rate": 7.0384, "passThrough": true},
+        {"code": "transmission", "label": "Transmission Charge", "rate": 1.035, "passThrough": true},
+        {"code": "system_loss", "label": "System Loss Charge", "rate": 0.621, "passThrough": true},
+        {"code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false},
+        {"code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.495, "passThrough": false},
+        {"code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.323, "passThrough": false},
+        {"code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true},
+        {"code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true},
+        {"code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true},
+        {"code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.987, "passThrough": true}
+      ],
+      "fixed": [
+        {"code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38},
+        {"code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.0},
+        {"code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57}
+      ]
+    },
+    {
+      "period": "2026-06",
+      "_note": "Synthetic demo schedule, extrapolated from the September sample. Not published Meralco data.",
+      "perKwh": [
+        {"code": "generation", "label": "Generation Charge", "rate": 7.0958, "passThrough": true},
+        {"code": "transmission", "label": "Transmission Charge", "rate": 1.035, "passThrough": true},
+        {"code": "system_loss", "label": "System Loss Charge", "rate": 0.621, "passThrough": true},
+        {"code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false},
+        {"code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.495, "passThrough": false},
+        {"code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.323, "passThrough": false},
+        {"code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true},
+        {"code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true},
+        {"code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true},
+        {"code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.987, "passThrough": true}
+      ],
+      "fixed": [
+        {"code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38},
+        {"code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.0},
+        {"code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57}
+      ]
+    },
+    {
+      "period": "2026-07",
+      "_note": "Synthetic demo schedule, extrapolated from the September sample. Not published Meralco data.",
+      "perKwh": [
+        {"code": "generation", "label": "Generation Charge", "rate": 7.1533, "passThrough": true},
+        {"code": "transmission", "label": "Transmission Charge", "rate": 1.035, "passThrough": true},
+        {"code": "system_loss", "label": "System Loss Charge", "rate": 0.621, "passThrough": true},
+        {"code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false},
+        {"code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.495, "passThrough": false},
+        {"code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.323, "passThrough": false},
+        {"code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true},
+        {"code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true},
+        {"code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true},
+        {"code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.987, "passThrough": true}
+      ],
+      "fixed": [
+        {"code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38},
+        {"code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.0},
+        {"code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57}
+      ]
+    },
+    {
+      "period": "2026-08",
+      "_note": "Synthetic demo schedule, extrapolated from the September sample. Not published Meralco data.",
+      "perKwh": [
+        {"code": "generation", "label": "Generation Charge", "rate": 7.2107, "passThrough": true},
+        {"code": "transmission", "label": "Transmission Charge", "rate": 1.035, "passThrough": true},
+        {"code": "system_loss", "label": "System Loss Charge", "rate": 0.621, "passThrough": true},
+        {"code": "distribution", "label": "Distribution Charge", "rate": 1.3712, "passThrough": false},
+        {"code": "supply_kwh", "label": "Supply Charge (per kWh)", "rate": 0.495, "passThrough": false},
+        {"code": "metering_kwh", "label": "Metering Charge (per kWh)", "rate": 0.323, "passThrough": false},
+        {"code": "universal", "label": "Universal Charges", "rate": 0.2264, "passThrough": true},
+        {"code": "fit_all", "label": "FIT-All", "rate": 0.0838, "passThrough": true},
+        {"code": "subsidies", "label": "Subsidies", "rate": 0.0016, "passThrough": true},
+        {"code": "vat_kwh", "label": "VAT (per kWh lines)", "rate": 0.987, "passThrough": true}
+      ],
+      "fixed": [
+        {"code": "supply_fixed", "label": "Supply Charge (per customer)", "amount": 16.38},
+        {"code": "metering_fixed", "label": "Metering Charge (per customer)", "amount": 5.0},
+        {"code": "vat_fixed", "label": "VAT (per customer lines)", "amount": 2.57}
+      ]
+    },
+    {
       "period": "2026-09",
       "perKwh": [
         { "code": "generation", "label": "Generation Charge", "rate": 7.1820, "passThrough": true },
