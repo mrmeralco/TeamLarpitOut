@@ -34,13 +34,12 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 describe("Missions tab: the 5% plan", () => {
   it("shows the goal, how much the plan covers, and the plan list", async () => {
-    render(<MissionPlan token="t" household={household} onOpen={() => {}} onBack={() => {}} onExpired={() => {}}><p>Forecast here</p></MissionPlan>);
+    render(<MissionPlan token="t" household={household} onOpen={() => {}} onBack={() => {}} onExpired={() => {}} />);
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
     expect(screen.getByText("About 31 kWh, or ~₱341 off your bill")).toBeTruthy();
     expect(screen.getByText("Your plan covers 5.0% · Goal reached")).toBeTruthy();
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("100");
     expect(screen.getByRole("button", { name: /Turn off the aircon 1 hour earlier.*−3\.0% · ~₱208/ })).toBeTruthy();
-    expect(screen.getByText("Forecast here")).toBeTruthy();
     expect(screen.getByText(/AI picks and words the missions/)).toBeTruthy();
   });
 

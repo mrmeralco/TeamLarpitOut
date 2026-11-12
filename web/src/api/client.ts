@@ -245,12 +245,18 @@ export type ScannedAccount =
   | { status: "unknownAccount"; canMasked: string }
   | { status: "ownedByAnother"; canMasked: string; message: string };
 
+export interface LinkCorrections { kwh?: number; billingDays?: number; totalAmount?: number }
+
 export const linkApi = {
-  /** Links the CAN the scan read (or, when it couldn't, the CAN typed from the same Bill). */
-  confirm: (token: string, scanToken: string, can?: string) => fetch("/api/households/link/confirm", {
+  /**
+   * Links the CAN the scan read (or, when it couldn't, the CAN typed from the same Bill).
+   * Corrections from "Does this look right?" go along; in demo mode the confirmed Bill
+   * becomes the demo Household's latest Bill.
+   */
+  confirm: (token: string, scanToken: string, can?: string, corrections: LinkCorrections = {}) => fetch("/api/households/link/confirm", {
     method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify(can ? { scanToken, can } : { scanToken }),
-  }).then((r) => json<{ status: "active"; householdSin: string; canMasked: string }>(r)),
+    body: JSON.stringify({ scanToken, ...(can ? { can } : {}), ...corrections }),
+  }).then((r) => json<{ status: "active"; householdSin: string; canMasked: string; demo?: true }>(r)),
 };
 
 export type ScanOutcome =
@@ -487,55 +493,6 @@ export interface UsagePlan {
   createdAt: string;
 }
 
-export interface ForecastRange {
-  minKwh: number;
-  maxKwh: number;
-  minPesos: number;
-  maxPesos: number;
-}
-
-export interface ForecastProjected {
-  kwh: number;
-  pesos: number;
-  kwhSoFar: number;
-  elapsedDays: number;
-  remainingDays: number;
-  reading: number;
-  readingDate: string | null;
-}
-
-export interface TargetComparison {
-  targetKwh: number;
-  targetPesos: number;
-  diffPesos: number;
-  diffKwh: number;
-  status: "within_target" | "over_target";
-  label: string;
-}
-
-export interface ForecastResult {
-  currency: "PHP-centavos";
-  period: string;
-  billingDays: number;
-  rateSchedulePeriod: string;
-  hasReading: boolean;
-  lastReading: number | null;
-  range: ForecastRange | null;
-  projected: ForecastProjected | null;
-  targetComparison: TargetComparison | null;
-  heatWave: {
-    active: boolean;
-    heatIndex: number | null;
-    banner: string | null;
-    kwhAdjustmentPerDay: number;
-  };
-  heatSensitivity: {
-    value: number;
-    source: string;
-    label: string;
-    sigma: number;
-  };
-}
 
 export interface PointsHistoryEntry {
   id: string;
@@ -623,19 +580,6 @@ export const usagePlanApi = {
       headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify(body),
     }).then((r) => json<{ active: boolean; plan: UsagePlan }>(r)),
-  forecast: (token: string, sin: string, signal?: AbortSignal) =>
-    fetch(`${planPath(sin)}/forecast`, authed(token, signal)).then((r) => json<ForecastResult>(r)),
-  saveReading: (token: string, sin: string, body: { reading: number; elapsedDays?: number; readingDate?: string }) =>
-    fetch(`${planPath(sin)}/mid-month-reading`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify(body),
-    }).then((r) => json<ForecastResult>(r)),
-  deleteReading: (token: string, sin: string) =>
-    fetch(`${planPath(sin)}/mid-month-reading`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    }).then((r) => json<ForecastResult>(r)),
   points: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(`${planPath(sin)}/points`, authed(token, signal)).then((r) => json<PointsResult>(r)),
   selfReport: (token: string, sin: string, body?: { missionId?: string; status?: string }) =>
