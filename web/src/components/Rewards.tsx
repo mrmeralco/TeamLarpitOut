@@ -105,6 +105,11 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
               <span>Points balance</span>
               <strong>{data.balance} Points</strong>
             </div>
+            {(data.lockedPoints ?? 0) > 0 && (
+              <p className="small" data-testid="locked-points">
+                🔒 {data.lockedPoints} Welcome Points ay naka-lock hanggang sa unang Verified Savings sa susunod na Bill.
+              </p>
+            )}
             <p className="muted">
               1 Point bawat ₱1 ng Verified Savings. Gamitin sa sample rewards mula sa aming partners.
             </p>

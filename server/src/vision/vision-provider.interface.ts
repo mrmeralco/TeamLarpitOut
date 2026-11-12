@@ -39,9 +39,20 @@ export interface RawEnergyLabelReading {
   referenceHoursPerDay?: number | null;
 }
 
+/** What a photo of an aircon unit shows; the visual answers the catalog already asks. */
+export interface RawAirconPhotoReading {
+  readable: boolean;
+  mount?: "split" | "window" | null;
+  inverter?: "yes" | "no" | null;
+  /** Unit size as a room-size class (small ≈ 0.75–1 HP, medium ≈ 1.5 HP, large ≈ 2 HP+). */
+  room?: "small" | "medium" | "large" | null;
+}
+
 export interface VisionProvider {
   readBill(image: BillImage): Promise<RawBillReading>;
   readEnergyLabel(image: BillImage): Promise<RawEnergyLabelReading>;
+  /** Optional shortcut in Household Setup: estimate the aircon's size from a photo. */
+  readAirconPhoto?(image: BillImage): Promise<RawAirconPhotoReading>;
 }
 
 /** Thrown when no vision model is configured (e.g. no API key). */

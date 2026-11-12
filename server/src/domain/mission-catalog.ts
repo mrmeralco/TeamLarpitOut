@@ -105,6 +105,28 @@ export const MISSION_CATALOG: MissionDefinition[] = [
     },
   },
   {
+    id: "aircon-off-1h",
+    title: "Turn off the aircon 1 hour earlier",
+    appliance: "aircon",
+    basis: "physics",
+    kwhSaved: (ctx) => {
+      const ac = sum(ctx, "aircon");
+      if (ac.kwh <= 0 || ac.hours <= 1) return null;
+      return { kwh: ac.kwh / ac.hours, assumptions: [] };
+    },
+  },
+  {
+    id: "tv-hour-less",
+    title: "Watch TV 1 hour less a day",
+    appliance: "tv",
+    basis: "physics",
+    kwhSaved: (ctx) => {
+      const tv = sum(ctx, "tv");
+      if (tv.kwh <= 0 || tv.hours <= 1) return null;
+      return { kwh: tv.kwh / tv.hours, assumptions: [] };
+    },
+  },
+  {
     id: "fan-first-hour",
     title: "Electric fan muna sa unang oras, bago ang aircon",
     appliance: "aircon",
