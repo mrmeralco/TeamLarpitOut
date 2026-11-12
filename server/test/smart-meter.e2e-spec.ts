@@ -5,7 +5,7 @@ import { DAY_MS, HOUR_MS, type HourlyReading, type ReadingRange } from "../src/d
 import { DEMO_ACCOUNTS } from "../src/bills/meralco-accounts.js";
 import { MockReadingSource } from "../src/smart-meter/mock-reading-source.provider.js";
 import { inMemoryReadingSource, type ReadingSource } from "../src/smart-meter/reading-source.interface.js";
-import { ownerIdForEmail } from "../src/auth/auth.service.js";
+import { ownerIdForEmail, SESSION_IDLE_MS } from "../src/auth/auth.service.js";
 import { harness, testAccounts, testLogins } from "./utils/test-harness.js";
 
 const SMART = "9876543210";
@@ -170,7 +170,7 @@ describe("GET /api/households/:sin/readings", () => {
     await api.links.remove(link.ownerId, SMART);
     expect((await api.get(path(), token)).status).toBe(404);
     await api.links.save(link);
-    now = 60 * 60 * 1000;
+    now = SESSION_IDLE_MS;
     expect((await api.get(path(), token)).status).toBe(401);
     expect(source.describe).not.toHaveBeenCalled();
   });

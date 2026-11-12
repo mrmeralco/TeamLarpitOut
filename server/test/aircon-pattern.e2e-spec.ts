@@ -4,7 +4,7 @@ import { MockReadingSource } from "../src/smart-meter/mock-reading-source.provid
 import { inMemoryReadingSource } from "../src/smart-meter/reading-source.interface.js";
 import { MockDailyWeatherProvider } from "../src/weather/mock-daily-weather.provider.js";
 import { inMemoryDailyWeatherSource } from "../src/weather/daily-weather-source.interface.js";
-import { ownerIdForEmail } from "../src/auth/auth.service.js";
+import { ownerIdForEmail, SESSION_IDLE_MS } from "../src/auth/auth.service.js";
 import { patternFixture } from "./utils/aircon-pattern-fixture.js";
 import { bill, harness, testAccounts, testLogins } from "./utils/test-harness.js";
 
@@ -104,7 +104,7 @@ describe("POST aircon-pattern-proposal", () => {
     const link = (await api.links.forOwner(ownerIdForEmail(testLogins[0]!.email))).find((l) => l.sin === SMART)!;
     await api.links.remove(link.ownerId, SMART);
     expect((await api.post(path(), {}, token)).status).toBe(404);
-    await api.links.save(link); now = 60 * 60 * 1000;
+    await api.links.save(link); now = SESSION_IDLE_MS;
     expect((await api.post(path(), {}, token)).status).toBe(401);
     expect(describe).not.toHaveBeenCalled();
   });
