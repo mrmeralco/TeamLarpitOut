@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  ApiError, homeApi, missionPlanApi,
-  type HomeChargeLine, type Household, type HomeSummary, type MissionPlan, type SetupStatus, type UsageMonth,
+  ApiError, appliancesApi, homeApi, missionPlanApi,
+  type ApplianceBreakdown, type HomeChargeLine, type Household, type HomeSummary, type MissionPlan, type SetupStatus, type UsageMonth,
 } from "../api/client";
+import { peso } from "../lib/format";
 import { greeting, HomeWrapped, month, plainPeso, wholePeso } from "./HomeWrapped";
 
 /** Eelio's three gamified states (docs/mascot/mascot-branding-eelio.md). */
@@ -41,15 +42,6 @@ function Stars({ value, label }: { value: number; label: string }) {
   );
 }
 
-function Ring({ percent, label }: { percent: number; label: string }) {
-  const p = Math.max(0, Math.min(100, Math.round(percent)));
-  return (
-    <span className="ring" role="img" aria-label={`${label}: ${p}%`} style={{ "--p": `${p}` } as React.CSSProperties}>
-      <span aria-hidden="true">{p}%</span>
-    </span>
-  );
-}
-
 const ICON = {
   bolt: "M13 2 4 14h7l-1 8 9-12h-7z",
   sun: "M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z",
@@ -60,43 +52,121 @@ const Svg = ({ d }: { d: string }) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
 );
 
-/** kWh per month as a small line chart; the latest month is marked. */
-function UsageChart({ months }: { months: UsageMonth[] }) {
+const isSample = (m: UsageMonth) => !!m.provenance?.kind && !["scanned", "real-derived"].includes(m.provenance.kind);
+
+/** kWh of the last 12 Bills as bars; the latest Bill is highlighted, the average is a dashed line. */
+function UsageBars({ months }: { months: UsageMonth[] }) {
   const data = months.slice(-12);
   if (data.length < 2) return <p className="muted small">Your usage chart appears once there are two bills.</p>;
-  const W = 520, H = 170, P = 24;
-  const max = Math.max(...data.map((m) => m.kwh)) * 1.15 || 1;
-  const x = (i: number) => P + (i * (W - 2 * P)) / (data.length - 1);
-  const y = (kwh: number) => H - P - (kwh / max) * (H - 2 * P);
-  const line = data.map((m, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(m.kwh).toFixed(1)}`).join(" ");
+  const max = Math.max(...data.map((m) => m.kwh)) || 1;
+  const avg = data.reduce((s, m) => s + m.kwh, 0) / data.length;
   const last = data.at(-1)!;
-  const sampled = data.some((m) => m.provenance?.kind && !["scanned", "real-derived"].includes(m.provenance.kind));
   return (
-    <figure className="usage-chart">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`kWh per month, ${month(data[0]!.period)} to ${month(last.period)}. Latest ${last.kwh} kWh.`}>
-        {[0.25, 0.5, 0.75].map((f) => <line key={f} x1={P} x2={W - P} y1={H - P - f * (H - 2 * P)} y2={H - P - f * (H - 2 * P)} className="grid" />)}
-        <path d={`${line} L${x(data.length - 1)},${H - P} L${x(0)},${H - P} Z`} className="area" />
-        <path d={line} className="line" />
-        <circle cx={x(data.length - 1)} cy={y(last.kwh)} r="6" className="dot" />
-        <g className="tip" transform={`translate(${Math.min(x(data.length - 1), W - 50)}, ${Math.max(y(last.kwh) - 30, 6)})`}>
-          <rect x="-44" y="0" width="88" height="22" rx="8" />
-          <text x="0" y="15" textAnchor="middle">{last.kwh} kWh</text>
-        </g>
-        {data.map((m, i) => (i % 2 === (data.length - 1) % 2) && (
-          <text key={m.period} x={x(i)} y={H - 4} textAnchor="middle" className="axis">{month(m.period).slice(0, 3)}</text>
-        ))}
-      </svg>
-      {sampled && <figcaption className="muted small">Earlier months are sample values.</figcaption>}
+    <figure className="usage-bars">
+      <div className="bars" role="img" aria-label={`kWh per bill, ${month(data[0]!.period)} to ${month(last.period)}. Latest ${last.kwh} kWh; ${data.length}-month average ${Math.round(avg)} kWh.`}>
+        <span className="bars-avg" style={{ bottom: `calc(22px + (100% - 44px) * ${avg / max})` }} aria-hidden="true"><span>avg {Math.round(avg)}</span></span>
+        {data.map((m, i) => {
+          const latest = i === data.length - 1;
+          return (
+            <span key={m.period} className={`bar-col${latest ? " latest" : ""}${isSample(m) ? " sample" : ""}`} aria-hidden="true">
+              <span className="ubar" style={{ height: `${Math.max(4, (m.kwh / max) * 100)}%`, animationDelay: `${i * 40}ms` }}>
+                {latest && <span className="ubar-value">{m.kwh} kWh</span>}
+              </span>
+              <span className="bar-month">{month(m.period).slice(0, 3)}</span>
+            </span>
+          );
+        })}
+      </div>
+      {data.some(isSample) && <figcaption className="muted small"><span className="swatch sample" aria-hidden="true" /> Earlier months are sample values.</figcaption>}
     </figure>
+  );
+}
+
+const GROUPS: { key: string; label: string; note: string }[] = [
+  { key: "Pass-through", label: "Pass-through", note: "Goes to power generators and the grid" },
+  { key: "Meralco", label: "Meralco", note: "Meralco's own distribution charges" },
+  { key: "Government", label: "Government", note: "Taxes and government charges" },
+  { key: "Subsidy", label: "Subsidies", note: "Discounts for other customers, set by law" },
+  { key: "Other", label: "Other", note: "Other charges on the bill" },
+];
+
+/** Every charge on the Bill, grouped by who gets the money; each line opens the charge chat. */
+function ChargesBreakdown({ data, onAsk }: { data: HomeSummary; onAsk?: (line: HomeChargeLine) => void }) {
+  const all = [...data.chargeLines.all].sort((a, b) => b.amount - a.amount);
+  if (all.length === 0) return null;
+  const lines = all.filter((l) => Math.round(l.amount / 100) !== 0);
+  const zero = all.length - lines.length;
+  const total = lines.reduce((s, l) => s + Math.max(0, l.amount), 0) || 1;
+  const groupOf = (l: HomeChargeLine) => (GROUPS.some((g) => g.key === l.goesTo) ? l.goesTo! : "Other");
+  const groups = GROUPS.map((g) => ({ ...g, amount: lines.filter((l) => groupOf(l) === g.key).reduce((s, l) => s + Math.max(0, l.amount), 0) }))
+    .filter((g) => g.amount > 0);
+  return (
+    <div className="card charges-card">
+      <div className="charges-head">
+        <h3>Charges on your bill</h3>
+        <span className="muted small">Tap a charge to ask Eelio</span>
+      </div>
+      <div className="split-bar" role="img" aria-label={groups.map((g) => `${g.label} ${Math.round((g.amount / total) * 100)}%`).join(", ")}>
+        {groups.map((g) => <span key={g.key} className={`seg g-${g.key.toLowerCase().replace(/\W/g, "")}`} style={{ width: `${(g.amount / total) * 100}%` }} />)}
+      </div>
+      <ul className="split-legend">
+        {groups.map((g) => (
+          <li key={g.key} title={g.note}>
+            <span className={`swatch g-${g.key.toLowerCase().replace(/\W/g, "")}`} aria-hidden="true" />
+            <span>{g.label}</span>
+            <strong>{wholePeso(g.amount, false)}</strong>
+            <span className="muted">{Math.round((g.amount / total) * 100)}%</span>
+          </li>
+        ))}
+      </ul>
+      <ul className="charge-list">
+        {lines.map((l) => (
+          <li key={l.id}>
+            <button type="button" className="charge-row" onClick={() => onAsk?.(l)}
+              aria-label={`${l.label}: ${peso(l.amount)}${l.change !== null ? `, ${peso(l.change, true)} vs. last month` : ""}${l.goesTo ? `, ${l.goesTo}` : ""}. Ask about this charge`}>
+              <span className={`swatch g-${groupOf(l).toLowerCase().replace(/\W/g, "")}`} aria-hidden="true" />
+              <span className="charge-row-name"><strong>{l.label}</strong><span>{Math.round((Math.max(0, l.amount) / total) * 100)}% of the bill</span></span>
+              <span className="charge-row-amount">
+                <strong>{wholePeso(l.amount, false)}</strong>
+                {l.change !== null && l.change !== 0 && <span className={l.change > 0 ? "up" : "down"}>{wholePeso(l.change)}</span>}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {zero > 0 && <p className="muted small">+{zero} more {zero === 1 ? "charge" : "charges"} at ₱0 on this bill.</p>}
+    </div>
+  );
+}
+
+/** Where the Bill's kWh went, by appliance; shown only after the appliances are set up. */
+function AppliancesCard({ data }: { data: ApplianceBreakdown }) {
+  const rows = [...data.rows].sort((a, b) => b.kwh - a.kwh);
+  const top = rows[0]?.share || 1;
+  return (
+    <div className="card appliances-card">
+      <div className="usage-head"><h3>Your appliances</h3><span className="muted small">{month(data.bill.period)} bill · {Math.round(data.bill.kwh)} kWh</span></div>
+      <ul className="appliance-bars">
+        {rows.map((r) => (
+          <li key={r.index}>
+            <span className="appliance-name"><strong>{r.label}{r.quantity > 1 ? ` ×${r.quantity}` : ""}</strong><span>{r.sourceLabel}</span></span>
+            <span className="appliance-track" aria-hidden="true"><span style={{ width: `${(r.share / top) * 100}%` }} /></span>
+            <span className="appliance-amount"><strong>{Math.round(r.share * 100)}%</strong><span>{Math.round(r.kwh)} kWh · {wholePeso(r.pesos, false)}</span></span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted small">Estimates from the appliances and routine you set up; they add up to your bill's kWh.</p>
+    </div>
   );
 }
 
 /**
  * Home, gamified around Eelio: a hero card with the bill, Eelio's mood and charge, three star
- * skills, a usage chart, and the missions with progress rings. The bill's full story opens as
- * "Wrapped". Parent keys it by session and SIN.
+ * skills, the last 12 bills' kWh as bars, the appliances (once set up), and on the side every
+ * Meralco charge grouped by who gets the money. The bill's full story opens as "Wrapped".
+ * Parent keys it by session and SIN.
  */
-export function Home({ token, household, onExpired, onAskCharge, onSave, saveCard, setup, onOpenMission }: {
+export function Home({ token, household, onExpired, onAskCharge, onSave, saveCard, setup }: {
   token: string;
   household: Household;
   onExpired: () => void;
@@ -106,17 +176,17 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   onSave?: () => void;
   /** Replaces the save card once Household Setup is done (Mission Plan summary). */
   saveCard?: ReactNode;
-  /** Household Setup progress, for Eelio's charge and the missions list. */
+  /** Household Setup progress: Eelio's charge, and the appliances card once appliances are set up. */
   setup?: SetupStatus | null;
-  /** Opens a Mission's detail on the Missions tab. */
-  onOpenMission?: (id: string) => void;
 }) {
   const [data, setData] = useState<HomeSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [usage, setUsage] = useState<UsageMonth[] | null>(null);
   const [plan, setPlan] = useState<MissionPlan | null>(null);
+  const [appliances, setAppliances] = useState<ApplianceBreakdown | null>(null);
   const [playing, setPlaying] = useState(false);
   const planReady = !!setup?.complete;
+  const appliancesReady = !!setup?.steps.find((st) => st.key === "appliances")?.done;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -137,6 +207,14 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
     missionPlanApi.get(token, household.sin, controller.signal).then(setPlan).catch(() => {});
     return () => controller.abort();
   }, [token, household.sin, planReady]);
+
+  useEffect(() => {
+    if (!appliancesReady) { setAppliances(null); return; }
+    const controller = new AbortController();
+    appliancesApi.breakdown(token, household.sin, controller.signal)
+      .then((b) => setAppliances(b.rows.length ? b : null)).catch(() => setAppliances(null));
+    return () => controller.abort();
+  }, [token, household.sin, appliancesReady]);
 
   if (error) return <section className="card home"><p className="error" role="alert">{error}</p></section>;
   if (!data) return <section className="dash loading" aria-busy="true"><p className="muted">Eelio is reading your bill…</p></section>;
@@ -181,13 +259,14 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
         </ul>
 
         <div className="card usage-card">
-          <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh per month</span></div>
-          {usage === null ? <p className="muted small">Loading…</p> : <UsageChart months={usage} />}
+          <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh per bill · last 12 months</span></div>
+          {usage === null ? <p className="muted small">Loading…</p> : <UsageBars months={usage} />}
         </div>
+
+        {appliances && <AppliancesCard data={appliances} />}
       </div>
 
-      <aside className="dash-side" aria-label="Your missions">
-        <h3>Your missions</h3>
+      <aside className="dash-side" aria-label="Your bill's charges">
         {saveCard ?? (
           <button type="button" className="save-card" onClick={onSave}>
             <span><strong>Want to save on your next bill?</strong>
@@ -196,31 +275,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
             <span aria-hidden="true">→</span>
           </button>
         )}
-        <ul className="quests">
-          {plan ? plan.missions.map((m) => (
-            <li key={m.id}>
-              <button type="button" className="quest" onClick={() => onOpenMission?.(m.id)}>
-                <Ring percent={m.share * 100} label={`${m.title}, share of your 5% goal`} />
-                <span className="quest-copy">
-                  <strong>{m.title}</strong>
-                  <span>−{m.percent.toFixed(1)}% · ~{wholePeso(m.pesoValue, false)}</span>
-                  <span className="quest-tag">{m.effort}</span>
-                </span>
-              </button>
-            </li>
-          )) : (setup?.steps ?? []).map((s) => (
-            <li key={s.key}>
-              <button type="button" className="quest" onClick={onSave}>
-                <Ring percent={s.done ? 100 : 0} label={s.label} />
-                <span className="quest-copy">
-                  <strong>{s.label}</strong>
-                  <span>{s.done ? "Done" : "Setup step"}</span>
-                  <span className="quest-tag">+{Math.round((setup?.welcomePoints.points ?? 100) / (setup?.total ?? 3))} pts</span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <ChargesBreakdown data={data} onAsk={(line) => onAskCharge?.(line, data)} />
       </aside>
 
       {playing && (
