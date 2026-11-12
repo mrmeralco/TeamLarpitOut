@@ -155,7 +155,7 @@ export function PlanSummaryCard({ token, sin, onOpen }: { token: string; sin: st
       <span>
         <strong>Your plan: use {plan?.goal.cut ?? 5}% less electricity</strong>
         <span>{plan
-          ? `${plan.missions.length} missions · about ${Math.round(plan.goal.kwh)} kWh, or ~${wholePeso(plan.goal.pesos)}`
+          ? `${plan.missions.length} mission${plan.missions.length === 1 ? "" : "s"} · about ${Math.round(plan.goal.kwh)} kWh, or ~${wholePeso(plan.goal.pesos)}`
           : "Your missions are ready."}</span>
       </span>
       <span aria-hidden="true">→</span>

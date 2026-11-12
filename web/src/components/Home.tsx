@@ -1,82 +1,102 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ApiError, homeApi, type HomeChargeLine, type HomePart, type Household, type HomeSummary } from "../api/client";
-import { peso } from "../lib/format";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  ApiError, homeApi, missionPlanApi,
+  type HomeChargeLine, type Household, type HomeSummary, type MissionPlan, type SetupStatus, type UsageMonth,
+} from "../api/client";
+import { greeting, HomeWrapped, month, plainPeso, wholePeso } from "./HomeWrapped";
 
-const EFFECT_LABEL: Record<string, (amount: number) => string> = {
-  rate: () => "Rate",
-  billingDays: () => "Billing days",
-  weather: (a) => (a >= 0 ? "Hotter weather" : "Cooler weather"),
-  habit: () => "Household usage",
-  lifeline: () => "Lifeline discount",
-  catchUp: () => "Estimate catch-up",
+/** Eelio's three gamified states (docs/mascot/mascot-branding-eelio.md). */
+type Mood = "charged" | "detective" | "sleepy";
+const MOOD: Record<Mood, { img: string; title: string; line: string }> = {
+  charged: { img: "/mascot/eelio-hero.png", title: "Fully Charged", line: "You used less power than last month. Eelio is buzzing!" },
+  detective: { img: "/mascot/eelio-detective.png", title: "Bill Detective", line: "Eelio read your bill. Tap play to see what happened." },
+  sleepy: { img: "/mascot/eelio-sleepy.png", title: "Low Battery", line: "Eelio is running low. Set up your home to charge Eelio up." },
 };
-const EFFECT_NOTE: Record<string, string> = {
-  rate: "Meralco's price per kWh changed.",
-  billingDays: "This bill covered a different number of days.",
-  weather: "Heat makes aircons and fans work harder.",
-  habit: "How your household used power. This is the part you control.",
-};
-const effectLabel = (p: HomePart) => (EFFECT_LABEL[p.key] ?? (() => p.label))(p.amount);
 
-const month = (period: string) => new Date(`${period}-01T00:00:00`).toLocaleDateString("en-PH", { month: "long" });
-const shortDate = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
-/** Whole pesos: "+₱937". */
-const wholePeso = (centavos: number, signed = true) => {
-  const s = `₱${Math.round(Math.abs(centavos) / 100).toLocaleString("en-PH")}`;
-  return centavos < 0 ? `−${s}` : signed && centavos > 0 ? `+${s}` : s;
-};
-/** Whole pesos without a sign, for sentences that already say "more" or "less". */
-const plainPeso = (centavos: number) => wholePeso(Math.abs(centavos), false);
-function greeting(now = new Date()) {
-  const h = now.getHours();
-  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+function moodFor(data: HomeSummary, setup: SetupStatus | null): Mood {
+  const habit = data.bakitGanito?.habit ?? 0;
+  if (habit < 0) return "charged";
+  if (setup && !setup.complete) return "sleepy";
+  return "detective";
 }
 
-/** Counts up to a peso amount when the slide opens; shows the final value at once without motion support. */
-function CountUp({ centavos, signed = false }: { centavos: number; signed?: boolean }) {
-  const animate = typeof window !== "undefined" && typeof window.matchMedia === "function"
-    && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const [shown, setShown] = useState(animate ? 0 : centavos);
-  useEffect(() => {
-    if (!animate) { setShown(centavos); return; }
-    let frame = 0;
-    const start = performance.now();
-    const tick = (t: number) => {
-      const k = Math.min(1, (t - start) / 900);
-      setShown(Math.round(centavos * (1 - (1 - k) ** 3)));
-      if (k < 1) frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [centavos, animate]);
-  return <span aria-hidden="true">{wholePeso(shown, signed)}</span>;
+/** Eelio's charge (0–100): each setup step, an active plan, and lower usage than last month. */
+function chargeFor(data: HomeSummary, setup: SetupStatus | null, plan: MissionPlan | null): number {
+  const steps = setup ? setup.doneCount * 20 : 0;
+  return Math.min(100, steps + (plan ? 20 : 0) + ((data.bakitGanito?.habit ?? 0) < 0 ? 20 : 0));
 }
 
-function ChargeButton({ line, rank, share, onAsk }: { line: HomeChargeLine; rank?: number; share?: number; onAsk?: (line: HomeChargeLine) => void }) {
+/** 1–5 stars from how much an effect moved the bill, as a share of last month's bill. */
+function starsFrom(amount: number | undefined, base: number): number {
+  if (amount === undefined) return 3;
+  const share = amount / Math.max(1, base);
+  return share <= -0.05 ? 5 : share < 0 ? 4 : share <= 0.03 ? 3 : share <= 0.1 ? 2 : 1;
+}
+
+function Stars({ value, label }: { value: number; label: string }) {
   return (
-    <button type="button" className="wr-charge" onClick={() => onAsk?.(line)}
-      aria-label={`${line.label}: ${peso(line.amount)}${line.change !== null ? `, ${peso(line.change, true)} vs. last month` : ""}${line.goesTo ? `, ${line.goesTo}` : ""}. Ask about this charge`}>
-      {rank !== undefined && <span className="wr-rank" aria-hidden="true">{rank}</span>}
-      <span className="wr-charge-name">
-        <strong>{line.label}</strong>
-        <span>{line.goesTo ?? "Charge"}{share !== undefined ? ` · ${Math.round(share * 100)}%` : ""}</span>
-      </span>
-      <span className="wr-charge-amount">
-        <strong>{wholePeso(line.amount, false)}</strong>
-        {line.change !== null && line.change !== 0 && <span className={line.change > 0 ? "up" : "down"}>{wholePeso(line.change)}</span>}
-      </span>
-    </button>
+    <span className="stars" role="img" aria-label={`${label}: ${value} of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((n) => <span key={n} className={n <= value ? "on" : ""} aria-hidden="true">★</span>)}
+    </span>
   );
 }
 
-interface Slide { key: string; tone: string; label: string; body: ReactNode }
+function Ring({ percent, label }: { percent: number; label: string }) {
+  const p = Math.max(0, Math.min(100, Math.round(percent)));
+  return (
+    <span className="ring" role="img" aria-label={`${label}: ${p}%`} style={{ "--p": `${p}` } as React.CSSProperties}>
+      <span aria-hidden="true">{p}%</span>
+    </span>
+  );
+}
+
+const ICON = {
+  bolt: "M13 2 4 14h7l-1 8 9-12h-7z",
+  sun: "M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z",
+  target: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
+  play: "M8 5v14l11-7z",
+};
+const Svg = ({ d }: { d: string }) => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
+);
+
+/** kWh per month as a small line chart; the latest month is marked. */
+function UsageChart({ months }: { months: UsageMonth[] }) {
+  const data = months.slice(-12);
+  if (data.length < 2) return <p className="muted small">Your usage chart appears once there are two bills.</p>;
+  const W = 520, H = 170, P = 24;
+  const max = Math.max(...data.map((m) => m.kwh)) * 1.15 || 1;
+  const x = (i: number) => P + (i * (W - 2 * P)) / (data.length - 1);
+  const y = (kwh: number) => H - P - (kwh / max) * (H - 2 * P);
+  const line = data.map((m, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(m.kwh).toFixed(1)}`).join(" ");
+  const last = data.at(-1)!;
+  const sampled = data.some((m) => m.provenance?.kind && !["scanned", "real-derived"].includes(m.provenance.kind));
+  return (
+    <figure className="usage-chart">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`kWh per month, ${month(data[0]!.period)} to ${month(last.period)}. Latest ${last.kwh} kWh.`}>
+        {[0.25, 0.5, 0.75].map((f) => <line key={f} x1={P} x2={W - P} y1={H - P - f * (H - 2 * P)} y2={H - P - f * (H - 2 * P)} className="grid" />)}
+        <path d={`${line} L${x(data.length - 1)},${H - P} L${x(0)},${H - P} Z`} className="area" />
+        <path d={line} className="line" />
+        <circle cx={x(data.length - 1)} cy={y(last.kwh)} r="6" className="dot" />
+        <g className="tip" transform={`translate(${Math.min(x(data.length - 1), W - 50)}, ${Math.max(y(last.kwh) - 30, 6)})`}>
+          <rect x="-44" y="0" width="88" height="22" rx="8" />
+          <text x="0" y="15" textAnchor="middle">{last.kwh} kWh</text>
+        </g>
+        {data.map((m, i) => (i % 2 === (data.length - 1) % 2) && (
+          <text key={m.period} x={x(i)} y={H - 4} textAnchor="middle" className="axis">{month(m.period).slice(0, 3)}</text>
+        ))}
+      </svg>
+      {sampled && <figcaption className="muted small">Earlier months are sample values.</figcaption>}
+    </figure>
+  );
+}
 
 /**
- * Home is the latest Bill as a "Wrapped" story: the amount, how it compares with last month,
- * what moved it, where the money went (every charge opens the charge chat), and the next move.
- * Parent keys it by session and SIN.
+ * Home, gamified around Eelio: a hero card with the bill, Eelio's mood and charge, three star
+ * skills, a usage chart, and the missions with progress rings. The bill's full story opens as
+ * "Wrapped". Parent keys it by session and SIN.
  */
-export function Home({ token, household, onExpired, onAskCharge, onSave, saveCard }: {
+export function Home({ token, household, onExpired, onAskCharge, onSave, saveCard, setup, onOpenMission }: {
   token: string;
   household: Household;
   onExpired: () => void;
@@ -85,173 +105,129 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   /** "Want to save on your next bill?" → rewards onboarding (#51). */
   onSave?: () => void;
   /** Replaces the save card once Household Setup is done (Mission Plan summary). */
-  saveCard?: React.ReactNode;
+  saveCard?: ReactNode;
+  /** Household Setup progress, for Eelio's charge and the missions list. */
+  setup?: SetupStatus | null;
+  /** Opens a Mission's detail on the Missions tab. */
+  onOpenMission?: (id: string) => void;
 }) {
   const [data, setData] = useState<HomeSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [index, setIndex] = useState(0);
-  const [showAll, setShowAll] = useState(false);
+  const [usage, setUsage] = useState<UsageMonth[] | null>(null);
+  const [plan, setPlan] = useState<MissionPlan | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const planReady = !!setup?.complete;
 
   useEffect(() => {
     const controller = new AbortController();
-    homeApi
-      .summary(token, household.sin, controller.signal)
-      .then(setData)
-      .catch((err) => {
-        if (controller.signal.aborted) return;
-        if (err instanceof ApiError && err.status === 401) onExpired();
-        else setError(err instanceof Error ? err.message : "Couldn't load Home.");
-      });
+    const fail = (err: unknown) => {
+      if (controller.signal.aborted) return;
+      if (err instanceof ApiError && err.status === 401) onExpired();
+      else setError(err instanceof Error ? err.message : "Couldn't load Home.");
+    };
+    homeApi.summary(token, household.sin, controller.signal).then(setData).catch(fail);
+    homeApi.usage(token, household.sin, controller.signal).then(setUsage).catch(() => { if (!controller.signal.aborted) setUsage([]); });
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, household.sin]);
 
-  const slides = data ? buildSlides(data) : [];
-  const count = slides.length;
-  const go = useCallback((next: number) => { setIndex(Math.max(0, Math.min(count - 1, next))); setShowAll(false); }, [count]);
+  useEffect(() => {
+    if (!planReady) { setPlan(null); return; }
+    const controller = new AbortController();
+    missionPlanApi.get(token, household.sin, controller.signal).then(setPlan).catch(() => {});
+    return () => controller.abort();
+  }, [token, household.sin, planReady]);
 
   if (error) return <section className="card home"><p className="error" role="alert">{error}</p></section>;
-  if (!data) return <section className="wrapped loading" aria-busy="true"><p className="muted">Wrapping up your bill…</p></section>;
+  if (!data) return <section className="dash loading" aria-busy="true"><p className="muted">Eelio is reading your bill…</p></section>;
 
-  function buildSlides(d: HomeSummary): Slide[] {
-    const change = d.bakitGanito;
-    const amount = d.bill.amountDue;
-    const billMonth = month(d.bill.period);
-    const ask = (line: HomeChargeLine) => onAskCharge?.(line, d);
-    const out: Slide[] = [];
+  const change = data.bakitGanito;
+  const mood = moodFor(data, setup ?? null);
+  const charge = chargeFor(data, setup ?? null, plan);
+  const base = change ? Math.max(1, (data.bill.amountDue ?? 0) - change.total) : 1;
+  const effect = (key: string) => change?.effects.find((e) => e.key === key)?.amount;
+  const setupStars = setup ? Math.min(5, 1 + setup.doneCount + (plan ? 1 : 0)) : 1;
 
-    out.push({
-      key: "intro", tone: "tone-brand", label: `Your ${billMonth} bill`,
-      body: <>
-        <p className="wr-eyebrow">{greeting()} · {d.area} home</p>
-        <h2 className="wr-title">Your {billMonth} bill, wrapped</h2>
-        <p className="wr-big" aria-label={amount === null ? "Amount not available" : `Amount due ${peso(amount)}`}>
-          {amount === null ? "—" : <CountUp centavos={amount} />}
-        </p>
-        <p className="wr-sub">{d.bill.dueDate ? `Due ${shortDate(d.bill.dueDate)}` : "Amount due"}{d.canMasked ? ` · CAN ${d.canMasked}` : ""}</p>
-        <p className="wr-hint" aria-hidden="true">Tap to see what happened →</p>
-      </>,
-    });
+  return (
+    <section className="dash" aria-label="Home">
+      <div className="dash-main">
+        <div className={`hero mood-${mood}`}>
+          <div className="hero-copy">
+            <p className="hero-hello">{greeting()} · {data.area} home</p>
+            <h2>Your {month(data.bill.period)} bill</h2>
+            <p className="hero-amount">{data.bill.amountDue === null ? "—" : wholePeso(data.bill.amountDue, false)}
+              {change && change.total !== 0 && <span className={`hero-change ${change.total < 0 ? "down" : "up"}`}>
+                {change.total < 0 ? "▼" : "▲"} {plainPeso(change.total)} vs. {month(change.previousPeriod)}
+              </span>}
+            </p>
+            <div className="hero-title">
+              <span className="hero-title-icon"><Svg d={ICON.bolt} /></span>
+              <span><span className="small">Eelio says you're</span><strong>{MOOD[mood].title}</strong></span>
+            </div>
+            <div className="charge-meter" role="meter" aria-label="Eelio's charge" aria-valuemin={0} aria-valuemax={100} aria-valuenow={charge}>
+              <span className="charge-track"><span style={{ width: `${charge}%` }} /></span>
+              <span className="small">{charge}% charged</span>
+            </div>
+            <p className="hero-line">{MOOD[mood].line}</p>
+            <button type="button" className="hero-play" onClick={() => setPlaying(true)}><Svg d={ICON.play} /> Play your bill wrapped</button>
+          </div>
+          <img className="hero-mascot" src={MOOD[mood].img} alt={`Eelio, ${MOOD[mood].title}`} />
+        </div>
 
-    if (change) {
-      const less = change.total < 0;
-      out.push({
-        key: "change", tone: less ? "tone-teal" : "tone-ink", label: `Compared with ${month(change.previousPeriod)}`,
-        body: <>
-          <p className="wr-eyebrow">Compared with {month(change.previousPeriod)}</p>
-          <p className="wr-big" aria-label={`${peso(change.total, true)} vs. ${month(change.previousPeriod)}`}>
-            {change.total === 0 ? "₱0" : <CountUp centavos={change.total} signed />}
-          </p>
-          <h2 className="wr-title">
-            {change.total === 0 ? "Exactly the same as last month." : less
-              ? `You paid ${plainPeso(change.total)} less than in ${month(change.previousPeriod)}.`
-              : `You paid ${plainPeso(change.total)} more than in ${month(change.previousPeriod)}.`}
-          </h2>
-          {change.addsUp && <p className="wr-sub">Every peso of the change is explained next.</p>}
-        </>,
-      });
+        <ul className="skills" aria-label="Your energy skills">
+          <li><span className="skill-icon tone-a"><Svg d={ICON.bolt} /></span><Stars value={starsFrom(change?.habit, base)} label="Usage control" /><strong>Usage control</strong></li>
+          <li><span className="skill-icon tone-b"><Svg d={ICON.sun} /></span><Stars value={starsFrom(effect("weather"), base)} label="Weather-proof" /><strong>Weather-proof</strong></li>
+          <li><span className="skill-icon tone-c"><Svg d={ICON.target} /></span><Stars value={setupStars} label="Mission ready" /><strong>Mission ready</strong></li>
+        </ul>
 
-      const parts = [...change.effects, ...change.lines].filter((p) => p.amount !== 0).sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
-      const top = parts[0];
-      const max = Math.abs(top?.amount ?? 1) || 1;
-      if (top) out.push({
-        key: "reasons", tone: "tone-cream", label: "What moved your bill",
-        body: <>
-          <p className="wr-eyebrow">What moved your bill</p>
-          <h2 className="wr-title">#1: <span className="wr-accent">{effectLabel(top)}</span> {top.amount > 0 ? "added" : "saved you"} {plainPeso(top.amount)}.</h2>
-          <p className="wr-sub">{EFFECT_NOTE[top.key] ?? ""}</p>
-          <ol className="wr-reasons">
-            {parts.map((p, i) => (
-              <li key={p.key} className={p.key === "habit" ? "habit" : ""}>
-                <span className="wr-rank" aria-hidden="true">{i + 1}</span>
-                <span className="wr-reason-name">{effectLabel(p)}</span>
-                <span className="wr-reason-bar" aria-hidden="true"><span className={p.amount > 0 ? "up" : "down"} style={{ width: `${(Math.abs(p.amount) / max) * 100}%` }} /></span>
-                <strong className={p.amount > 0 ? "up" : "down"}>{wholePeso(p.amount)}</strong>
-              </li>
-            ))}
-          </ol>
-          {change.addsUp && <p className="wr-sub small">✓ Adds up to {peso(change.total, true)}</p>}
-        </>,
-      });
-    } else if (d.bakitGanitoUnavailable) {
-      out.push({
-        key: "change", tone: "tone-ink", label: "Compared with last month",
-        body: <><p className="wr-eyebrow">Compared with last month</p><h2 className="wr-title">{d.bakitGanitoUnavailable}</h2></>,
-      });
-    }
+        <div className="card usage-card">
+          <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh per month</span></div>
+          {usage === null ? <p className="muted small">Loading…</p> : <UsageChart months={usage} />}
+        </div>
+      </div>
 
-    if (d.chargeLines.all.length > 0) {
-      const total = d.chargeLines.all.reduce((s, l) => s + Math.max(0, l.amount), 0) || 1;
-      const ranked = [...d.chargeLines.featured].sort((a, b) => b.amount - a.amount);
-      out.push({
-        key: "charges", tone: "tone-plum", label: "Where your money went",
-        body: <>
-          <p className="wr-eyebrow">Where your money went</p>
-          <h2 className="wr-title">Your top charges</h2>
-          <p className="wr-sub">Tap any charge to ask about it.</p>
-          {!showAll ? <div className="wr-charges">
-            {ranked.map((l, i) => <ChargeButton key={l.id} line={l} rank={i + 1} share={l.amount / total} onAsk={ask} />)}
-          </div> : <div className="wr-charges all" aria-label="All charges">
-            {d.chargeLines.all.map((l) => <ChargeButton key={l.id} line={l} onAsk={ask} />)}
-          </div>}
-          <button type="button" className="wr-link" aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}>
-            {showAll ? "Show top charges" : `View all ${d.chargeLines.all.length} charges`}
-          </button>
-        </>,
-      });
-    }
-
-    out.push({
-      key: "next", tone: "tone-brand", label: "Your next move",
-      body: <>
-        <p className="wr-eyebrow">Your next move</p>
-        <h2 className="wr-title">{change && change.habit > 0
-          ? `${wholePeso(change.habit, false)} came from how you used power. Win it back next month.`
-          : "Use a little less next month and earn points."}</h2>
+      <aside className="dash-side" aria-label="Your missions">
+        <h3>Your missions</h3>
         {saveCard ?? (
-          <button type="button" className="wr-cta" onClick={onSave}>
+          <button type="button" className="save-card" onClick={onSave}>
             <span><strong>Want to save on your next bill?</strong>
-              <span>{change && change.habit > 0 ? `${wholePeso(change.habit, false)} came from usage. Cut it and earn points.` : "Use a little less and earn points on your next bill."}</span>
+              <span>{change && change.habit > 0 ? `${plainPeso(change.habit)} came from usage. Cut it and earn points.` : "Use a little less and earn points on your next bill."}</span>
             </span>
             <span aria-hidden="true">→</span>
           </button>
         )}
-        <button type="button" className="wr-link" onClick={() => go(0)}>Replay</button>
-      </>,
-    });
-    return out;
-  }
+        <ul className="quests">
+          {plan ? plan.missions.map((m) => (
+            <li key={m.id}>
+              <button type="button" className="quest" onClick={() => onOpenMission?.(m.id)}>
+                <Ring percent={m.share * 100} label={`${m.title}, share of your 5% goal`} />
+                <span className="quest-copy">
+                  <strong>{m.title}</strong>
+                  <span>−{m.percent.toFixed(1)}% · ~{wholePeso(m.pesoValue, false)}</span>
+                  <span className="quest-tag">{m.effort}</span>
+                </span>
+              </button>
+            </li>
+          )) : (setup?.steps ?? []).map((s) => (
+            <li key={s.key}>
+              <button type="button" className="quest" onClick={onSave}>
+                <Ring percent={s.done ? 100 : 0} label={s.label} />
+                <span className="quest-copy">
+                  <strong>{s.label}</strong>
+                  <span>{s.done ? "Done" : "Setup step"}</span>
+                  <span className="quest-tag">+{Math.round((setup?.welcomePoints.points ?? 100) / (setup?.total ?? 3))} pts</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </aside>
 
-  const current = slides[Math.min(index, count - 1)]!;
-  const onKey = (e: React.KeyboardEvent) => {
-    if ((e.target as HTMLElement).closest("input, textarea")) return;
-    if (e.key === "ArrowRight") { e.preventDefault(); go(index + 1); }
-    if (e.key === "ArrowLeft") { e.preventDefault(); go(index - 1); }
-  };
-  /** Tapping the empty part of a slide moves like a story: left third back, the rest forward. */
-  const onTap = (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest("button, a, input, [role=dialog]")) return;
-    const box = e.currentTarget.getBoundingClientRect();
-    go(e.clientX - box.left < box.width / 3 ? index - 1 : index + 1);
-  };
-
-  return (
-    <section className="wrapped" aria-label="Home" aria-roledescription="carousel" onKeyDown={onKey}>
-      <div className="wr-progress" role="tablist" aria-label="Slides">
-        {slides.map((s, i) => (
-          <button key={s.key} type="button" role="tab" aria-selected={i === index} aria-label={`Slide ${i + 1}: ${s.label}`}
-            className={i < index ? "done" : i === index ? "on" : ""} onClick={() => go(i)}><span /></button>
-        ))}
-      </div>
-      <div key={current.key} className={`wr-slide ${current.tone}`} role="group" aria-roledescription="slide"
-        aria-label={`${index + 1} of ${count}: ${current.label}`} onClick={onTap}>
-        {current.body}
-      </div>
-      <div className="wr-nav">
-        <button type="button" className="wr-arrow" aria-label="Previous slide" disabled={index === 0} onClick={() => go(index - 1)}>‹</button>
-        <span className="wr-count" aria-live="polite">{index + 1} / {count}</span>
-        <button type="button" className="wr-arrow" aria-label="Next slide" disabled={index === count - 1} onClick={() => go(index + 1)}>›</button>
-      </div>
+      {playing && (
+        <div className="wrapped-overlay" role="dialog" aria-modal="true" aria-label="Your bill, wrapped">
+          <HomeWrapped data={data} onAskCharge={onAskCharge} onSave={onSave} saveCard={saveCard} onClose={() => setPlaying(false)} />
+        </div>
+      )}
     </section>
   );
 }

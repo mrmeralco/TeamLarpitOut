@@ -513,9 +513,15 @@ export interface HomeSummary {
   smartMeter: { monthToDateKwh: number | null } | null;
 }
 
+/** One month of the Bill History, as the usage chart on Home needs it. */
+export interface UsageMonth { period: string; kwh: number; billingDays: number; provenance?: { kind: string; note: string } }
+
 export const homeApi = {
   summary: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(`/api/households/${encodeURIComponent(sin)}/home`, authed(token, signal)).then((r) => json<HomeSummary>(r)),
+  /** Bill History, oldest first; Home charts its kWh. */
+  usage: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/bills`, authed(token, signal)).then((r) => json<UsageMonth[]>(r)),
 };
 
 export interface ChargeAnswer {

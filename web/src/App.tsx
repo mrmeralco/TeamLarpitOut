@@ -127,6 +127,7 @@ export function App() {
         {tab === "home" && <>
           <Home key={`home:${key}`} token={session.token} household={selected} onExpired={onExpired} onSave={() => go("missions", "save")}
             saveCard={setup?.complete ? <PlanSummaryCard token={session.token} sin={selected.sin} onOpen={() => go("missions")} /> : undefined}
+            setup={setup} onOpenMission={(id) => go("missions", "m", id)}
             onAskCharge={(line, summary) => setAsking({
               line,
               previousMonth: summary.bakitGanito ? new Date(`${summary.bakitGanito.previousPeriod}-01T00:00:00`).toLocaleDateString("en-PH", { month: "long" }) : null,
