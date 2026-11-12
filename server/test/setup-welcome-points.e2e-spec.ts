@@ -75,7 +75,7 @@ describe("Household Setup checklist", () => {
     const missions = await api.get(`/api/households/${SIN}/missions`, token);
     const locked = await api.put(`/api/households/${SIN}/usage-plan`, { cut: 5, missionIds: [missions.body.missions[0].id] }, token);
     expect(locked.status).toBe(409);
-    expect(locked.body).toMatchObject({ reason: "setupIncomplete", error: "Tapusin ang setup para ma-unlock ang Missions." });
+    expect(locked.body).toMatchObject({ reason: "setupIncomplete", error: "Finish setup to unlock Missions." });
     await api.completeSetup(SIN, token);
     expect((await api.put(`/api/households/${SIN}/usage-plan`, { cut: 5, missionIds: [missions.body.missions[0].id] }, token)).status).toBe(200);
   });

@@ -40,7 +40,7 @@ describe("POST /api/households/:sin/appliances/scan-label", () => {
       ...result.body.label, consumptionKwh: type === "aircon" ? 135 : 60, confirmed: true,
     } }] }, token);
     expect(saved.status).toBe(200);
-    expect(saved.body.appliances[0]).toMatchObject({ source: "label", sourceLabel: "Mula sa energy label", estimatedKwhPerDay: type === "aircon" ? 4 : 2 });
+    expect(saved.body.appliances[0]).toMatchObject({ source: "label", sourceLabel: "From the energy label", estimatedKwhPerDay: type === "aircon" ? 4 : 2 });
     expect((await api.get(path, token)).body).toEqual(saved.body);
   });
 
@@ -109,7 +109,7 @@ describe("POST /api/households/:sin/appliances/scan-label", () => {
     const token = await api.login();
     const result = await api.upload(`${path}/scan-label`, undefined, undefined, token, { type: "aircon" });
     expect(result.status).toBe(status);
-    expect(result.body.error).toContain("mga sagot mo");
+    expect(result.body.error).toMatch(/use your answers/i);
     expect((await api.get(path, token)).body.saved).toBe(false);
   });
 

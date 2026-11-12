@@ -5,7 +5,7 @@ import { normalizeEmail } from "./email-code.service.js";
 
 export interface AuthClock { now(): number }
 export const SESSION_TTL_MS = 60 * 60 * 1000;
-export const SIGN_IN_REQUIRED = "Mag-sign in muna.";
+export const SIGN_IN_REQUIRED = "Please sign in first.";
 interface Session { ownerId: string; expiresAt: number }
 
 /** A login's stable id. Derived from the email, so the email itself never needs storing. */

@@ -40,7 +40,7 @@ describe("calculateHeatSensitivity", () => {
     expect(res.source).toBe("history");
     expect(res.heatSensitivity).toBe(1.8);
     expect(res.hotDayKwh).toBe(1.8);
-    expect(res.label).toBe("Mula sa Bill History");
+    expect(res.label).toBe("From your Bill History");
   });
 
   it("clamps negative slope to zero", () => {

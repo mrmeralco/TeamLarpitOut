@@ -89,7 +89,7 @@ describe("04 · Heat Sensitivity and Weather Effect", () => {
     const weatherEffect = findEffect(body, "weather");
     expect(weatherEffect).toBeDefined();
     expect(weatherEffect.estimate).toBe(true);
-    expect(weatherEffect.label).toContain("tantya");
+    expect(weatherEffect.label).toContain("estimate");
     expect(weatherEffect.amount).toBeLessThan(0);
     expect(sum(body.effects)).toBe(body.total);
   });

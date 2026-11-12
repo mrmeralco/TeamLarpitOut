@@ -8,7 +8,7 @@ import { BADGE_LABEL, bakitGanitoSentence, homeAction, homeBadge } from "../doma
 import { homeChargeLines } from "../domain/charge-lines.js";
 import { HouseholdsService } from "../households/households.service.js";
 
-const MONTHS = ["Enero", "Pebrero", "Marso", "Abril", "Mayo", "Hunyo", "Hulyo", "Agosto", "Setyembre", "Oktubre", "Nobyembre", "Disyembre"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const monthName = (period: string) => MONTHS[Number(period.slice(5, 7)) - 1] ?? period;
 
 /** The amount due as Meralco printed it: the total, else the sum of the printed lines (centavos). */
@@ -18,7 +18,7 @@ function amountDue(bill: Bill): number | null {
   return lines.length ? lines.reduce((s, l) => s + Math.round(l.amount * 100), 0) : null;
 }
 
-/** Home: pay-ready summary + "Bakit ganito? · Tama ba ito? · Ano ang gagawin ko?" */
+/** Home: pay-ready summary + "Why this bill? · Is it right? · What should I do?" */
 @Injectable()
 export class HomeService {
   constructor(
@@ -32,7 +32,7 @@ export class HomeService {
     const household = (await this.households.list(ownerId)).find((h) => h.sin === sin)!;
     const history = await this.bills.bills(sin);
     const latest = history.at(-1);
-    if (!latest) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    if (!latest) throw new NotFoundException({ error: "There is no Bill for this Household." });
 
     const checks = await this.billChecks.checkForHousehold(sin);
     const badge = homeBadge({ checksOverall: checks.overall });
@@ -48,7 +48,7 @@ export class HomeService {
       addsUp: boolean;
       habit: number;
     } | null = null;
-    let bakitGanitoUnavailable: string | null = history.length < 2 ? "Kailangan ng dalawang Bill para maikumpara." : null;
+    let bakitGanitoUnavailable: string | null = history.length < 2 ? "Two Bills are needed to compare." : null;
     if (history.length >= 2) {
       try {
         const change = await this.billChange.explainForHousehold(sin);
@@ -67,7 +67,7 @@ export class HomeService {
         };
       } catch (err) {
         if (!(err instanceof HttpException)) throw err;
-        bakitGanitoUnavailable = "Hindi pa maipaliwanag ang pagbabago ng Bill na ito.";
+        bakitGanitoUnavailable = "This Bill's change can't be explained yet.";
       }
     }
 
@@ -98,7 +98,7 @@ export class HomeService {
         screen: "tama-ba" as const,
       },
       action: homeAction(badge, checks.summary),
-      /** Smart meter extras ("Ngayong buwan hanggang ngayon") arrive with the smart meter readings (#10). */
+      /** Smart meter extras ("This month so far") arrive with the smart meter readings (#10). */
       smartMeter: household.meter_type === "smart" ? { monthToDateKwh: null } : null,
     };
   }

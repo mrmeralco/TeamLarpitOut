@@ -7,9 +7,9 @@ const date = (value: string, timeZone: string) => new Intl.DateTimeFormat("en-PH
   timeZone, month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit",
 }).format(new Date(value));
 const views: Record<ReadingInterval, { label: string; title: string; window: string; period: string }> = {
-  hour: { label: "Hour", title: "Hourly", window: "huling 24 oras na available", period: "oras" },
-  day: { label: "Day", title: "Daily", window: "huling 30 araw na available", period: "araw" },
-  week: { label: "Week", title: "Weekly", window: "huling 12 linggo na available", period: "linggo" },
+  hour: { label: "Hour", title: "Hourly", window: "last 24 hours available", period: "hour" },
+  day: { label: "Day", title: "Daily", window: "last 30 days available", period: "day" },
+  week: { label: "Week", title: "Weekly", window: "last 12 weeks available", period: "week" },
 };
 
 function UsageChart({ data }: { data: UsageReadings }) {
@@ -21,7 +21,7 @@ function UsageChart({ data }: { data: UsageReadings }) {
   });
   const labelEvery = Math.max(1, Math.ceil(data.readings.length / 4));
   return <figure className="meter-usage-chart">
-    <figcaption>{views[data.interval].title} usage · kWh{data.interval === "week" && " · linggo mula Lunes"}</figcaption>
+    <figcaption>{views[data.interval].title} usage · kWh{data.interval === "week" && " · weeks start Monday"}</figcaption>
     <svg viewBox="0 0 360 200" role="img" aria-label={`${views[data.interval].title} usage chart in kWh. Exact values are in the readings table.`}>
       {[0, 0.5, 1].map((fraction) => <g key={fraction}>
         <line x1="42" x2="342" y1={160 - fraction * 140} y2={160 - fraction * 140} className="meter-usage-grid" />
@@ -40,18 +40,18 @@ function UsageData({ data }: { data: UsageReadings }) {
   // The API uses integer Wh; sum in Wh here too, avoiding floating-point total drift.
   const total = data.readings.reduce((sum, row) => sum + Math.round(row.kwh * 1000), 0) / 1000;
   return <>
-    <p className="notice">Synthetic demo data · Hindi ito totoong meter readings. {data.provenance.note}</p>
+    <p className="notice">Synthetic demo data · These are not real meter readings. {data.provenance.note}</p>
     {data.available && <p className="muted meter-usage-window">Simulation: {date(data.available.from, data.timeZone)} – {date(data.available.to, data.timeZone)} (end exclusive).</p>}
-    {data.range && <p className="muted meter-usage-window">Ipinapakitang saklaw: {date(data.range.from, data.timeZone)} – {date(data.range.to, data.timeZone)} (end exclusive). Lahat ng oras: {data.timeZone}.</p>}
-    {!data.readings.length ? <p>Wala pang usage readings sa saklaw na ito.</p> : <>
-      <p className="meter-usage-total"><strong>{kwh(total)} kWh</strong> · kabuuan ng available readings</p>
+    {data.range && <p className="muted meter-usage-window">Showing: {date(data.range.from, data.timeZone)} – {date(data.range.to, data.timeZone)} (end exclusive). All times: {data.timeZone}.</p>}
+    {!data.readings.length ? <p>No usage readings in this range yet.</p> : <>
+      <p className="meter-usage-total"><strong>{kwh(total)} kWh</strong> · total of the available readings</p>
       <UsageChart data={data} />
-      {data.readings.some((row) => row.partial) && <p className="muted">Partial: kulang ang oras o bahagi lang ng buong interval ang sakop. Hindi ito buong {views[data.interval].period}.</p>}
+      {data.readings.some((row) => row.partial) && <p className="muted">Partial: some hours are missing or only part of the interval is covered. Not a full {views[data.interval].period}.</p>}
       <details>
-        <summary>Tingnan ang readings table</summary>
+        <summary>See the readings table</summary>
         <div className="table-scroll"><table>
-          <caption>{views[data.interval].title} readings · {data.timeZone} · hanggang sa end time, hindi kasama</caption>
-          <thead><tr><th scope="col">Mula / hanggang</th><th scope="col">kWh</th><th scope="col">Coverage</th></tr></thead>
+          <caption>{views[data.interval].title} readings · {data.timeZone} · up to the end time, not included</caption>
+          <thead><tr><th scope="col">From / to</th><th scope="col">kWh</th><th scope="col">Coverage</th></tr></thead>
           <tbody>{data.readings.map((row) => <tr key={row.from}>
             <th scope="row">{date(row.from, data.timeZone)}<small>→ {date(row.to, data.timeZone)}</small></th>
             <td>{kwh(row.kwh)}</td><td>{row.partial ? "Partial" : "Complete"}</td>
@@ -76,13 +76,13 @@ function IntervalReadings({ token, sin, interval, onExpired }: { token: string; 
     }).catch((error: unknown) => {
       if (!active) return;
       if (error instanceof ApiError && error.status === 401) onExpired();
-      else setState({ status: "error", message: error instanceof ApiError ? error.message : "Hindi makuha ang smart meter readings. Subukan ulit." });
+      else setState({ status: "error", message: error instanceof ApiError ? error.message : "Couldn't get the smart meter readings. Please try again." });
     });
     return () => { active = false; controller.abort(); };
   }, [token, sin, interval, attempt, onExpired]);
   return <div aria-busy={state.status === "loading"} aria-live="polite">
-    {state.status === "loading" && <p role="status">Kinukuha ang usage readings…</p>}
-    {state.status === "error" && <><p className="error" role="alert">{state.message}</p><button type="button" className="ghost" onClick={() => setAttempt((n) => n + 1)}>Subukan ulit ang readings</button></>}
+    {state.status === "loading" && <p role="status">Loading usage readings…</p>}
+    {state.status === "error" && <><p className="error" role="alert">{state.message}</p><button type="button" className="ghost" onClick={() => setAttempt((n) => n + 1)}>Retry readings</button></>}
     {state.status === "ready" && <UsageData data={state.data} />}
   </div>;
 }

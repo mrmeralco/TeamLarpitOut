@@ -31,7 +31,7 @@ export class BillChecksService {
   ): Promise<BillChecksResult> {
     const list = await this.bills.bills(sin);
     if (!list || list.length === 0) {
-      throw new NotFoundException({ error: "Walang nahanap na Bill para sa household na ito" });
+      throw new NotFoundException({ error: "No Bill found for this household" });
     }
 
     const now = list.at(-1)!;

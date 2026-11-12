@@ -76,7 +76,7 @@ export class SetupService {
 
   async saveRoutine(sin: string, home: HomePattern, aircon: AirconPattern | null | undefined) {
     const { aircon: hasAircon } = await this.hasAppliances(sin);
-    if (hasAircon && !aircon) throw new BadRequestException({ error: "Kailan karaniwang naka-on ang aircon?", issues: ["aircon"] });
+    if (hasAircon && !aircon) throw new BadRequestException({ error: "When is the aircon usually on?", issues: ["aircon"] });
     const record = await this.repository.find(sin);
     const next: SetupRecord = { ...record, routine: { home, aircon: hasAircon ? aircon! : null } };
     await this.repository.save(sin, next);
@@ -89,12 +89,12 @@ export class SetupService {
     const issues: string[] = [];
     const clean: Partial<Record<GridType, number>> = {};
     for (const [type, n] of Object.entries(counts)) {
-      if (!(GRID_TYPES as readonly string[]).includes(type)) issues.push(`${type}: wala sa listahan`);
-      else if (!Number.isInteger(n) || n < 0 || n > MAX_PER_TYPE) issues.push(`${type}: 0–${MAX_PER_TYPE} lang`);
+      if (!(GRID_TYPES as readonly string[]).includes(type)) issues.push(`${type}: not in the list`);
+      else if (!Number.isInteger(n) || n < 0 || n > MAX_PER_TYPE) issues.push(`${type}: 0–${MAX_PER_TYPE} only`);
       else if (n > 0) clean[type as GridType] = n;
     }
-    if (issues.length) throw new BadRequestException({ error: "May mali sa listahan ng appliance.", issues });
-    if (Object.keys(clean).length === 0) throw new BadRequestException({ error: "Pumili ng kahit isang appliance.", issues: ["counts"] });
+    if (issues.length) throw new BadRequestException({ error: "Something is wrong in the appliance list.", issues });
+    if (Object.keys(clean).length === 0) throw new BadRequestException({ error: "Pick at least one appliance.", issues: ["counts"] });
     const record = await this.repository.find(sin);
     const next: SetupRecord = { ...record, grid: clean, ...(clean.aircon ? {} : { airconPhoto: undefined }) };
     if (next.routine && !clean.aircon) next.routine = { ...next.routine, aircon: null };
@@ -116,13 +116,13 @@ export class SetupService {
 
   /** Optional "Snap your aircon": the vision model estimates its size; tagged "Estimated from photo". */
   async airconPhoto(sin: string, image: BillImage) {
-    if (!this.vision.readAirconPhoto) throw new ServiceUnavailableException({ error: "Hindi pa available ang aircon photo. Typical value muna." });
+    if (!this.vision.readAirconPhoto) throw new ServiceUnavailableException({ error: "The aircon photo isn't available yet. Using the typical value for now." });
     let raw;
     try {
       raw = await this.vision.readAirconPhoto(image);
     } catch (err) {
-      if (err instanceof VisionUnavailableError) throw new ServiceUnavailableException({ error: "Hindi pa naka-set up ang photo estimate. Typical value muna." });
-      throw new BadGatewayException({ error: "Hindi nabasa ang litrato ngayon. Typical value muna." });
+      if (err instanceof VisionUnavailableError) throw new ServiceUnavailableException({ error: "Photo estimates are not set up yet. Using the typical value for now." });
+      throw new BadGatewayException({ error: "We couldn't read the photo right now. Using the typical value for now." });
     }
     const pickFrom = <T extends string>(v: unknown, allowed: readonly T[]) => (allowed.includes(v as T) ? (v as T) : UNKNOWN);
     const answers = {
@@ -131,7 +131,7 @@ export class SetupService {
       room: pickFrom(raw?.room, ["small", "medium", "large"] as const),
     };
     if (!raw?.readable || Object.values(answers).every((v) => v === UNKNOWN)) {
-      throw new UnprocessableEntityException({ error: "Hindi makilala ang aircon sa litrato. Typical value muna." });
+      throw new UnprocessableEntityException({ error: "We couldn't recognise an aircon in the photo. Using the typical value for now." });
     }
     const def = findAppliance("aircon")!;
     const kwhPerHour = Math.round((def.rating(answers) ?? def.defaultRating) * 1000) / 1000;
@@ -193,7 +193,7 @@ export class SetupService {
       source: "welcome",
       hasOutage: false,
       excludedReason: null,
-      description: `Welcome Points para sa Household Setup (naka-lock hanggang sa unang Verified Savings)`,
+      description: `Welcome Points for Household Setup (locked until your first Verified Savings)`,
       createdAt: new Date().toISOString(),
     });
   }

@@ -6,6 +6,6 @@ const peso = (centavos: number) =>
 /** Deterministic wording, used when no AI is configured or the AI fails. */
 export class TemplateCoachProvider implements CoachProvider {
   async phraseMission(f: MissionFacts): Promise<string> {
-    return `${f.title}: mga ${f.kwhSaved} kWh ang matitipid mo, mga ${peso(f.pesoValue)} sa susunod na Bill.`;
+    return `${f.title}: you could save about ${f.kwhSaved} kWh, about ${peso(f.pesoValue)} on your next Bill.`;
   }
 }

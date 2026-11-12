@@ -107,7 +107,7 @@ describe("Account Linking by CAN", () => {
     const token = await api.login(NEW);
     const res = await api.post("/api/households/link", { can: A.can }, token);
     expect(res.status).toBe(409);
-    expect(res.body.error).toMatch(/Kausapin ang may-ari ng account/);
+    expect(res.body.error).toMatch(/contact the account owner/);
     expect((await api.get(`/api/households/${A.sin}/bills`, token)).status).toBe(404);
   });
 

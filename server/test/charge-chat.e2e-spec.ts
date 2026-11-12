@@ -35,12 +35,12 @@ describe("POST /api/households/:sin/charges/:lineId/ask", () => {
   it("sends only that line's computed facts and the question to the provider", async () => {
     const coach = fakeCoach("Generation went up because you used more electricity.");
     const { api, token } = await setup(coach);
-    const res = await api.post(ask("generation"), { question: "Bakit tumaas ito?" }, token);
+    const res = await api.post(ask("generation"), { question: "Why did this go up?" }, token);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ lineId: "generation", kind: "answer", source: "ai", answer: "Generation went up because you used more electricity." });
     expect(coach.seen).toHaveLength(1);
     const { facts, question } = coach.seen[0]!;
-    expect(question).toBe("Bakit tumaas ito?");
+    expect(question).toBe("Why did this go up?");
     expect(facts).toMatchObject({
       line: "Generation", kind: "perKwh", goesTo: "Pass-through", passThrough: true,
       amountNow: 4026, amountBefore: 3120, change: 906, kwhNow: 610, kwhBefore: 520, kwhChange: 90, billCheck: "green",
@@ -68,14 +68,14 @@ describe("POST /api/households/:sin/charges/:lineId/ask", () => {
     expect((await api.post(ask("generation"), { question: "Why did this go up?" }, token)).body).toMatchObject({ source: "ai", answer: reply });
   });
 
-  it("never offers to file a complaint: complaint questions get Itanong kay Meralco plus the copy summary", async () => {
+  it("never offers to file a complaint: complaint questions get 'ask Meralco' plus the copy summary", async () => {
     const coach = fakeCoach("I will file a complaint for you.");
     const { api, token } = await setup(coach, history(9999));
     for (const question of ["Can you file a complaint for me?", "Paano ko ireklamo ito?", "I want to dispute this"]) {
       const res = await api.post(ask("generation"), { question }, token);
       expect(res.body.kind).toBe("askMeralco");
       expect(res.body.answer).toMatch(/does not file complaints/);
-      expect(res.body.answer).toMatch(/Itanong kay Meralco/);
+      expect(res.body.answer).toMatch(/ask Meralco/i);
       expect(res.body.summary.length).toBeGreaterThan(0);
     }
     expect(coach.seen).toHaveLength(0);
@@ -94,7 +94,7 @@ describe("POST /api/households/:sin/charges/:lineId/ask", () => {
 
   it("works with the template provider when no API key is set", async () => {
     const { api, token } = await setup(new TemplateCoachProvider());
-    const why = await api.post(ask("generation"), { question: "Bakit tumaas ito?" }, token);
+    const why = await api.post(ask("generation"), { question: "Why did this go up?" }, token);
     expect(why.body.source).toBe("template");
     expect(why.body.answer).toMatch(/rose by ₱906\.00/);
     expect(why.body.answer).toMatch(/went up by ₱0\.60\/kWh, which added about ₱366\.00/);
@@ -105,7 +105,7 @@ describe("POST /api/households/:sin/charges/:lineId/ask", () => {
     expect((await api.post(ask("generation"), { question: "Is this correct?" }, token)).body.answer).toMatch(/Bill Checks for this bill pass/);
   });
 
-  it("answers 'Is this correct?' on a red Bill with Itanong kay Meralco and the summary", async () => {
+  it("answers 'Is this correct?' on a red Bill with 'ask Meralco' and the summary", async () => {
     const { api, token } = await setup(new TemplateCoachProvider(), history(9999));
     const res = await api.post(ask("generation"), { question: "Is this correct?" }, token);
     expect(res.body.kind).toBe("askMeralco");

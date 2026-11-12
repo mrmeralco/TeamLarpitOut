@@ -46,7 +46,7 @@ export class AccountLinkingController {
   @Header("Cache-Control", "no-store")
   async link(@Body() body: LinkHouseholdDto, @Req() request: AuthenticatedRequest) {
     const can = tenDigits(body.can);
-    if (can === null) throw new BadRequestException({ error: "Ang CAN ay 10 digit. Tingnan ulit ang Bill." });
+    if (can === null) throw new BadRequestException({ error: "The CAN has 10 digits. Please check your Bill again." });
     const { account, status } = await this.households.startLink(request.auth.ownerId, can);
     return { status, ...(status === "active" ? { householdSin: account.sin } : {}), ...(await this.summary(account)) };
   }
@@ -65,7 +65,7 @@ export class AccountLinkingController {
   async confirm(@Body() body: ConfirmLinkDto, @Req() request: AuthenticatedRequest) {
     const scanned = this.contexts.context(body.scanToken);
     const can = scanned.can ?? (body.can !== undefined ? tenDigits(body.can) : null);
-    if (can === null) throw new BadRequestException({ error: "I-type ang 10-digit na CAN na nakasulat sa Bill." });
+    if (can === null) throw new BadRequestException({ error: "Type the 10-digit CAN printed on the Bill." });
     return this.households.activateFromScan(request.auth.ownerId, can);
   }
 }

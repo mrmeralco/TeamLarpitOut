@@ -54,13 +54,13 @@ export function areConsecutivePeriods(beforePeriod: string, nowPeriod: string): 
 
 /** Check 1: Lines sum to the total */
 export function checkLineSum(now: Bill, tolerancePesos = 2.0): SingleCheckResult {
-  const title = "Kabuuan ng mga linya (Lines sum to total)";
+  const title = "Lines sum to the total";
   if (now.totalAmount === undefined) {
     return {
       key: "lineSum",
       title,
       status: "skipped",
-      message: "Walang naka-print na total amount sa Bill upang ikumpara sa mga linya.",
+      message: "The Bill has no printed total amount to compare the lines with.",
     };
   }
 
@@ -69,7 +69,7 @@ export function checkLineSum(now: Bill, tolerancePesos = 2.0): SingleCheckResult
       key: "lineSum",
       title,
       status: "skipped",
-      message: "Walang nakalistang charge lines sa Bill.",
+      message: "The Bill lists no charge lines.",
     };
   }
 
@@ -81,7 +81,7 @@ export function checkLineSum(now: Bill, tolerancePesos = 2.0): SingleCheckResult
       key: "lineSum",
       title,
       status: "pass",
-      message: `Tugma ang kabuuan ng mga linya sa total amount (diff: ₱${diff.toFixed(2)} <= ₱${tolerancePesos.toFixed(2)} tolerance).`,
+      message: `The lines add up to the total amount (difference ₱${diff.toFixed(2)}, within the ₱${tolerancePesos.toFixed(2)} tolerance).`,
     };
   }
 
@@ -89,11 +89,11 @@ export function checkLineSum(now: Bill, tolerancePesos = 2.0): SingleCheckResult
     key: "lineSum",
     title,
     status: "fail",
-    message: "Hindi nagtutugma ang kabuuan ng mga charge lines sa naka-print na Total Amount sa Bill.",
+    message: "The charge lines do not add up to the Total Amount printed on the Bill.",
     discrepancy: {
-      labelA: "Kabuuan ng Charge Lines sa Bill",
+      labelA: "Sum of the charge lines on the Bill",
       valueA: `₱${linesSum.toFixed(2)}`,
-      labelB: "Naka-print na Total Amount sa Bill",
+      labelB: "Total Amount printed on the Bill",
       valueB: `₱${now.totalAmount.toFixed(2)}`,
     },
   };
@@ -101,14 +101,14 @@ export function checkLineSum(now: Bill, tolerancePesos = 2.0): SingleCheckResult
 
 /** Check 2: Previous reading = last Bill's present reading */
 export function checkReadingContinuity(now: Bill, before?: Bill): SingleCheckResult {
-  const title = "Continuity ng metro reading (Previous vs Present Reading)";
+  const title = "Meter reading continuity (previous vs. present reading)";
 
   if (!before) {
     return {
       key: "readingContinuity",
       title,
       status: "skipped",
-      message: "Walang nakaraang Bill na mapagkukumparahan.",
+      message: "There is no previous Bill to compare with.",
     };
   }
 
@@ -117,7 +117,7 @@ export function checkReadingContinuity(now: Bill, before?: Bill): SingleCheckRes
       key: "readingContinuity",
       title,
       status: "skipped",
-      message: `Hindi magkasunod ang billing periods (${before.period} at ${now.period}); may missing Bill sa pagitan.`,
+      message: `The billing periods are not consecutive (${before.period} and ${now.period}); a Bill in between is missing.`,
     };
   }
 
@@ -130,7 +130,7 @@ export function checkReadingContinuity(now: Bill, before?: Bill): SingleCheckRes
       key: "readingContinuity",
       title,
       status: "skipped",
-      message: `Nagpalit ng metro (${before.meterSerialNumber} → ${now.meterSerialNumber}), kaya hindi inaasahang magtutugma ang reading.`,
+      message: `The meter was replaced (${before.meterSerialNumber} → ${now.meterSerialNumber}), so the readings are not expected to continue.`,
     };
   }
 
@@ -139,7 +139,7 @@ export function checkReadingContinuity(now: Bill, before?: Bill): SingleCheckRes
       key: "readingContinuity",
       title,
       status: "skipped",
-      message: "Kulang ang datos ng meter readings (walang previous o present reading).",
+      message: "Meter readings are incomplete (no previous or present reading).",
     };
   }
 
@@ -148,7 +148,7 @@ export function checkReadingContinuity(now: Bill, before?: Bill): SingleCheckRes
       key: "readingContinuity",
       title,
       status: "pass",
-      message: `Tugma ang Previous reading (${now.previousReading}) sa Present reading ng nakaraang Bill (${before.presentReading}).`,
+      message: `The previous reading (${now.previousReading}) matches the last Bill's present reading (${before.presentReading}).`,
     };
   }
 
@@ -156,11 +156,11 @@ export function checkReadingContinuity(now: Bill, before?: Bill): SingleCheckRes
     key: "readingContinuity",
     title,
     status: "fail",
-    message: "Hindi tugma ang Previous reading ng kasalukuyang Bill sa Present reading ng nakaraang Bill.",
+    message: "This Bill's previous reading does not match the last Bill's present reading.",
     discrepancy: {
-      labelA: "Previous reading sa kasalukuyang Bill",
+      labelA: "Previous reading on this Bill",
       valueA: now.previousReading,
-      labelB: "Present reading sa nakaraang Bill",
+      labelB: "Present reading on the last Bill",
       valueB: before.presentReading,
     },
   };
@@ -180,7 +180,7 @@ export function checkRateSchedule(
       key: "rateSchedule",
       title,
       status: "skipped",
-      message: `Walang published Rate Schedule para sa period na ${now.period}.`,
+      message: `There is no published Rate Schedule for ${now.period}.`,
     };
   }
 
@@ -189,7 +189,7 @@ export function checkRateSchedule(
       key: "rateSchedule",
       title,
       status: "skipped",
-      message: "Walang charge lines sa Bill para ikumpara sa published Rate Schedule.",
+      message: "The Bill has no charge lines to compare with the published Rate Schedule.",
     };
   }
 
@@ -211,9 +211,9 @@ export function checkRateSchedule(
             key: "rateSchedule",
             title,
             status: "fail",
-            message: `Hindi tugma ang per-kWh rate ng ${line.label} sa published Rate Schedule ng Meralco.`,
+            message: `The per-kWh rate of ${line.label} does not match Meralco's published Rate Schedule.`,
             discrepancy: {
-              labelA: `Rate sa Bill (${line.label})`,
+              labelA: `Rate on the Bill (${line.label})`,
               valueA: `₱${line.rate.toFixed(4)}/kWh`,
               labelB: `Published Rate Schedule (${matchedSched.label})`,
               valueB: `₱${matchedSched.rate.toFixed(4)}/kWh`,
@@ -229,9 +229,9 @@ export function checkRateSchedule(
             key: "rateSchedule",
             title,
             status: "fail",
-            message: `Hindi tugma ang per-kWh rate ng ${line.label} sa published Rate Schedule ng Meralco.`,
+            message: `The per-kWh rate of ${line.label} does not match Meralco's published Rate Schedule.`,
             discrepancy: {
-              labelA: `Epektibong Rate sa Bill (${line.label})`,
+              labelA: `Effective rate on the Bill (${line.label})`,
               valueA: `₱${effectiveRate.toFixed(4)}/kWh (Halaga: ₱${line.amount.toFixed(2)})`,
               labelB: `Published Rate Schedule (${matchedSched.label})`,
               valueB: `₱${matchedSched.rate.toFixed(4)}/kWh (Inaasahang halaga: ₱${expectedAmount.toFixed(2)})`,
@@ -246,7 +246,7 @@ export function checkRateSchedule(
     key: "rateSchedule",
     title,
     status: "pass",
-    message: `Lahat ng nasuring per-kWh rates ay tugma sa published Rate Schedule para sa ${now.period}.`,
+    message: `Every per-kWh rate checked matches the published Rate Schedule for ${now.period}.`,
   };
 }
 
@@ -256,7 +256,7 @@ export function checkPaymentReflection(
   optionsPayments?: PaymentRecord[],
   tolerancePesos = 2.0,
 ): SingleCheckResult {
-  const title = "Pag-reflect ng mga bayad bago ang Bill date";
+  const title = "Payments made before the Bill date";
   const payments = now.payments ?? optionsPayments;
   const billDate = now.billDate ?? now.dueDate;
 
@@ -265,7 +265,7 @@ export function checkPaymentReflection(
       key: "paymentReflection",
       title,
       status: "skipped",
-      message: "Walang tala ng mga naunang bayad upang masuri kung nag-reflect sa Bill.",
+      message: "There is no record of earlier payments to check against the Bill.",
     };
   }
 
@@ -274,7 +274,7 @@ export function checkPaymentReflection(
       key: "paymentReflection",
       title,
       status: "skipped",
-      message: "Walang petsa ng Bill (billDate o dueDate) para ikumpara sa petsa ng bayad.",
+      message: "The Bill has no date (bill date or due date) to compare with the payment dates.",
     };
   }
 
@@ -286,7 +286,7 @@ export function checkPaymentReflection(
       key: "paymentReflection",
       title,
       status: "pass",
-      message: `Walang naitalang bayad bago o sa araw ng bill date (${billDate}). Ang ${paymentsAfter.length} bayad pagkatapos ng petsang ito ay tama lamang na hindi pa nag-reflect.`,
+      message: `No payment was recorded on or before the bill date (${billDate}). The ${paymentsAfter.length} payment(s) after that date are correctly not reflected yet.`,
     };
   }
 
@@ -310,7 +310,7 @@ export function checkPaymentReflection(
       key: "paymentReflection",
       title,
       status: "pass",
-      message: `Naka-reflect sa Bill ang bayad na ginawa bago ang bill date (${billDate}): ₱${actualCredited.toFixed(2)}.`,
+      message: `Payments made before the bill date (${billDate}) are reflected on the Bill: ₱${actualCredited.toFixed(2)}.`,
     };
   }
 
@@ -318,11 +318,11 @@ export function checkPaymentReflection(
     key: "paymentReflection",
     title,
     status: "fail",
-    message: `May bayad bago ang bill date (${billDate}) na hindi nag-reflect o hindi tugma sa ibinawas sa Bill.`,
+    message: `A payment made before the bill date (${billDate}) is not reflected, or does not match what the Bill credited.`,
     discrepancy: {
-      labelA: `Naitalang bayad bago ang bill date (${billDate})`,
+      labelA: `Payments recorded before the bill date (${billDate})`,
       valueA: `₱${expectedCredited.toFixed(2)}`,
-      labelB: "Naka-reflect na bayad sa Bill",
+      labelB: "Payments credited on the Bill",
       valueB: `₱${actualCredited.toFixed(2)}`,
     },
   };
@@ -334,14 +334,14 @@ function buildSummary(
   householdSin?: string,
 ): string {
   if (failedChecks.length === 0) {
-    return "Lahat ng nasuring Meralco figures ay nagtutugma. Walang nakitang discrepancy.";
+    return "All of Meralco's figures checked match. No discrepancy found.";
   }
 
   const lines: string[] = [
-    "Magandang araw, Meralco Customer Care.",
+    "Good day, Meralco Customer Care.",
     "",
-    `Nais ko pong ipasuri ang aking Meralco Bill para sa period na ${now.period}${householdSin ? ` (SIN: ${householdSin})` : ""}.`,
-    "Ayon sa pagsusuri ng mga opisyal na numero sa aking bill, may nakitang discrepancy:",
+    `I would like to have my Meralco Bill for ${now.period}${householdSin ? ` (SIN: ${householdSin})` : ""} checked.`,
+    "Comparing the official figures on my bill, these do not match:",
   ];
 
   for (let i = 0; i < failedChecks.length; i++) {
@@ -352,12 +352,12 @@ function buildSummary(
       lines.push(`   • ${fc.discrepancy.labelA}: ${fc.discrepancy.valueA}`);
       lines.push(`   • ${fc.discrepancy.labelB}: ${fc.discrepancy.valueB}`);
     }
-    lines.push(`   • Detalye: ${fc.message}`);
+    lines.push(`   • Details: ${fc.message}`);
   }
 
   lines.push("");
   lines.push(
-    "Maaari po bang paki-verify at ipaliwanag kung bakit magkaiba ang mga numerong ito sa aking bill? Salamat po.",
+    "Could you please verify and explain why these figures on my bill differ? Thank you.",
   );
 
   return lines.join("\n");
@@ -389,7 +389,7 @@ export function runBillChecks(
       key: "rateSchedule",
       title: "Rate Schedule fidelity (per-kWh rates vs published table)",
       status: "skipped",
-      message: "Walang RateScheduleTable na naibigay para sa pagsusuri.",
+      message: "No Rate Schedule table was provided for the check.",
     });
   }
 
@@ -432,8 +432,8 @@ export function runBillChecks(
     overall === "red"
       ? buildSummary(now, failedChecks, options.householdSin)
       : overall === "yellow"
-      ? "Mas mataas kaysa karaniwan mo para sa ganitong panahon pero tugma ang lahat ng opisyal na numero ng Meralco."
-      : "Lahat ng nasuring Meralco figures ay nagtutugma. Walang nakitang discrepancy.";
+      ? "Higher than usual for this weather, but all of Meralco's official figures match."
+      : "All of Meralco's figures checked match. No discrepancy found.";
 
   return {
     overall,

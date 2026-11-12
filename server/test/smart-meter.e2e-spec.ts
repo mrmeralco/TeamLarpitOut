@@ -146,7 +146,7 @@ describe("GET /api/households/:sin/readings", () => {
     const token = await api.login();
     const foreign = await api.get(path(undefined, "5555555555"), token);
     expect(foreign).toEqual(await api.get(path(undefined, "unknown"), token));
-    expect(foreign).toEqual({ status: 404, body: { error: "Hindi makita ang Household." } });
+    expect(foreign).toEqual({ status: 404, body: { error: "Household not found." } });
     expect((await api.get(path(undefined, "1234567890"), token)).status).toBe(422);
     await api.post("/api/auth/logout", {}, token);
     expect((await api.get(path(), token)).status).toBe(401);
@@ -196,7 +196,7 @@ describe("GET /api/households/:sin/readings", () => {
     expect(await api.get(path(), token)).toEqual(first);
     fail = true;
     expect(await api.get(path(undefined, OTHER_SMART), token)).toEqual({
-      status: 502, body: { error: "Hindi makuha ang smart meter readings. Subukan ulit." },
+      status: 502, body: { error: "We couldn't get the smart meter readings. Please try again." },
     });
     const otherOwner = await api.login("owner-b@example.test");
     expect((await api.get(path(), otherOwner)).status).toBe(404);
@@ -207,7 +207,7 @@ describe("GET /api/households/:sin/readings", () => {
     source.describe.mockRejectedValue(new Error("private details"));
     const api = await harness({ readingSource: source });
     expect(await api.get(path(), await api.login())).toEqual({
-      status: 502, body: { error: "Hindi makuha ang smart meter readings. Subukan ulit." },
+      status: 502, body: { error: "We couldn't get the smart meter readings. Please try again." },
     });
     expect(source.readings).not.toHaveBeenCalled();
   });

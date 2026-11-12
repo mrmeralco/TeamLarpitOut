@@ -70,7 +70,7 @@ describe("catch-up line", () => {
     // 400 kWh over 60 days → 200 + 200. 50 kWh of this Bill belong to September.
     expect(line(body, "catchUp")).toEqual({
       key: "catchUp",
-      label: "Catch-up mula sa tantyang Bill",
+      label: "Catch-up from an estimated Bill",
       amount: 100_000,
       kwh: 50,
     });

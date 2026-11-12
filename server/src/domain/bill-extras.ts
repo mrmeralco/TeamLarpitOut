@@ -12,7 +12,7 @@ const RULES: { kind: ExtraKind; match: RegExp; label: string }[] = [
   {
     kind: "priorBalance",
     match: /previous\s*balance|prior\s*balance|balance\s*(from|forward)|arrear|unpaid|outstanding|overdue/,
-    label: "Balanse mula sa nakaraan",
+    label: "Balance from previous bills",
   },
   { kind: "refund", match: /refund/, label: "Refund" },
   { kind: "credit", match: /credit|rebate|overpay|advance\s*payment|bill\s*deposit/, label: "Credit" },

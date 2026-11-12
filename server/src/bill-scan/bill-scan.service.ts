@@ -57,7 +57,7 @@ function chargeLines(raw: RawBillReading["chargeLines"]): ChargeLine[] {
 
 /** Turns what the vision model claims to see into an editable draft. */
 export function toScanResult(raw: RawBillReading): ScanResult {
-  const unreadable = "Hindi mabasa ang litrato. Kunan ulit nang malinaw, o i-type na lang ang Bill.";
+  const unreadable = "We couldn't read the photo. Retake it clearly.";
   if (!raw?.readable) return { status: "unreadable", problem: raw?.problem || unreadable };
 
   const billingDays = num(raw.billingDays, 1);

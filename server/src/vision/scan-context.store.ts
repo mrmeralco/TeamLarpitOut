@@ -33,7 +33,7 @@ export class ScanContextStore {
     const value = this.contexts.get(token);
     if (!value || value.expiresAt <= this.clock.now()) {
       this.contexts.delete(token);
-      throw new NotFoundException({ error: "Nag-expire o hindi makita ang scan. I-scan ulit ang Bill." });
+      throw new NotFoundException({ error: "The scan expired or was not found. Please scan the Bill again." });
     }
     return { can: value.can };
   }

@@ -37,7 +37,7 @@ describe("POST /api/bills/laman", () => {
     expect(row(body, "Transmission Charge").payee.type).toBe("passThrough");
     expect(row(body, "System Loss Charge").payee.type).toBe("passThrough");
     expect(row(body, "Distribution Charge").payee.type).toBe("meralco");
-    expect(row(body, "Generation Charge").what).toMatch(/planta/);
+    expect(row(body, "Generation Charge").what).toMatch(/power plants/);
   });
 
   it("groups Fixed Charges separately from per-kWh charges", async () => {
@@ -61,7 +61,7 @@ describe("POST /api/bills/laman", () => {
       code: null,
       kind: null,
       payee: null,
-      what: "Hindi pa namin kilala ang linyang ito.",
+      what: "We don't recognise this line yet.",
       amount: -1250,
     });
   });
@@ -110,6 +110,6 @@ describe("POST /api/bills/laman", () => {
     const api = await harness();
     const { status, body } = await api.userPost("/api/bills/laman", { now: { chargeLines: [] } });
     expect(status).toBe(400);
-    expect(JSON.stringify(body)).toMatch(/Walang charge line/);
+    expect(JSON.stringify(body)).toMatch(/No charge lines/);
   });
 });

@@ -110,10 +110,10 @@ describe("POST /api/bills/scan", () => {
   });
 
   it("asks for a retake or manual entry when the photo is unreadable", async () => {
-    const api = await harness({ vision: { readable: false, problem: "Malabo ang litrato" } });
+    const api = await harness({ vision: { readable: false, problem: "Blurry photo" } });
     const { status, body } = await api.userUpload("/api/bills/scan");
     expect(status).toBe(422);
-    expect(body).toEqual({ status: "unreadable", problem: "Malabo ang litrato" });
+    expect(body).toEqual({ status: "unreadable", problem: "Blurry photo" });
   });
 
   it("treats a 'readable' photo with none of kWh, billing days or period as unreadable", async () => {
@@ -121,7 +121,7 @@ describe("POST /api/bills/scan", () => {
     const { status, body } = await api.userUpload("/api/bills/scan");
     expect(status).toBe(422);
     expect(body.status).toBe("unreadable");
-    expect(body.problem).toMatch(/i-type/);
+    expect(body.problem).toMatch(/Retake/);
   });
 
   it("returns 503 so the PWA falls back to typing when no vision model is configured", async () => {

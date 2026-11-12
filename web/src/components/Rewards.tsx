@@ -38,7 +38,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
             onExpired();
             return;
           }
-          setError(err instanceof Error ? err.message : "Hindi ma-load ang Rewards catalog.");
+          setError(err instanceof Error ? err.message : "Couldn't load the Rewards catalog.");
           setLoading(false);
         });
     },
@@ -58,7 +58,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
       const res = await rewardsApi.redeem(token, household.sin, item.id);
       setFeedback({
         type: "success",
-        message: `Matagumpay na na-redeem ang ${res.reward.name}! Bawas na ang ${res.redeemedPoints} Points sa balance mo.`,
+        message: `${res.reward.name} redeemed! ${res.redeemedPoints} Points were taken off your balance.`,
       });
       setConfirmingItem(null);
       load();
@@ -70,7 +70,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
       }
       setFeedback({
         type: "error",
-        message: err instanceof Error ? err.message : "Hindi na-redeem ang reward. Pakisubukan muli.",
+        message: err instanceof Error ? err.message : "Couldn't redeem the reward. Please try again.",
       });
     } finally {
       setRedeemingId(null);
@@ -85,7 +85,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
           <span className="tag sample-rewards-badge">sample rewards</span>
         </div>
         <p className="muted rewards-disclaimer">
-          Partner-funded sample rewards catalog. <strong>Hindi ito bawas o diskwento sa Meralco bill.</strong>
+          Partner-funded sample rewards catalog. <strong>Not a deduction or discount on your Meralco bill.</strong>
         </p>
       </div>
 
@@ -117,7 +117,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
 
           {confirmingItem && (
             <div className="notice confirm confirmation-box" role="dialog" aria-labelledby="confirm-redeem-title">
-              <h4 id="confirm-redeem-title">Kumpirmahin ang pag-redeem</h4>
+              <h4 id="confirm-redeem-title">Confirm redemption</h4>
               <p>
                 Sigurado ka bang nais mong i-redeem ang <strong>{confirmingItem.name}</strong> para sa{" "}
                 <strong>{confirmingItem.pointsCost} Points</strong>?
@@ -192,7 +192,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
                     </button>
                   ) : (
                     <button type="button" className="wide" disabled>
-                      Kulang ang Points ({item.pointsNeeded} pts pa)
+                      Not enough Points ({item.pointsNeeded} pts to go)
                     </button>
                   )}
                 </div>
@@ -202,7 +202,7 @@ export function Rewards({ token, household, onExpired, onPointsChanged }: Reward
 
           {data.redemptions && data.redemptions.length > 0 && (
             <div className="redemptions-history" data-testid="redemptions-history">
-              <h3>Mga Na-redeem na Reward</h3>
+              <h3>Redeemed Rewards</h3>
               <ul className="redemptions-list">
                 {data.redemptions.map((r) => (
                   <li key={r.id} className="redemption-entry">

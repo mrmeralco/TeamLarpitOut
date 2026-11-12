@@ -35,7 +35,7 @@ export function Forecast({
       }
     } catch (err) {
       if (signal?.aborted) return;
-      fail(err, "Hindi makuha ang Forecast.");
+      fail(err, "Couldn't get the Forecast.");
     }
   }
 
@@ -50,7 +50,7 @@ export function Forecast({
     e.preventDefault();
     const n = Number(readingInput);
     if (!Number.isFinite(n) || n <= 0) {
-      setError("Maglagay ng wastong numero ng reading.");
+      setError("Enter a valid reading.");
       return;
     }
     setSaving(true);
@@ -59,7 +59,7 @@ export function Forecast({
       const res = await usagePlanApi.saveReading(token, household.sin, { reading: n });
       setData(res);
     } catch (err) {
-      fail(err, "Hindi na-save ang Mid-month Reading.");
+      fail(err, "Couldn't save the Mid-month Reading.");
     } finally {
       setSaving(false);
     }
@@ -73,7 +73,7 @@ export function Forecast({
       setData(res);
       setReadingInput("");
     } catch (err) {
-      fail(err, "Hindi nabura ang reading.");
+      fail(err, "Couldn't delete the reading.");
     } finally {
       setSaving(false);
     }
@@ -81,10 +81,10 @@ export function Forecast({
 
   return (
     <section id="forecast" className="card forecast anchor" aria-live="polite">
-      <h2>Forecast para sa Susunod na Bill</h2>
+      <h2>Forecast for your next Bill</h2>
       {error && <p className="error">{error}</p>}
       {!data ? (
-        !error && <p className="muted">Kinukuwenta ang forecast…</p>
+        !error && <p className="muted">Calculating the forecast…</p>
       ) : (
         <>
           {data.heatWave.active && data.heatWave.banner && (
@@ -108,19 +108,19 @@ export function Forecast({
           {!data.hasReading && data.range ? (
             <div className="forecast-range-box">
               <p>
-                Inaasahang Bill sa {monthLabel(data.period)}:{" "}
+                Expected Bill for {monthLabel(data.period)}:{" "}
                 <strong style={{ fontSize: "1.25rem", color: "var(--color-primary, #0284c7)" }}>
                   {peso(data.range.minPesos)} – {peso(data.range.maxPesos)}
                 </strong>{" "}
                 <span className="muted">({data.range.minKwh} – {data.range.maxKwh} kWh)</span>
               </p>
               <p className="muted" style={{ fontSize: "0.9rem" }}>
-                Range mula sa Bill History at 14-day weather forecast. I-type ang kasalukuyang numero ng metro para paliitin ito sa isang numero.
+                A range from your Bill History and the 14-day weather forecast. Type your current meter reading to narrow it to one figure.
               </p>
 
               <form onSubmit={handleSave} style={{ marginTop: "16px" }}>
                 <label>
-                  <span>Mid-month Reading (kasalukuyang numero sa metro)</span>
+                  <span>Mid-month Reading (current number on the meter)</span>
                   <input
                     type="number"
                     inputMode="numeric"
@@ -132,18 +132,18 @@ export function Forecast({
                 </label>
                 {data.lastReading !== null && (
                   <small className="muted" style={{ display: "block", marginBottom: "8px" }}>
-                    Huling reading sa bill: <strong>{data.lastReading} kWh</strong>
+                    Last reading on the bill: <strong>{data.lastReading} kWh</strong>
                   </small>
                 )}
                 <button type="submit" className="primary" disabled={saving || !readingInput}>
-                  {saving ? "Sine-save…" : "I-update ang Forecast"}
+                  {saving ? "Saving…" : "Update the Forecast"}
                 </button>
               </form>
             </div>
           ) : data.projected ? (
             <div className="forecast-single-box">
               <p>
-                Inaasahang Bill sa {monthLabel(data.period)}:{" "}
+                Expected Bill for {monthLabel(data.period)}:{" "}
                 <strong style={{ fontSize: "1.35rem", color: "var(--color-primary, #0284c7)" }}>
                   {peso(data.projected.pesos)}
                 </strong>{" "}
@@ -160,14 +160,14 @@ export function Forecast({
                 }}
               >
                 <div>
-                  <strong>{data.projected.kwhSoFar} kWh</strong> nagamit na sa loob ng{" "}
-                  <strong>{data.projected.elapsedDays} araw</strong>.
+                  <strong>{data.projected.kwhSoFar} kWh</strong> used in{" "}
+                  <strong>{data.projected.elapsedDays} days</strong>.
                 </div>
                 <div className="muted">
-                  Natitira sa billing period: {data.projected.remainingDays} araw.
+                  Left in the billing period: {data.projected.remainingDays} days.
                 </div>
                 <div className="muted" style={{ fontSize: "0.85rem" }}>
-                  Meter reading na tinayp: {data.projected.reading} kWh
+                  Meter reading typed: {data.projected.reading} kWh
                 </div>
               </div>
 
@@ -192,14 +192,14 @@ export function Forecast({
                     {data.targetComparison.label}
                   </strong>
                   <div style={{ fontSize: "0.85rem", marginTop: "4px" }}>
-                    Target sa buwang ito: {peso(data.targetComparison.targetPesos)} ({data.targetComparison.targetKwh} kWh)
+                    This month's target: {peso(data.targetComparison.targetPesos)} ({data.targetComparison.targetKwh} kWh)
                   </div>
                 </div>
               )}
 
               <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
                 <button type="button" className="ghost" onClick={handleDelete} disabled={saving}>
-                  {saving ? "Tinatanggal…" : "Burahin ang reading (ibalik sa range)"}
+                  {saving ? "Removing…" : "Delete the reading (back to the range)"}
                 </button>
               </div>
             </div>

@@ -56,7 +56,7 @@ describe("GET /api/households/:sin/bills", () => {
     const token = await api.login("owner-b@example.test");
     const foreign = await api.get(path(), token);
     expect(foreign).toEqual(await api.get(path("unknown"), token));
-    expect(foreign).toEqual({ status: 404, body: { error: "Hindi makita ang Household." } });
+    expect(foreign).toEqual({ status: 404, body: { error: "Household not found." } });
   });
 
   it("sorts source Bills and returns only the latest twelve", async () => {
@@ -75,7 +75,7 @@ describe("GET /api/households/:sin/bills", () => {
     const token = await api.login();
     expect((await api.get(path(), token)).body).toHaveLength(1);
     const failed = await api.get(path("9876543210"), token);
-    expect(failed).toEqual({ status: 502, body: { error: "Hindi makuha ang Bill History. Subukan ulit." } });
+    expect(failed).toEqual({ status: 502, body: { error: "We couldn't get the Bill History. Please try again." } });
     const empty = await harness();
     expect(await empty.get(path(), await empty.login())).toEqual({ status: 200, body: [] });
   });

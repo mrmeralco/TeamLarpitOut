@@ -30,8 +30,8 @@ describe("POST aircon-pattern-proposal", () => {
     expect(response.body).toMatchObject({ status: "proposal", canPropose: true, timeZone: "Asia/Manila", hours: 8,
       routine: { start: "21:00", end: "05:00", days: "everyday" },
       provenance: { readings: { kind: "synthetic" }, weather: { kind: "synthetic" } } });
-    expect(response.body.prompt).toContain("mula 9 PM hanggang 5 AM");
-    expect(response.body.prompt).toContain("Aircon ba ito?");
+    expect(response.body.prompt).toContain("from 9 PM to 5 AM");
+    expect(response.body.prompt).toContain("Is this the aircon?");
     expect(source.readings).toHaveBeenCalledWith(SMART, fixture.range);
     expect(daily.daily).toHaveBeenCalledWith(SMART, { from: "2026-11-01", to: "2026-11-16" });
     expect((await api.get(`/api/households/${SMART}/appliances`, token)).body.saved).toBe(false);

@@ -4,7 +4,7 @@ import { ChargeLineDto } from "../../bills/dto/bill.dto.js";
 
 export class PrintedLinesDto {
   @IsArray()
-  @ArrayNotEmpty({ message: "Walang charge line. I-type o i-scan ang mga linya ng Bill." })
+  @ArrayNotEmpty({ message: "No charge lines. Type or scan the Bill's lines." })
   @ValidateNested({ each: true })
   @Type(() => ChargeLineDto)
   chargeLines: ChargeLineDto[];
