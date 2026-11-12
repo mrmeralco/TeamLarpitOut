@@ -7,11 +7,13 @@ export interface PointsEntry {
   savedKwh: number;
   baselineKwh: number;
   actualKwh: number;
-  source: "bill_verified" | "self_report";
+  source: "bill_verified" | "self_report" | "redemption";
   hasOutage: boolean;
   excludedReason?: string | null;
   description: string;
   createdAt: string;
+  rewardId?: string;
+  rewardName?: string;
 }
 
 export interface PointsRepository {

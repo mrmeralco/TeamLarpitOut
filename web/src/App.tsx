@@ -22,6 +22,7 @@ import { Appliances } from "./components/Appliances";
 import { UsagePlan } from "./components/UsagePlan";
 import { Forecast } from "./components/Forecast";
 import { Home } from "./components/Home";
+import { Rewards } from "./components/Rewards";
 import { ScanLinkageNotice } from "./components/ScanLinkageNotice";
 import { BillBreakdown } from "./components/BillBreakdown";
 import { BillChecks } from "./components/BillChecks";
@@ -367,6 +368,7 @@ export function App() {
   const [selectedSin, setSelectedSin] = useState("");
   /** Bumped when appliances are saved so Missions are recomputed. */
   const [applianceVersion, setApplianceVersion] = useState(0);
+  const [rewardsVersion, setRewardsVersion] = useState(0);
   const [sessionNotice, setSessionNotice] = useState<string | null>(null);
   const selected = session?.households.find((h) => h.sin === selectedSin);
   const onExpired = useCallback(() => {
@@ -506,6 +508,9 @@ export function App() {
           <UsagePlan key={`plan:${session.token}:${selected.sin}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />
           <Forecast key={`forecast:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />
         </>
+      )}
+      {session && selected && (
+        <Rewards key={`rewards:${session.token}:${selected.sin}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => setRewardsVersion((v) => v + 1)} />
       )}
 
       <section className="card hero-scan">
