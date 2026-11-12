@@ -1,12 +1,22 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Home } from "../src/components/Home";
-import type { HomeSummary, MissionPlan, SetupStatus } from "../src/api/client";
+import type { ApplianceBreakdown, HomeChargeLine, HomeSummary, MissionPlan, SetupStatus } from "../src/api/client";
 
 const household = { sin: "1234567890", masked_address: "••• Caloocan City", meter_type: "traditional" as const };
+const line = (id: string, label: string, amount: number, change: number | null, goesTo: string | null): HomeChargeLine => ({
+  id, label, amount, previous: change === null ? null : amount - change, change, kind: "perKwh", payee: null, goesTo, printed: [label],
+});
+const lines = [
+  line("generation", "Generation", 342000, 41000, "Pass-through"),
+  line("distribution", "Distribution", 121000, -16000, "Meralco"),
+  line("taxes", "Taxes", 78000, null, "Government"),
+  line("transmission", "Transmission", 59000, 6200, "Pass-through"),
+  line("senior", "Senior citizen", 30, null, "Subsidy"), // ₱0.30 shows as ₱0, so it is folded away
+];
 const summary = (over: Partial<HomeSummary> = {}): HomeSummary => ({
   meterType: "traditional", canMasked: "39•• ••• 482", area: "Caloocan City",
-  chargeLines: { featured: [], all: [] },
+  chargeLines: { featured: lines.slice(0, 4), all: lines },
   bill: { period: "2026-10", amountDue: 681700, dueDate: "2026-11-24", billDate: null },
   badge: { status: "green", label: "Bill verified" },
   bakitGanito: {
@@ -44,11 +54,21 @@ const usage = [
   { period: "2026-09", kwh: 590, billingDays: 30, provenance: { kind: "generated", note: "" } },
   { period: "2026-10", kwh: 610, billingDays: 33, provenance: { kind: "scanned", note: "" } },
 ];
+const breakdown: ApplianceBreakdown = {
+  bill: { period: "2026-10", kwh: 610, billingDays: 33 },
+  rows: [
+    { index: 0, type: "refrigerator", label: "Refrigerator", quantity: 1, source: "default", sourceLabel: "Typical value", kwh: 120, pesos: 140000, share: 0.2 },
+    { index: 1, type: "aircon", label: "Aircon", quantity: 1, source: "default", sourceLabel: "Typical value", kwh: 450, pesos: 520000, share: 0.74 },
+    { index: 2, type: "electric_fan", label: "Electric fan", quantity: 2, source: "default", sourceLabel: "Typical value", kwh: 40, pesos: 46000, share: 0.06 },
+  ],
+  totals: { kwh: 610, perKwhCharges: 0, fixedCharges: 0 },
+};
 let home: HomeSummary;
 const fetchMock = vi.fn(async (input: string) => {
   if (input.endsWith("/home")) return new Response(JSON.stringify(home));
   if (input.endsWith("/bills")) return new Response(JSON.stringify(usage));
   if (input.endsWith("/missions/plan")) return new Response(JSON.stringify(plan));
+  if (input.endsWith("/appliances/breakdown")) return new Response(JSON.stringify(breakdown));
   throw new Error(`Unexpected ${input}`);
 });
 
@@ -91,33 +111,45 @@ describe("Home: gamified with Eelio", () => {
     expect(skills.getByRole("img", { name: "Mission ready: 2 of 5 stars" })).toBeTruthy();
   });
 
-  it("charts kWh per month and says when earlier months are samples", async () => {
+  it("shows the last 12 bills' kWh as bars with the average, and says when earlier months are samples", async () => {
     render(<Home token="t" household={household} onExpired={() => {}} />);
-    expect(await screen.findByRole("img", { name: /kWh per month, August to October\. Latest 610 kWh/ })).toBeTruthy();
-    expect(screen.getByText("Earlier months are sample values.")).toBeTruthy();
+    expect(await screen.findByRole("img", { name: "kWh per bill, August to October. Latest 610 kWh; 3-month average 587 kWh." })).toBeTruthy();
+    expect(screen.getByText("610 kWh")).toBeTruthy();
+    expect(screen.getByText(/Earlier months are sample values\./)).toBeTruthy();
   });
 
-  it("before setup the missions list is the setup steps; the save card starts onboarding", async () => {
+  it("the side breaks down Meralco's charges by who gets the money; every charge opens the charge chat", async () => {
+    const onAsk = vi.fn();
+    render(<Home token="t" household={household} onExpired={() => {}} onAskCharge={onAsk} />);
+    await screen.findByRole("heading", { name: "Your October bill" });
+    const side = within(screen.getByRole("complementary", { name: "Your bill's charges" }));
+    expect(side.getByRole("img", { name: "Pass-through 67%, Meralco 20%, Government 13%" })).toBeTruthy();
+    const rows = side.getAllByRole("button", { name: /Ask about this charge/ }).map((b) => b.getAttribute("aria-label")!.split(":")[0]);
+    expect(rows).toEqual(["Generation", "Distribution", "Taxes", "Transmission"]);
+    expect(side.getByText("+1 more charge at ₱0 on this bill.")).toBeTruthy();
+    fireEvent.click(side.getByRole("button", { name: /^Distribution: ₱1,210\.00, −₱160\.00 vs\. last month, Meralco/ }));
+    expect(onAsk.mock.calls[0]![0].id).toBe("distribution");
+  });
+
+  it("before setup: the save card starts onboarding and there is no appliances card", async () => {
     const onSave = vi.fn();
     render(<Home token="t" household={household} onExpired={() => {}} onSave={onSave} setup={setupStatus([true, false, false])} />);
     await screen.findByRole("heading", { name: "Your October bill" });
-    const side = within(screen.getByRole("complementary", { name: "Your missions" }));
-    expect(side.getByRole("img", { name: "Household info: 100%" })).toBeTruthy();
-    expect(side.getByRole("img", { name: "Appliances: 0%" })).toBeTruthy();
-    fireEvent.click(side.getByRole("button", { name: /Want to save on your next bill\?.*₱577 came from usage/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Want to save on your next bill\?.*₱577 came from usage/ }));
     expect(onSave).toHaveBeenCalled();
-    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/missions/plan"))).toBe(false);
+    expect(screen.queryByRole("heading", { name: "Your appliances" })).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/appliances/breakdown") || url.endsWith("/missions/plan"))).toBe(false);
   });
 
-  it("after setup the missions show progress rings toward the 5% goal and open their detail", async () => {
-    const onOpen = vi.fn();
-    render(<Home token="t" household={household} onExpired={() => {}} onOpenMission={onOpen} setup={setupStatus([true, true, true])}
+  it("once the appliances are set up, shows where the bill's kWh went by appliance, biggest first", async () => {
+    render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([true, true, false])}
       saveCard={<p>Your plan: use 5% less electricity</p>} />);
-    const ring = await screen.findByRole("img", { name: "Turn off the aircon 1 hour earlier, share of your 5% goal: 60%" });
+    expect(await screen.findByRole("heading", { name: "Your appliances" })).toBeTruthy();
+    const names = [...document.querySelectorAll(".appliance-name strong")].map((el) => el.textContent);
+    expect(names).toEqual(["Aircon", "Refrigerator", "Electric fan ×2"]);
+    expect(screen.getByText("74%")).toBeTruthy();
+    expect(screen.getByText("450 kWh · ₱5,200")).toBeTruthy();
     expect(screen.getByText("Your plan: use 5% less electricity")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Want to save/ })).toBeNull();
-    fireEvent.click(ring.closest("button")!);
-    expect(onOpen).toHaveBeenCalledWith("aircon-off-1h");
   });
 
   it("'Play your bill wrapped' opens the story over Home; × closes it", async () => {
