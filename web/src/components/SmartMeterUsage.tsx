@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiError, type Household, type ReadingInterval, type UsageReadings } from "../api/client";
 import { maskSin } from "../lib/format";
+import { EelioLoader } from "./EelioLoader";
 
 const kwh = (value: number) => value.toLocaleString("en-PH", { maximumFractionDigits: 3 });
 const date = (value: string, timeZone: string) => new Intl.DateTimeFormat("en-PH", {
@@ -81,7 +82,15 @@ function IntervalReadings({ token, sin, interval, onExpired }: { token: string; 
     return () => { active = false; controller.abort(); };
   }, [token, sin, interval, attempt, onExpired]);
   return <div aria-busy={state.status === "loading"} aria-live="polite">
-    {state.status === "loading" && <p role="status">Loading usage readings…</p>}
+    {state.status === "loading" && (
+      <EelioLoader
+        compact
+        variant="meter"
+        badge="Smart Meter"
+        title="Loading usage readings…"
+        role="status"
+      />
+    )}
     {state.status === "error" && <><p className="error" role="alert">{state.message}</p><button type="button" className="ghost" onClick={() => setAttempt((n) => n + 1)}>Retry readings</button></>}
     {state.status === "ready" && <UsageData data={state.data} />}
   </div>;

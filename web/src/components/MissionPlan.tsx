@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiError, missionPlanApi, type Household, type MissionPlan as Plan, type PlanMission } from "../api/client";
+import { EelioLoader } from "./EelioLoader";
 import { greeting, month, wholePeso } from "./HomeWrapped";
 
 const pesoAmount = (centavos: number) => wholePeso(centavos, false);
@@ -114,7 +115,17 @@ export function MissionPlan({ token, household, missionId, onOpen, onBack, onExp
   }
 
   if (error && !plan) return <section className="card"><p className="error" role="alert">{error}</p></section>;
-  if (!plan) return <section className="dash loading" aria-busy="true"><p className="muted">Eelio is picking your missions…</p></section>;
+  if (!plan) {
+    return (
+      <section className="dash loading" aria-busy="true">
+        <EelioLoader
+          variant="missions"
+          badge="5% Mission Plan"
+          title="Eelio is picking your missions…"
+        />
+      </section>
+    );
+  }
 
   const daily = plan.daily;
   // Smart meter homes see today's Missions (they change daily); others see the month's plan.

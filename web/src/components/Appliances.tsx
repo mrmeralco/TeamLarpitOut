@@ -11,6 +11,7 @@ import {
   type TimeRange,
 } from "../api/client";
 import { monthLabel, peso } from "../lib/format";
+import { EelioLoader } from "./EelioLoader";
 import { EnergyLabelScan } from "./EnergyLabelScan";
 import { AirconPatternProposal } from "./AirconPatternProposal";
 
@@ -460,7 +461,16 @@ function HouseholdAppliances({ token, household, onExpired, onSaved }: Appliance
       <h2>{editing ? "Appliances at home" : "Where does it go?"}</h2>
       {error && <p className="error">{error}</p>}
       {!catalog || saved === null ? (
-        !error && <p className="muted">Loading…</p>
+        !error && (
+          <EelioLoader
+            compact
+            variant="appliances"
+            badge="Appliance Check"
+            title="Loading…"
+            progress={36}
+            activeStep={0}
+          />
+        )
       ) : editing ? (
         <Survey
           token={token} sin={household.sin} onExpired={onExpired}
@@ -474,7 +484,16 @@ function HouseholdAppliances({ token, household, onExpired, onSaved }: Appliance
       ) : breakdown ? (
         <Breakdown data={breakdown} onEdit={() => setEditing(true)} />
       ) : (
-        !error && <p className="muted">Calculating…</p>
+        !error && (
+          <EelioLoader
+            compact
+            variant="appliances"
+            badge="Where Does It Go?"
+            title="Calculating…"
+            progress={76}
+            activeStep={2}
+          />
+        )
       )}
     </section>
   );

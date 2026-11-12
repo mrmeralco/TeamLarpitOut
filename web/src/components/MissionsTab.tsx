@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Household, SetupStatus } from "../api/client";
 import type { Tab } from "../lib/routes";
 import { setupApi } from "../api/client";
+import { EelioLoader } from "./EelioLoader";
 import { MissionsOnboarding } from "./MissionsOnboarding";
 import { SetupChecklist } from "./SetupChecklist";
 import { SetupHousehold } from "./SetupHousehold";
@@ -63,7 +64,18 @@ export function MissionsTab({ token, household, sub, go, setup, onSetup, onExpir
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [isSetupModal]);
-  if (!setup) return <section className="card"><p className="muted" role="status">Loading setup…</p></section>;
+  if (!setup) {
+    return (
+      <section className="dash loading" aria-busy="true">
+        <EelioLoader
+          variant="setup"
+          badge="Home Setup"
+          title="Loading setup…"
+          role="status"
+        />
+      </section>
+    );
+  }
   const nextStep = (s: SetupStatus) => s.steps.find((x) => !x.done)?.key;
   const advance = (s: SetupStatus) => {
     onSetup(s);
