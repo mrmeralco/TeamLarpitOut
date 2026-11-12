@@ -2767,34 +2767,24 @@ button.wide { width: 100%; margin-top: 10px; }
 @media (min-width: 901px) {
   .shell .dash.leaderboard-dash,
   .shell.nav-collapsed .dash.leaderboard-dash { grid-template-columns: minmax(400px, 470px) minmax(0, 1fr); }
-  .leaderboard-dash .hero { margin-top: 0; min-height: 0; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; padding: 20px 22px; overflow: hidden; }
-  .leaderboard-dash .hero-copy { flex: 1; max-width: 64%; gap: 8px; }
-  .leaderboard-dash .hero-play { margin-top: auto; }
+  .leaderboard-dash .hero { margin-top: 0; min-height: 0; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; padding: 20px 22px; overflow: hidden; }
+  .leaderboard-dash .hero-copy { max-width: 64%; gap: 8px; }
   .leaderboard-dash .hero h2 { font-size: 1.15rem; }
   .leaderboard-dash .hero-amount { font-size: 1.85rem; }
-  .leaderboard-dash .hero-mascot { top: auto; bottom: 6px; right: 6px; height: calc(100% - 30px); max-height: 200px; }
+  .leaderboard-dash .hero-mascot { top: auto; bottom: 6px; right: 6px; height: calc(100% - 24px); max-height: 170px; }
 }
 @media (max-width: 900px) {
   .leaderboard-dash .hero { margin-top: 0; padding: 18px; min-height: 0; overflow: hidden; }
   .leaderboard-dash .hero-copy { max-width: 68%; gap: 8px; }
   .leaderboard-dash .hero-amount { font-size: 1.6rem; }
-  .leaderboard-dash .hero-mascot { top: auto; bottom: 8px; right: 6px; height: 140px; }
+  .leaderboard-dash .hero-mascot { top: auto; bottom: 8px; right: 6px; height: 130px; }
 }
 
+.bayanihan-meter { height: 100%; box-sizing: border-box; justify-content: center; }
 .bayanihan-meter p.muted { margin: 4px 0 0; }
-.bayanihan-impact-strip {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
-  padding: 10px 14px; border-radius: 16px; background: var(--muted); border: 1.5px solid var(--border);
-}
-.bayanihan-impact-strip > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.bayanihan-impact-strip strong { font-size: 0.9rem; }
-.bayanihan-note {
-  margin: 0; padding: 10px 12px; border-radius: 14px;
-  background: var(--info-soft); color: var(--foreground); border: 1px solid #B6DDD8; line-height: 1.4;
-}
 
-.leaderboard-card { margin: 0; padding: 20px 22px; display: flex; flex-direction: column; gap: 18px; }
-.leaderboard-head { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+.leaderboard-card { margin: 0; padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.leaderboard-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
 .leaderboard-head h3 { margin: 0; font-size: 1.15rem; }
 .leaderboard-tabs {
   display: inline-flex; gap: 6px; padding: 4px; border-radius: 14px;
@@ -2810,30 +2800,6 @@ button.wide { width: 100%; margin-top: 10px; }
   box-shadow: 0 2px 6px rgba(31, 27, 22, 0.12);
 }
 
-.lb-podium {
-  list-style: none; margin: 0; padding: 0;
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
-}
-@media (max-width: 700px) {
-  .lb-podium { grid-template-columns: minmax(0, 1fr); }
-}
-.lb-podium-card {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
-  padding: 16px; border-radius: 20px; border: 1.5px solid var(--border);
-  background: var(--card); box-shadow: 0 4px 0 var(--border);
-}
-.lb-podium-card.rank-1 {
-  border-color: #F3C46A; box-shadow: 0 4px 0 #F3C46A;
-  background: linear-gradient(180deg, #FFF9E8, var(--card) 65%);
-}
-.lb-podium-card.is-yours {
-  border-color: var(--info); box-shadow: 0 4px 0 var(--info);
-  background: linear-gradient(180deg, var(--info-soft), var(--card) 65%);
-}
-.lb-podium-top { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 8px; }
-.lb-medal { font-size: 1.5rem; line-height: 1; }
-.lb-podium-name { font-size: 1rem; line-height: 1.25; }
-.lb-podium-stat { font-size: 1.2rem; font-weight: 800; color: var(--ok); font-variant-numeric: tabular-nums; }
 .lb-you-pill {
   padding: 2px 8px; border-radius: 999px; background: var(--info); color: #fff;
   font-size: 0.72rem; font-weight: 800; white-space: nowrap;
@@ -2841,7 +2807,7 @@ button.wide { width: 100%; margin-top: 10px; }
 
 .lb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .lb-row {
-  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px; padding: 12px 16px;
   border-radius: 18px; border: 1.5px solid var(--border); background: var(--card);
   box-shadow: 0 4px 0 var(--border);
 }
@@ -2850,24 +2816,15 @@ button.wide { width: 100%; margin-top: 10px; }
   background: linear-gradient(90deg, var(--info-soft), var(--card) 45%);
 }
 .lb-rank {
-  flex: none; width: 42px; height: 42px; border-radius: 12px;
+  flex: none; width: 40px; height: 40px; border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
-  background: var(--muted); font-weight: 800; font-size: 1rem;
+  background: var(--muted); font-weight: 800; font-size: 0.95rem;
 }
-.lb-rank.rank-1, .lb-rank.rank-2, .lb-rank.rank-3 { font-size: 1.3rem; background: #FFF4CC; }
-.lb-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.lb-rank.rank-1, .lb-rank.rank-2, .lb-rank.rank-3 { background: #FFF4CC; color: var(--brand-ink); }
+.lb-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .lb-row-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.lb-status-chip {
-  padding: 2px 8px; border-radius: 999px; background: var(--muted);
-  color: var(--muted-foreground); font-size: 0.72rem; font-weight: 700;
-}
-.lb-bar-track { height: 8px; border-radius: 4px; background: var(--muted); overflow: hidden; max-width: 360px; }
-.lb-bar-track span {
-  display: block; height: 100%; border-radius: 4px;
-  background: linear-gradient(90deg, var(--info), #2FA39A);
-}
-.lb-row-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.lb-cut { font-size: 1rem; font-weight: 800; color: var(--ok); font-variant-numeric: tabular-nums; }
+.lb-row-side { flex: none; display: flex; align-items: center; gap: 10px; }
+.lb-cut { font-size: 0.95rem; font-weight: 800; color: var(--ok); font-variant-numeric: tabular-nums; }
 
 /* ───────────────────────── Landing Page & Guest Bill Explanation ───────────────────────── */
 .landing-screen { gap: 24px; }
