@@ -6,10 +6,12 @@ import type { BillSource } from "../bills/bill-source.js";
 import { BillsModule } from "../bills/bills.module.js";
 import type { CoachProvider } from "../coach/coach-provider.interface.js";
 import { CoachModule } from "../coach/coach.module.js";
-import { BILL_SOURCE, COACH_PROVIDER } from "../common/injection-tokens.js";
+import { BILL_SOURCE, COACH_PROVIDER, KNOWLEDGE_SOURCE } from "../common/injection-tokens.js";
 import { chargeFactsFor, classifyQuestion, figuresComeFromFacts, templateChargeAnswer } from "../domain/charge-chat.js";
 import { HouseholdAccessGuard } from "../households/household-access.guard.js";
 import { HouseholdsModule } from "../households/households.module.js";
+import type { KnowledgeSource } from "../knowledge/knowledge-source.interface.js";
+import { KnowledgeModule } from "../knowledge/knowledge.module.js";
 import { AskChargeDto } from "./dto/ask-charge.dto.js";
 
 /** Stateless: each question is answered on its own and nothing is kept. */
@@ -18,6 +20,7 @@ export class ChargeChatService {
   constructor(
     @Inject(BILL_SOURCE) private readonly bills: BillSource,
     @Inject(COACH_PROVIDER) private readonly coach: CoachProvider,
+    @Inject(KNOWLEDGE_SOURCE) private readonly knowledge: KnowledgeSource,
     private readonly billChecks: BillChecksService,
   ) {}
 
@@ -29,10 +32,17 @@ export class ChargeChatService {
 
     const intent = classifyQuestion(question, facts);
     const summary = checks?.summary ?? null;
-    if (intent === "complaint") return { lineId, kind: "askMeralco" as const, source: "template" as const, answer: templateChargeAnswer(intent, facts), summary };
-    if (intent === "offTopic") return { lineId, kind: "redirect" as const, source: "template" as const, answer: templateChargeAnswer(intent, facts) };
+    if (intent === "offTopic") return { lineId, kind: "redirect" as const, source: "template" as const, answer: templateChargeAnswer(intent, facts), sources: [] };
 
-    const ai = this.coach.answerCharge ? await this.coach.answerCharge({ facts, question }).catch(() => null) : null;
+    // RAG: the official explanation for this line, from Meralco's public bill guide (ML service).
+    // Only the line's name and the question are sent there; it returns public text, shown as sources.
+    const sources = await this.knowledge
+      .search({ lineLabel: facts.line, question: intent === "complaint" ? "how to ask Meralco about a bill" : question })
+      .catch(() => []);
+    if (intent === "complaint") return { lineId, kind: "askMeralco" as const, source: "template" as const, answer: templateChargeAnswer(intent, facts), summary, sources };
+
+    const references = sources.map((s) => ({ title: s.title, text: s.text }));
+    const ai = this.coach.answerCharge ? await this.coach.answerCharge({ facts, question, references }).catch(() => null) : null;
     const usable = ai !== null && figuresComeFromFacts(ai, facts) && !/\b(i will|i'll|we will|we'll) file\b|i-?file (ko|namin)/i.test(ai);
     return {
       lineId,
@@ -40,6 +50,7 @@ export class ChargeChatService {
       source: usable ? ("ai" as const) : ("template" as const),
       answer: usable ? ai : templateChargeAnswer(intent, facts),
       ...(intent === "correct" && facts.billCheck === "red" ? { summary } : {}),
+      sources,
     };
   }
 }
@@ -58,7 +69,7 @@ export class ChargeChatController {
 }
 
 @Module({
-  imports: [HouseholdsModule, BillsModule, BillChecksModule, CoachModule],
+  imports: [HouseholdsModule, BillsModule, BillChecksModule, CoachModule, KnowledgeModule],
   controllers: [ChargeChatController],
   providers: [ChargeChatService],
 })

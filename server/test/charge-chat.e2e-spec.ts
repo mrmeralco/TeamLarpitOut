@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CoachProvider } from "../src/coach/coach-provider.interface.js";
-import { chargePrompt, type ChargeFacts } from "../src/domain/charge-chat.js";
+import { chargePrompt, type ChargeFacts, type ChargeReference } from "../src/domain/charge-chat.js";
+import type { KnowledgePassage, KnowledgeSource } from "../src/knowledge/knowledge-source.interface.js";
 import type { Bill } from "../src/domain/bill.js";
 import { TemplateCoachProvider } from "../src/coach/template-coach.provider.js";
 import { bill, harness, testAccounts, testLogins } from "./utils/test-harness.js";
@@ -18,7 +19,7 @@ const history = (octTotal?: number): Bill[] => [
 const ask = (lineId: string) => `/api/households/${SIN}/charges/${lineId}/ask`;
 
 function fakeCoach(reply: string | null) {
-  const seen: { facts: ChargeFacts; question: string }[] = [];
+  const seen: { facts: ChargeFacts; question: string; references?: ChargeReference[] }[] = [];
   const coach: CoachProvider = {
     phraseMission: async () => "ok",
     async answerCharge(input) { seen.push(structuredClone(input)); return reply; },
@@ -26,8 +27,27 @@ function fakeCoach(reply: string | null) {
   return Object.assign(coach, { seen });
 }
 
-async function setup(coach: CoachProvider, bills = history()) {
-  const api = await harness({ bills: { [SIN]: bills }, coach });
+const GENERATION_PASSAGE: KnowledgePassage = {
+  title: "Generation Charge",
+  text: "The cost of power Meralco buys from power producers. It is pass-through, regulated by the ERC.",
+  url: "https://www.meralco.com.ph/residential/understand-your-bill",
+};
+
+/** A fake ML service retrieval that records what it was asked. */
+function fakeKnowledge(passages: KnowledgePassage[] | Error) {
+  const asked: { lineLabel: string; question: string }[] = [];
+  const knowledge: KnowledgeSource = {
+    async search(input) {
+      asked.push({ lineLabel: input.lineLabel, question: input.question });
+      if (passages instanceof Error) throw passages;
+      return passages;
+    },
+  };
+  return Object.assign(knowledge, { asked });
+}
+
+async function setup(coach: CoachProvider, bills = history(), knowledge?: KnowledgeSource) {
+  const api = await harness({ bills: { [SIN]: bills }, coach, knowledge });
   return { api, token: await api.login() };
 }
 
@@ -37,7 +57,7 @@ describe("POST /api/households/:sin/charges/:lineId/ask", () => {
     const { api, token } = await setup(coach);
     const res = await api.post(ask("generation"), { question: "Why did this go up?" }, token);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ lineId: "generation", kind: "answer", source: "ai", answer: "Generation went up because you used more electricity." });
+    expect(res.body).toEqual({ lineId: "generation", kind: "answer", source: "ai", answer: "Generation went up because you used more electricity.", sources: [] });
     expect(coach.seen).toHaveLength(1);
     const { facts, question } = coach.seen[0]!;
     expect(question).toBe("Why did this go up?");
@@ -50,6 +70,37 @@ describe("POST /api/households/:sin/charges/:lineId/ask", () => {
     const prompt = chargePrompt(facts, question);
     for (const other of ["Distribution", "Supply", "2684", "2080", "6710"]) expect(prompt).not.toContain(other);
     for (const personal of [SIN, testAccounts[0]!.can, testLogins[0]!.email, "City A", "owner"]) expect(prompt).not.toContain(personal);
+  });
+
+  it("RAG: retrieves the official explanation for the line, gives it to the AI and returns it as a source", async () => {
+    const coach = fakeCoach("Generation is the cost of power from producers; it went up because you used more electricity.");
+    const knowledge = fakeKnowledge([GENERATION_PASSAGE]);
+    const { api, token } = await setup(coach, history(), knowledge);
+    const res = await api.post(ask("generation"), { question: "Bakit tumaas?" }, token);
+    expect(res.body).toMatchObject({ source: "ai", sources: [GENERATION_PASSAGE] });
+    // Retrieval gets only the line's name and the question: no SIN, CAN, email or amounts.
+    expect(knowledge.asked).toEqual([{ lineLabel: "Generation", question: "Bakit tumaas?" }]);
+    const { facts, question, references } = coach.seen[0]!;
+    expect(references).toEqual([{ title: GENERATION_PASSAGE.title, text: GENERATION_PASSAGE.text }]);
+    const prompt = chargePrompt(facts, question, references);
+    expect(prompt).toContain("Official Meralco reference");
+    expect(prompt).toContain(GENERATION_PASSAGE.text);
+    for (const personal of [SIN, testAccounts[0]!.can, testLogins[0]!.email, "City A", "owner"]) expect(prompt).not.toContain(personal);
+  });
+
+  it("RAG: shows the official explanation even when the answer comes from the template", async () => {
+    const { api, token } = await setup(new TemplateCoachProvider(), history(), fakeKnowledge([GENERATION_PASSAGE]));
+    const res = await api.post(ask("generation"), { question: "Who gets this money?" }, token);
+    expect(res.body).toMatchObject({ source: "template", sources: [GENERATION_PASSAGE] });
+  });
+
+  it("RAG: keeps answering when the ML service is down", async () => {
+    const coach = fakeCoach("Generation went up because you used more electricity.");
+    const { api, token } = await setup(coach, history(), fakeKnowledge(new Error("connect ECONNREFUSED 127.0.0.1:8000")));
+    const res = await api.post(ask("generation"), { question: "Why did this go up?" }, token);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ source: "ai", sources: [] });
+    expect(coach.seen[0]!.references).toEqual([]);
   });
 
   it("returns the template answer when the AI writes a peso or kWh figure that is not in the facts", async () => {

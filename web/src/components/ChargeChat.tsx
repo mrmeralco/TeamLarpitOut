@@ -76,6 +76,11 @@ export function ChargeChat({ token, sin, line, previousMonth, onClose, onExpired
               <p className="small muted">{answer.summary}</p>
               <button type="button" className="ghost wide" onClick={() => copy(answer.summary!)}>{copied ? "Copied ✓" : "Copy the summary for Meralco"}</button>
             </>}
+            {answer.sources?.[0] && <details className="small muted">
+              <summary>From Meralco's bill guide: {answer.sources[0].title}</summary>
+              <p>{answer.sources[0].text}</p>
+              <a href={answer.sources[0].url} target="_blank" rel="noreferrer">meralco.com.ph</a>
+            </details>}
           </div>}
           {error && <p className="error" role="alert">{error}</p>}
         </div>

@@ -14,10 +14,11 @@ import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
 import { inMemoryOutageSource, type OutageRecord, type OutageSource } from "../../src/bills/outage-source.js";
-import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, DAILY_WEATHER_SOURCE, HOUSEHOLD_LINKS, NOTIFIER, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
+import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, DAILY_WEATHER_SOURCE, HOUSEHOLD_LINKS, KNOWLEDGE_SOURCE, NOTIFIER, MERALCO_ACCOUNTS, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, SIGN_IN_CODE_GENERATOR, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
 import { inMemoryReadingSource, type ReadingSource } from "../../src/smart-meter/reading-source.interface.js";
 import type { HourlyReading } from "../../src/domain/meter-reading.js";
 import type { CoachProvider } from "../../src/coach/coach-provider.interface.js";
+import { noKnowledge, type KnowledgeSource } from "../../src/knowledge/knowledge-source.interface.js";
 import { TemplateCoachProvider } from "../../src/coach/template-coach.provider.js";
 import { ownerIdForEmail, type AuthClock } from "../../src/auth/auth.service.js";
 import type { Notifier, OtpChannel } from "../../src/auth/notifier.interface.js";
@@ -129,6 +130,8 @@ export interface HarnessOptions {
   outageSource?: OutageSource;
   /** The AI Coach; defaults to the deterministic template so tests never call an AI. */
   coach?: CoachProvider;
+  /** Retrieval over the bill guide; defaults to none (as when the ML service is down). */
+  knowledge?: KnowledgeSource;
 }
 
 /** Fake vision provider: returns a fixed reading and records the images it got. */
@@ -190,6 +193,8 @@ export async function harness(opts: HarnessOptions = {}) {
         ? opts.weather
         : new FakeWeatherProvider(opts.weather as Record<string, number> | undefined),
     )
+    .overrideProvider(KNOWLEDGE_SOURCE)
+    .useValue(opts.knowledge ?? noKnowledge)
     .overrideProvider(COACH_PROVIDER)
     .useValue(opts.coach ?? new TemplateCoachProvider())
     .overrideProvider(OUTAGE_SOURCE)
