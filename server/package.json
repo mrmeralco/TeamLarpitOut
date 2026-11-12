@@ -8,6 +8,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "db:seed": "nest build && node scripts/seed-supabase.mjs",
+    "db:reseed": "nest build && node scripts/seed-supabase.mjs --fresh",
     "data:real-bill": "nest build && node scripts/generate-real-bill-history.mjs && node scripts/generate-bill-history.mjs"
   },
   "devDependencies": {
