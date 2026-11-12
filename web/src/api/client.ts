@@ -150,13 +150,22 @@ async function json<T>(res: Response): Promise<T> {
   return body as T;
 }
 
+export interface CodeSent { channel: "sms" | "email"; sentTo: string; expiresInSeconds: number }
+const post = <T>(path: string, body: unknown) => fetch(path, {
+  method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body),
+}).then((r) => json<T>(r));
+
 export const api = {
-  startSignIn: (email: string) => fetch("/api/auth/email/start", {
-    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }),
-  }).then((r) => json<{ sent: true; expiresInSeconds: number }>(r)),
-  verifySignIn: (email: string, code: string) => fetch("/api/auth/email/verify", {
-    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, code }),
-  }).then((r) => json<{ token: string }>(r)),
+  /** Sign up 1/3: email + mobile number; a one-time code goes to the phone. */
+  signUp: (email: string, phone: string) => post<CodeSent>("/api/auth/signup", { email, phone }),
+  resendCode: (email: string, channel: "sms" | "email") => post<CodeSent>("/api/auth/signup/resend", { email, channel }),
+  /** Sign up 2/3: the code; the email then gets a verification link. */
+  verifyCode: (email: string, code: string) =>
+    post<{ sentTo: string; expiresInHours: number; demoLink?: string }>("/api/auth/signup/verify", { email, code }),
+  checkLink: (token: string) => post<{ email: string }>("/api/auth/signup/link", { token }),
+  /** Sign up 3/3: create a password from the email link; signs the person in. */
+  createPassword: (token: string, password: string) => post<{ token: string }>("/api/auth/signup/password", { token, password }),
+  signIn: (email: string, password: string) => post<{ token: string }>("/api/auth/signin", { email, password }),
   households: (token: string, signal?: AbortSignal) => fetch("/api/households", {
     headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
   }).then((r) => json<Household[]>(r)),
@@ -218,16 +227,7 @@ export interface DraftBill {
   estimated?: boolean;
 }
 
-/** What a scan did to the login's pending Account Linking. */
-export type LinkActivation =
-  | { status: "active"; householdSin: string; canMasked: string }
-  | { status: "pending"; reason: "differentAccount" | "canUnread"; canMasked: string }
-  | { status: "refused"; reason: "ownedByAnother"; message: string }
-  | { status: "none" };
-
-export interface LinkSummary {
-  status: "pending" | "active";
-  householdSin?: string;
+interface AccountSummary {
   canMasked: string;
   area: string;
   meterType: "traditional" | "smart";
@@ -235,16 +235,20 @@ export interface LinkSummary {
   firstPeriod: string | null;
   lastPeriod: string | null;
 }
+/** What the scanned Bill's CAN points to. Nothing is linked until "Yes, explain my bill". */
+export type ScannedAccount =
+  | ({ status: "found" } & AccountSummary)
+  | ({ status: "alreadyLinked"; householdSin: string } & AccountSummary)
+  | { status: "canUnread" }
+  | { status: "unknownAccount"; canMasked: string }
+  | { status: "ownedByAnother"; canMasked: string; message: string };
 
 export const linkApi = {
-  start: (token: string, can: string) => fetch("/api/households/link", {
-    method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ can }),
-  }).then((r) => json<LinkSummary>(r)),
-  pending: (token: string, signal?: AbortSignal) => fetch("/api/households/link", authed(token, signal))
-    .then((r) => json<{ pending: LinkSummary | null }>(r)),
-  confirmTyped: (token: string, scanToken: string, can: string) => fetch("/api/households/link/confirm", {
-    method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ scanToken, can }),
-  }).then((r) => json<LinkActivation>(r)),
+  /** Links the CAN the scan read (or, when it couldn't, the CAN typed from the same Bill). */
+  confirm: (token: string, scanToken: string, can?: string) => fetch("/api/households/link/confirm", {
+    method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify(can ? { scanToken, can } : { scanToken }),
+  }).then((r) => json<{ status: "active"; householdSin: string; canMasked: string }>(r)),
 };
 
 export type ScanOutcome =
@@ -256,7 +260,7 @@ export type ScanOutcome =
       missing: string[];
       serviceIdMasked: string | null;
       canMasked?: string | null;
-      link?: LinkActivation;
+      account?: ScannedAccount;
       scanToken: string;
     }
   | { kind: "unreadable"; problem: string }

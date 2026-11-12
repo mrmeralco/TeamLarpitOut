@@ -1,0 +1,149 @@
+import { useRef, useState } from "react";
+import { ApiError, linkApi, scanBill, type DraftBill, type ScanOutcome } from "../api/client";
+import { BackButton, Icon, ICON } from "./auth/AuthScreens";
+
+type ReadScan = Extract<ScanOutcome, { kind: "read" }>;
+
+const month = (period?: string) => (period && /^\d{4}-\d{2}$/.test(period)
+  ? new Date(`${period}-01T00:00:00`).toLocaleDateString("en-PH", { month: "long" }) : "—");
+const shortDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : "");
+const totalOf = (b: DraftBill | null | undefined) => {
+  const lines = b?.chargeLines ?? [];
+  return lines.length ? `₱${Math.round(lines.reduce((s, l) => s + l.amount, 0)).toLocaleString("en-PH")}` : "";
+};
+const GALLERY = "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM21 15l-5-5L5 21";
+const CARD = "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM7 9h10M7 13h6";
+const INFO = "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v4M12 16h.01";
+
+/**
+ * 5 · Scan your latest bill, then 6 · Confirm scanned values. The CAN on the Bill links the
+ * Household (no CAN screen); nothing is linked until "Yes, explain my bill".
+ */
+export function ScanBill({ token, onLinked, onExpired, onBack }: {
+  token: string; onLinked: (householdSin: string) => void; onExpired: () => void; onBack?: () => void;
+}) {
+  const [scan, setScan] = useState<ReadScan | null>(null);
+  const [typedCan, setTypedCan] = useState("");
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const camera = useRef<HTMLInputElement>(null);
+  const gallery = useRef<HTMLInputElement>(null);
+
+  async function onPhoto(file: File) {
+    setBusy(true); setError(null);
+    const out = await scanBill(file, token);
+    setBusy(false);
+    if (out.kind !== "read") {
+      if (out.kind === "unavailable" && /HTTP 401|sign in/i.test(out.error)) return onExpired();
+      setError(out.kind === "unreadable" ? out.problem : out.error);
+      return;
+    }
+    setScan(out); setTypedCan(""); setEdits({});
+  }
+
+  async function confirm() {
+    if (!scan) return;
+    const account = scan.account;
+    if (account?.status === "alreadyLinked") return onLinked(account.householdSin);
+    setBusy(true); setError(null);
+    try {
+      const linked = await linkApi.confirm(token, scan.scanToken, account?.status === "canUnread" ? typedCan : undefined);
+      onLinked(linked.householdSin);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return onExpired();
+      setError(err instanceof Error ? err.message : "We couldn't link this bill right now.");
+    } finally { setBusy(false); }
+  }
+
+  const fileInputs = <>
+    <input ref={camera} type="file" accept="image/*" capture="environment" hidden aria-label="Take a photo of the bill"
+      onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onPhoto(f); }} />
+    <input ref={gallery} type="file" accept="image/*" hidden aria-label="Upload a bill photo"
+      onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onPhoto(f); }} />
+  </>;
+
+  if (!scan) {
+    return <section className="screen" aria-labelledby="scan-title">
+      {fileInputs}
+      {onBack && <BackButton onClick={onBack} />}
+      <div className="screen-intro">
+        <h1 id="scan-title">Scan your latest Meralco bill</h1>
+        <p className="lead">We read the Customer Account Number (CAN) on your bill to link your account and load 12 months of history. Make sure the CAN is visible.</p>
+      </div>
+      <div className="camera" aria-hidden="true">
+        <div className="bill-sketch">
+          <span className="bar accent" /><span className="bar w85" /><span className="bar w70" /><span className="block" />
+          <span className="bar w90" /><span className="bar w80" /><span className="bar w60" />
+          <span className="sketch-foot"><span className="bar w40" /><span className="total" /></span>
+        </div>
+        <span>{busy ? "Reading your bill…" : "Align the whole bill inside the frame"}</span>
+      </div>
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="camera-controls">
+        <button type="button" className="square-btn" aria-label="Upload from gallery" disabled={busy} onClick={() => gallery.current?.click()}><Icon d={GALLERY} size={22} /></button>
+        <button type="button" className="shutter" aria-label="Take photo" disabled={busy} onClick={() => camera.current?.click()}><span /></button>
+        <span className="square-btn placeholder" aria-hidden="true" />
+      </div>
+    </section>;
+  }
+
+  const account = scan.account;
+  const canUnread = account?.status === "canUnread";
+  const blocked = account?.status === "ownedByAnother" || account?.status === "unknownAccount";
+  const ready = !blocked && (!canUnread || typedCan.replace(/\D/g, "").length === 10);
+  const tag = account?.status === "found" || account?.status === "alreadyLinked"
+    ? <span className="tag-ok">{account.status === "alreadyLinked" ? "Already linked" : "Read from your bill"}</span>
+    : canUnread ? <span className="tag-warn">CAN not read</span>
+      : blocked ? <span className="tag-bad">{account?.status === "ownedByAnother" ? "Linked to another login" : "Account not found"}</span> : null;
+  const rows: { key: string; label: string; before: string; now: string }[] = [
+    { key: "kwh", label: "Usage (kWh)", before: scan.before?.kwh !== undefined ? String(scan.before.kwh) : "", now: scan.now.kwh !== undefined ? String(scan.now.kwh) : "" },
+    { key: "days", label: "Billing days", before: scan.before?.billingDays !== undefined ? String(scan.before.billingDays) : "", now: scan.now.billingDays !== undefined ? String(scan.now.billingDays) : "" },
+    { key: "total", label: "Total due", before: totalOf(scan.before), now: totalOf(scan.now) },
+    { key: "due", label: "Due date", before: "", now: shortDate(scan.now.dueDate) },
+  ];
+
+  return <section className="screen tinted" aria-labelledby="confirm-title">
+    {fileInputs}
+    <div className="screen-head left">
+      <BackButton onClick={() => setScan(null)} />
+      <span className="field-label">Review scan</span>
+    </div>
+    <div className="screen-intro">
+      <h1 id="confirm-title">Does this look right?</h1>
+      <p className="lead">Correct anything we misread. Nothing is used until you confirm.</p>
+    </div>
+    <div className="can-card">
+      <Icon d={CARD} />
+      <div>
+        <span className="small muted">Customer Account Number</span>
+        <strong>{scan.canMasked ?? "Not read"}</strong>
+        {(account?.status === "found" || account?.status === "alreadyLinked") &&
+          <span className="small muted">{account.area} · {account.meterType === "smart" ? "Smart meter" : "Traditional meter"} · {account.billsOnRecord} bills</span>}
+      </div>
+      {tag}
+    </div>
+    {canUnread && <div className="screen-group">
+      <label className="field-label" htmlFor="typed-can">Type the CAN printed on this bill</label>
+      <input id="typed-can" className="input-lg" inputMode="numeric" maxLength={20} value={typedCan} onChange={(e) => setTypedCan(e.target.value.replace(/[^\d\s-]/g, ""))} />
+    </div>}
+    {account?.status === "ownedByAnother" && <p className="notice-inline" role="alert">{account.message}</p>}
+    {account?.status === "unknownAccount" && <p className="notice-inline" role="alert">No Meralco account has this CAN. Retake the photo so the CAN is clear.</p>}
+    <div className="compare">
+      <div className="compare-head"><span /><span>{month(scan.before?.period)}</span><span>{month(scan.now.period)}</span></div>
+      {rows.map((r) => (
+        <div className="compare-row" key={r.key}>
+          <label htmlFor={`scan-${r.key}`}>{r.label}</label>
+          <span>{r.before || (r.key === "due" ? "" : "—")}</span>
+          <input id={`scan-${r.key}`} value={edits[r.key] ?? r.now} onChange={(e) => setEdits({ ...edits, [r.key]: e.target.value })} />
+        </div>
+      ))}
+    </div>
+    <p className="notice-inline with-icon"><Icon d={INFO} size={18} /><span>Confirming links this CAN to your account. {month(scan.before?.period)} figures come from its Meralco bill history.</span></p>
+    {error && <p className="error" role="alert">{error}</p>}
+    <div className="screen-bottom">
+      <button type="button" className="btn-primary" disabled={busy || !ready} onClick={() => void confirm()}>{busy ? "Linking…" : "Yes, explain my bill"}</button>
+      <button type="button" className="btn-text" onClick={() => camera.current?.click()}>Retake photo</button>
+    </div>
+  </section>;
+}

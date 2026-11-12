@@ -48,10 +48,8 @@ beforeEach(() => {
   setup = setupStatus([true, true, true]);
   fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10", "2026-11"] });
-    if (input === "/api/auth/email/start") return response({ sent: true, expiresInSeconds: 600 }, 202);
-    if (input === "/api/auth/email/verify") return loginFails ? response({ error: "The code is wrong or expired. Ask for a new code." }, 401) : response({ token: "test-session" });
+    if (input === "/api/auth/signin") return loginFails ? response({ error: "The email or password is incorrect." }, 401) : response({ token: "test-session" });
     if (input === "/api/households") return response(loginHouseholds);
-    if (input === "/api/households/link") return response({ pending: null });
     if (/^\/api\/households\/[^/]+\/setup$/.test(input)) return response(setup);
     if (/^\/api\/households\/[^/]+\/missions\/plan$/.test(input)) return response({
       period: "2026-11", goal: { cut: 5, kwh: 31, pesos: 34100, baselineKwh: 620, targetKwh: 589, targetPesos: 600000 }, covered: 1, coveredPercent: 5,
@@ -117,15 +115,16 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-async function enterCode(code = "123456") {
-  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "demo@example.com" } });
-  fireEvent.click(screen.getByRole("button", { name: "Send code" }));
-  await screen.findByRole("heading", { name: "Check your email" });
-  fireEvent.change(screen.getByLabelText("Verification code"), { target: { value: code } });
-  fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+/** Returning user: Sign up screen → "Sign in" → Gmail address + password. */
+async function signIn(password = "rosa2026x") {
+  fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+  await screen.findByRole("heading", { name: "Welcome back" });
+  fireEvent.change(screen.getByLabelText("Gmail address"), { target: { value: "demo@example.com" } });
+  fireEvent.change(screen.getByLabelText("Password"), { target: { value: password } });
+  fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 }
 async function login() {
-  await enterCode();
+  await signIn();
   await screen.findByRole("navigation", { name: "Main" });
 }
 async function goTab(name: "Home" | "Missions" | "Rewards" | "Account") {
@@ -239,7 +238,7 @@ describe("My Meralco PWA", () => {
     await goTab("Account");
     fireEvent.click(screen.getByRole("button", { name: "Log out" }));
     await act(async () => resolveHistory(response(history(230))));
-    await screen.findByRole("heading", { name: "Sign in" });
+    await screen.findByRole("heading", { name: "Welcome back" });
     expect(screen.queryByRole("table")).toBeNull();
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/auth/logout")).toBe(true));
   });
@@ -262,32 +261,32 @@ describe("My Meralco PWA", () => {
 
   it("clears the session when a protected request returns 401", async () => {
     historyRequest = async () => expired();
-    render(<App />); await enterCode();
+    render(<App />); await signIn();
     await screen.findByText(/Your session expired/);
     expect(screen.queryByRole("heading", { name: "Your Households" })).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
 
-  it("a login with no linked Household lands on Link CAN; signed-out users only see sign-in", async () => {
+  it("signed-out users start on Sign up; a login with no linked Household lands on the bill scan (no CAN screen)", async () => {
     loginHouseholds = [];
     render(<App />);
-    expect(screen.getByRole("heading", { name: "Sign in" })).toBeTruthy();
-    expect(screen.queryByText(/walang login|Quick verdict/i)).toBeNull();
+    expect(screen.getByRole("heading", { name: "Create your account" })).toBeTruthy();
     expect(document.querySelector('input[type="file"]')).toBeNull();
-    await enterCode();
-    await screen.findByRole("heading", { name: "Link your Meralco account" });
+    await signIn();
+    await screen.findByRole("heading", { name: "Scan your latest Meralco bill" });
+    expect(screen.queryByLabelText("Customer Account Number")).toBeNull();
     expect(screen.queryByLabelText("Choose a Household")).toBeNull();
   });
 
-  it("signs in with an emailed code and shows a wrong-code error", async () => {
+  it("signs in with Gmail address + password and shows a wrong-password error", async () => {
     loginFails = true;
     render(<App />);
-    await enterCode("000000");
-    await screen.findByText("The code is wrong or expired. Ask for a new code.");
-    expect(fetchMock.mock.calls.find(([url]) => url === "/api/auth/email/start")![1]!.body).toBe(JSON.stringify({ email: "demo@example.com" }));
-    expect(screen.getByText(/resend code in 0:30/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Use a different email" }));
-    expect(screen.getByRole("heading", { name: "Sign in" })).toBeTruthy();
+    await signIn("wrong-pass-1");
+    await screen.findByText("The email or password is incorrect.");
+    const call = fetchMock.mock.calls.find(([url]) => url === "/api/auth/signin")!;
+    expect(JSON.parse(String(call[1]!.body))).toEqual({ email: "demo@example.com", password: "wrong-pass-1" });
+    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
+    expect(screen.getByRole("heading", { name: "Create your account" })).toBeTruthy();
   });
 
   it("supports retry after a history error without keeping stale data", async () => {
@@ -303,7 +302,7 @@ describe("My Meralco PWA", () => {
 
   it("switches tabs by hash route and highlights the current tab", async () => {
     render(<App />); await login();
-    expect(window.location.hash).toBe("");
+    expect(window.location.hash).toBe("#/home");
     await screen.findByRole("cell", { name: "230" });
     await goTab("Missions");
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
@@ -333,7 +332,7 @@ describe("My Meralco PWA", () => {
     const originalFetch = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (input, init) => input === "/api/households" ? expired() : originalFetch(input, init));
     render(<App />);
-    await screen.findByRole("heading", { name: "Sign in" });
+    await screen.findByRole("heading", { name: "Welcome back" });
     expect(screen.getByText(/Your session expired/)).toBeTruthy();
     expect(window.sessionStorage.getItem("kuryenteko.token")).toBeNull();
   });
@@ -343,7 +342,7 @@ describe("My Meralco PWA", () => {
     const originalFetch = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (input, init) => /\/(target|usage-plan|forecast|missions|plan)$/.test(input) ? expired() : originalFetch(input, init));
     await goTab("Missions");
-    await screen.findByRole("heading", { name: "Sign in" });
+    await screen.findByRole("heading", { name: "Welcome back" });
     expect(screen.getByText(/Your session expired/)).toBeTruthy();
     expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
   });

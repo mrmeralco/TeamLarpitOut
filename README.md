@@ -50,12 +50,11 @@ pnpm typecheck
 
 ## API
 
-- `POST /api/auth/email/start` `{ email }` → `202 { sent, expiresInSeconds }`: sends a 6-digit code (demo sender logs only the code; `AUTH_FIXED_CODE` makes every code that value). Same answer for every email.
-- `POST /api/auth/email/verify` `{ email, code }` → `{ token }`, or `401` for a wrong, used or expired (10 min) code. Codes are stored hashed and work once; 5 wrong tries lock the code until a new start. A new login has no Households until one is linked.
+- Sign up (like My Meralco): `POST /api/auth/signup` `{ email, phone: "+639…" }` → `202 { channel: "sms", sentTo, expiresInSeconds }` (a 6-digit code by SMS; `409` if the account already exists). `POST /api/auth/signup/resend` `{ email, channel: "sms" | "email" }` resends, or sends it by email instead. `POST /api/auth/signup/verify` `{ email, code }` confirms the mobile number and emails a verification link (`/#/create-password/<token>`, 24 h, single-use). `POST /api/auth/signup/link` `{ token }` → `{ email }`; `POST /api/auth/signup/password` `{ token, password }` (8+ characters, a letter and a number) → `{ token }` (signed in). Codes are stored hashed, expire after 10 minutes and lock after 5 wrong tries. The demo notifier logs only the code or link; with `AUTH_FIXED_CODE` every code is that value and the verify response carries a `demoLink`.
+- `POST /api/auth/signin` `{ email, password }` → `{ token }`, or one `401` for a wrong password, an unknown email or an unfinished sign-up.
 - `POST /api/auth/logout` (Bearer token) → `204`, revokes the session.
 - `GET  /api/households` (Bearer token) → the login's active Households.
-- `POST /api/households/link` `{ can }` (Bearer token) → masked summary `{ status: "pending", canMasked, area, meterType, billsOnRecord, firstPeriod, lastPeriod }` (never amounts, kWh or the address); `409` when another login holds the active link, `404` unknown CAN. `GET /api/households/link` → `{ pending }`.
-- Account Linking: a signed-in `POST /api/bills/scan` reads the Bill's CAN and adds `link`: `active` when it matches the pending CAN, `pending` with reason `differentAccount` or `canUnread`, or `refused`. When the CAN was unread, `POST /api/households/link/confirm` `{ scanToken, can }` checks the CAN typed from the Bill. Until the link is active every per-Household route returns `403`.
+- Account Linking (no CAN screen): a signed-in `POST /api/bills/scan` reads the Bill's CAN and adds `account`: `found` (masked CAN, area, Meter Type, bills on record; never amounts, kWh or the address), `alreadyLinked`, `canUnread`, `unknownAccount` or `ownedByAnother`. Nothing is linked until `POST /api/households/link/confirm` `{ scanToken, can? }` ("Yes, explain my bill"); `can` is accepted only when the scan could not read it.
 - `GET  /api/rate-schedules` → `{ periods }`
 - `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` (Bearer token) → effects, total (centavos)
 - `POST /api/bills/laman` `{ now: Bill, before?: Bill }` (Bearer token) → grouped charge lines, pass-through vs Meralco distribution split
@@ -189,4 +188,4 @@ Changing the rating answers, quantity, or confirmed label cancels an outstanding
 
 ### Account Linking
 
-A signed-in `POST /api/bills/scan` includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized CAN printed on the Bill is retained server-side (at most 1,000 active references); no photo or scanned Bill is saved. Complete ten-digit CANs are required; whitespace and hyphens are accepted. The scan activates the login's pending link only when the CAN matches; a scan reference is never a login token. The old `POST /api/bills/scan-linkage` and the anonymous quick verdict were removed with ADR-0005.
+A signed-in `POST /api/bills/scan` includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized CAN printed on the Bill is retained server-side (at most 1,000 active references); no photo or scanned Bill is saved. Complete ten-digit CANs are required; whitespace and hyphens are accepted. The CAN the scan read is what "Yes, explain my bill" links; a scan reference is never a login token. The old `POST /api/bills/scan-linkage` and the anonymous quick verdict were removed with ADR-0005.

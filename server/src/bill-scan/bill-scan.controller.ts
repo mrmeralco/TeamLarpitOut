@@ -17,7 +17,7 @@ import { VisionUnavailableError } from "../vision/vision-provider.interface.js";
 import { BillScanService } from "./bill-scan.service.js";
 
 import { SessionGuard, type AuthenticatedRequest } from "../auth/session.guard.js";
-import { HouseholdsService } from "../households/households.service.js";
+import { AccountLinkingService } from "../account-linking/account-linking.module.js";
 
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
@@ -26,7 +26,7 @@ const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "ima
 export class BillScanController {
   constructor(
     private readonly billScan: BillScanService,
-    private readonly households: HouseholdsService,
+    private readonly linking: AccountLinkingService,
   ) {}
 
   /**
@@ -62,8 +62,7 @@ export class BillScanController {
     }
     const { result, can } = scanned;
     if (result.status === "unreadable") throw new UnprocessableEntityException(result);
-    // Account Linking: the scanned CAN activates this login's pending link when it is the same CAN.
-    const link = await this.households.activateFromScan(request.auth.ownerId, can);
-    return link.status === "none" ? result : { ...result, link };
+    // Account Linking: what the printed CAN points to. Nothing is linked until the person confirms.
+    return { ...result, account: await this.linking.preview(request.auth.ownerId, can) };
   }
 }

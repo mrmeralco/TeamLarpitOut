@@ -25,6 +25,17 @@ export function useHashRoute(): [Route, (tab: Tab, ...sub: string[]) => void] {
   return [route, go];
 }
 
+/** The raw hash, kept in sync (signed-out screens use #/signup, #/signin, #/create-password/<token>). */
+export function useRawHash(): string {
+  const [hash, setHash] = useState(() => window.location.hash);
+  useEffect(() => {
+    const onChange = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+  return hash;
+}
+
 /** Per-tab session storage: survives a reload, gone when the tab closes. Never required to work. */
 export const stored = {
   get(key: string): string | null {
