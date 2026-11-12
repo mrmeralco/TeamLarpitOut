@@ -53,18 +53,21 @@ export interface GridInput {
   counts: Partial<Record<GridType, number>>;
   home: HomePattern;
   aircon: AirconPattern | null;
-  /** Visual answers for the aircon, e.g. estimated from a photo. */
-  airconAnswers?: Record<string, string>;
+  /** Visual answers per appliance type, e.g. estimated from a photo. */
+  answers?: Partial<Record<GridType, Record<string, string>>>;
 }
 
+/** A tap-grid appliance's visual answers estimated from a photo, with the rating they select. */
+export interface PhotoEstimate { answers: Record<string, string>; kwh: number }
+
 /** The appliance list the tap grid and routine stand for. Lights are always added. */
-export function appliancesFromGrid({ counts, home, aircon, airconAnswers }: GridInput): ApplianceInput[] {
+export function appliancesFromGrid({ counts, home, aircon, answers }: GridInput): ApplianceInput[] {
   const out: ApplianceInput[] = [];
   const types: ApplianceType[] = [...GRID_TYPES.filter((t) => (counts[t] ?? 0) > 0), "lights"];
   for (const type of types) {
     const def = findAppliance(type)!;
     const quantity = type === "lights" ? 1 : counts[type as GridType]!;
-    const item: ApplianceInput = { type, quantity, answers: type === "aircon" && airconAnswers ? { ...airconAnswers } : {} };
+    const item: ApplianceInput = { type, quantity, answers: { ...(answers?.[type as GridType] ?? {}) } };
     if (def.routine === "timeRanges") {
       item.timeRanges = type === "aircon"
         ? AIRCON_HOURS[aircon ?? "sleeping"].map(range)
@@ -76,16 +79,22 @@ export function appliancesFromGrid({ counts, home, aircon, airconAnswers }: Grid
   return out;
 }
 
+/** The unit of a type's rating: kW while running, kWh per use, or kWh per day. */
+export function ratingUnit(type: ApplianceType): string {
+  const routine = findAppliance(type)!.routine;
+  return routine === "timeRanges" ? "kWh per hour" : routine === "usesPerWeek" ? "kWh per use" : "kWh per day";
+}
+
 /** What each grid tile shows: a typical kWh figure, tagged as such (or "Estimated from photo"). */
-export function gridCatalog(airconFromPhoto?: number) {
+export function gridCatalog(photos: Partial<Record<GridType, PhotoEstimate>> = {}) {
   return GRID_TYPES.map((type) => {
     const def = findAppliance(type)!;
-    const photo = type === "aircon" && airconFromPhoto !== undefined;
+    const photo = photos[type];
     return {
       type,
       label: def.label,
-      kwh: Math.round((photo ? airconFromPhoto : def.defaultRating) * 1000) / 1000,
-      unit: def.routine === "timeRanges" ? "kWh per hour" : def.routine === "usesPerWeek" ? "kWh per use" : "kWh per day",
+      kwh: Math.round((photo ? photo.kwh : def.defaultRating) * 1000) / 1000,
+      unit: ratingUnit(type),
       tag: photo ? "Estimated from photo" : "Typical value",
     };
   });

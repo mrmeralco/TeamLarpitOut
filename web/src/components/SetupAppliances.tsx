@@ -9,7 +9,8 @@ const MAX = 9;
 
 /**
  * Setup step 2 (mockup screen 10): tap adds one, tap again adds another, long-press removes.
- * Typical values only; no wattage or model fields. Optional aircon photo for a closer size.
+ * Typical values only; no wattage or model fields. Optional photo of any appliance: it is recognised,
+ * added to the grid, and its tile gets a closer rating when the photo shows enough.
  */
 export function SetupAppliances({ token, sin, status, onSaved, onBack, onExpired }: {
   token: string; sin: string; status: SetupStatus; onSaved: (s: SetupStatus) => void; onBack: () => void; onExpired: () => void;
@@ -43,13 +44,15 @@ export function SetupAppliances({ token, sin, status, onSaved, onBack, onExpired
   async function onPhoto(file: File) {
     setBusy(true); setError(null); setPhotoNote(null);
     try {
-      const out = await setupApi.airconPhoto(token, sin, file);
-      setTiles((ts) => ts.map((t) => (t.type === "aircon" ? { ...t, kwh: out.kwhPerHour, tag: out.tag } : t)));
-      if (!counts.aircon) set("aircon", 1);
-      setPhotoNote(`About ${out.kwhPerHour} kWh per hour · Estimated from photo`);
+      const out = await setupApi.appliancePhoto(token, sin, file);
+      if (out.tag === "Estimated from photo") setTiles((ts) => ts.map((t) => (t.type === out.type ? { ...t, kwh: out.kwh, tag: out.tag } : t)));
+      if (!counts[out.type]) set(out.type, 1);
+      setPhotoNote(out.tag === "Estimated from photo"
+        ? `${out.label}: about ${out.kwh} ${out.unit} · Estimated from photo`
+        : `${out.label} added · the photo didn't show its size, so the typical value is used`);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return onExpired();
-      setPhotoNote(err instanceof Error ? err.message : "Using the typical value for now.");
+      setPhotoNote(err instanceof Error ? err.message : "Tap the appliance instead for now.");
     } finally { setBusy(false); }
   }
 
@@ -87,7 +90,7 @@ export function SetupAppliances({ token, sin, status, onSaved, onBack, onExpired
       <input ref={photo} type="file" accept="image/*" capture="environment" hidden
         onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) void onPhoto(f); }} />
       <button type="button" className="ghost wide" disabled={busy} onClick={() => photo.current?.click()}>
-        📷 Optional: snap your aircon <span className="muted small">· for a closer estimate of its size</span>
+        📷 Optional: snap an appliance <span className="muted small">· we'll recognise it and estimate its size</span>
       </button>
       {photoNote && <p className="small muted" role="status">{photoNote}</p>}
       {error && <p className="error" role="alert">{error}</p>}

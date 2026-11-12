@@ -31,7 +31,7 @@ const photo = { mimeType: "image/jpeg", data: Buffer.from("fake-jpeg-bytes") };
 const gemini: VisionProvider = {
   readBill: async () => { throw new Error("bills must not go to Gemini in ml mode"); },
   readEnergyLabel: async () => ({ readable: true, type: "aircon", consumptionKwh: 90, period: "monthly", referenceDays: 30, referenceHoursPerDay: 8 }),
-  readAirconPhoto: async () => ({ readable: true, mount: "split", inverter: "yes", room: "medium" }),
+  readAppliancePhoto: async () => ({ readable: true, type: "aircon", answers: { mount: "split", inverter: "yes", room: "medium" } }),
 };
 
 describe("MlVisionProvider (bill scan through the ML service)", () => {
@@ -76,10 +76,10 @@ describe("MlVisionProvider (bill scan through the ML service)", () => {
     await expect(new MlVisionProvider(gemini, base).readBill(photo)).rejects.toThrow("HTTP 500");
   });
 
-  it("keeps energy label and aircon photos on the other provider", async () => {
+  it("keeps energy label and appliance photos on the other provider", async () => {
     const p = new MlVisionProvider(gemini, base);
     expect(await p.readEnergyLabel(photo)).toMatchObject({ readable: true, consumptionKwh: 90 });
-    expect(await p.readAirconPhoto(photo)).toMatchObject({ mount: "split" });
+    expect(await p.readAppliancePhoto(photo)).toMatchObject({ type: "aircon", answers: { mount: "split" } });
   });
 });
 

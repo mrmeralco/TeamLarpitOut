@@ -1,4 +1,4 @@
-import type { BillImage, RawAirconPhotoReading, RawBillReading, RawEnergyLabelReading, VisionProvider } from "./vision-provider.interface.js";
+import type { BillImage, RawAppliancePhotoReading, RawBillReading, RawEnergyLabelReading, VisionProvider } from "./vision-provider.interface.js";
 import { VisionUnavailableError } from "./vision-provider.interface.js";
 
 /** Local OCR takes about 8-10 s on a laptop CPU; allow for a slow first request. */
@@ -9,7 +9,7 @@ const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "
 /**
  * Reads Bill photos with the ML service (ml-service/, FastAPI): RapidOCR on our own machine plus a
  * deterministic parser. The photo goes only to ML_SERVICE_URL, never to an outside AI.
- * Energy label and aircon photos are not handled by the ML service and go to `photos` (Gemini).
+ * Energy label and appliance photos are not handled by the ML service and go to `photos` (Gemini).
  */
 export class MlVisionProvider implements VisionProvider {
   constructor(
@@ -55,8 +55,8 @@ export class MlVisionProvider implements VisionProvider {
     return this.photos.readEnergyLabel(image);
   }
 
-  readAirconPhoto(image: BillImage): Promise<RawAirconPhotoReading> {
-    if (!this.photos.readAirconPhoto) throw new VisionUnavailableError("Aircon photos are not supported");
-    return this.photos.readAirconPhoto(image);
+  readAppliancePhoto(image: BillImage): Promise<RawAppliancePhotoReading> {
+    if (!this.photos.readAppliancePhoto) throw new VisionUnavailableError("Appliance photos are not supported");
+    return this.photos.readAppliancePhoto(image);
   }
 }

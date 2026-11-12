@@ -4,7 +4,7 @@ import { AppliancesService } from "../appliances/appliances.service.js";
 import { POINTS_REPOSITORY, SETUP_REPOSITORY, VISION_PROVIDER } from "../common/injection-tokens.js";
 import { findAppliance, UNKNOWN } from "../domain/appliance-catalog.js";
 import type { Household } from "../domain/household.js";
-import { appliancesFromGrid, GRID_TYPES, gridCatalog, MAX_PER_TYPE, routineHours, type GridType } from "../domain/routine-presets.js";
+import { appliancesFromGrid, GRID_TYPES, gridCatalog, MAX_PER_TYPE, ratingUnit, routineHours, type GridType } from "../domain/routine-presets.js";
 import { VisionUnavailableError, type BillImage, type VisionProvider } from "../vision/vision-provider.interface.js";
 import { hasVerifiedSavings, WELCOME_POINTS } from "../domain/welcome-points.js";
 import type { PointsRepository } from "../usage-plan/points-repository.interface.js";
@@ -62,7 +62,7 @@ export class SetupService {
       routine: record.routine ?? null,
       hasAircon: appliances.aircon,
       grid: record.grid ?? null,
-      gridCatalog: gridCatalog(record.airconPhoto?.kwhPerHour),
+      gridCatalog: gridCatalog(record.photos),
       welcomePoints: { points: WELCOME_POINTS, granted: Boolean(welcome), locked: Boolean(welcome) && !unlocked },
       /** Eelio's Missions onboarding was already shown for this Household (on any device). */
       onboardingSeen: record.onboardingSeenAt !== undefined,
@@ -107,7 +107,9 @@ export class SetupService {
     if (issues.length) throw new BadRequestException({ error: "Something is wrong in the appliance list.", issues });
     if (Object.keys(clean).length === 0) throw new BadRequestException({ error: "Pick at least one appliance.", issues: ["counts"] });
     const record = await this.repository.find(sin);
-    const next: SetupRecord = { ...record, grid: clean, ...(clean.aircon ? {} : { airconPhoto: undefined }) };
+    // A photo estimate stays only for appliances still in the grid.
+    const photos = Object.fromEntries(Object.entries(record.photos ?? {}).filter(([type]) => clean[type as GridType]));
+    const next: SetupRecord = { ...record, grid: clean, photos: Object.keys(photos).length ? photos : undefined };
     if (next.routine && !clean.aircon) next.routine = { ...next.routine, aircon: null };
     await this.repository.save(sin, next);
     await this.writeGridAppliances(sin, next);
@@ -119,38 +121,49 @@ export class SetupService {
       counts: record.grid!,
       home: record.routine?.home ?? "eveningsWeekends",
       aircon: record.routine?.aircon ?? null,
-      airconAnswers: record.airconPhoto?.answers,
+      answers: Object.fromEntries(Object.entries(record.photos ?? {}).map(([type, photo]) => [type, photo!.answers])),
     });
     const saved = await this.appliances.save(sin, list as never);
     await this.repository.save(sin, { ...record, gridWrittenAt: saved.updatedAt });
   }
 
   /** Optional "Snap your aircon": the vision model estimates its size; tagged "Estimated from photo". */
-  async airconPhoto(sin: string, image: BillImage) {
-    if (!this.vision.readAirconPhoto) throw new ServiceUnavailableException({ error: "The aircon photo isn't available yet. Using the typical value for now." });
+  /**
+   * "Snap an appliance": recognises any tap-grid appliance in a photo and answers that type's
+   * visual questions, so its tile (and the appliance list) use a closer rating than the typical
+   * value. One estimate per type: a later photo of the same type replaces it.
+   */
+  async appliancePhoto(sin: string, image: BillImage) {
+    if (!this.vision.readAppliancePhoto) throw new ServiceUnavailableException({ error: "Appliance photos aren't available yet. Tap the appliance instead." });
     let raw;
     try {
-      raw = await this.vision.readAirconPhoto(image);
+      raw = await this.vision.readAppliancePhoto(image);
     } catch (err) {
-      if (err instanceof VisionUnavailableError) throw new ServiceUnavailableException({ error: "Photo estimates are not set up yet. Using the typical value for now." });
-      throw new BadGatewayException({ error: "We couldn't read the photo right now. Using the typical value for now." });
+      if (err instanceof VisionUnavailableError) throw new ServiceUnavailableException({ error: "Photo estimates are not set up yet. Tap the appliance instead." });
+      throw new BadGatewayException({ error: "We couldn't read the photo right now. Try again or tap the appliance instead." });
     }
-    const pickFrom = <T extends string>(v: unknown, allowed: readonly T[]) => (allowed.includes(v as T) ? (v as T) : UNKNOWN);
-    const answers = {
-      mount: pickFrom(raw?.mount, ["split", "window"] as const),
-      inverter: pickFrom(raw?.inverter, ["yes", "no"] as const),
-      room: pickFrom(raw?.room, ["small", "medium", "large"] as const),
+    const type = (GRID_TYPES as readonly string[]).includes(raw?.type as string) ? (raw!.type as GridType) : null;
+    if (!raw?.readable || !type) {
+      throw new UnprocessableEntityException({ error: "We couldn't recognise an appliance in the photo. Retake it or tap the appliance instead." });
+    }
+    const def = findAppliance(type)!;
+    // Only this type's questions, and only the options the catalog offers; anything else is "I don't know".
+    const answers = Object.fromEntries(def.questions.map((q) => {
+      const value = raw.answers?.[q.key];
+      return [q.key, q.options.some((o) => o.value === value) ? value! : UNKNOWN];
+    }));
+    const estimated = Object.values(answers).some((v) => v !== UNKNOWN);
+    const kwh = Math.round((def.rating(answers) ?? def.defaultRating) * 1000) / 1000;
+    if (estimated) {
+      const record = await this.repository.find(sin);
+      const next: SetupRecord = { ...record, photos: { ...record.photos, [type]: { answers, kwh } } };
+      await this.repository.save(sin, next);
+      if (next.grid?.[type] && (await this.appliances.list(sin)).updatedAt === next.gridWrittenAt) await this.writeGridAppliances(sin, next);
+    }
+    return {
+      type, label: def.label, answers, kwh, unit: ratingUnit(type),
+      tag: estimated ? "Estimated from photo" as const : "Typical value" as const,
     };
-    if (!raw?.readable || Object.values(answers).every((v) => v === UNKNOWN)) {
-      throw new UnprocessableEntityException({ error: "We couldn't recognise an aircon in the photo. Using the typical value for now." });
-    }
-    const def = findAppliance("aircon")!;
-    const kwhPerHour = Math.round((def.rating(answers) ?? def.defaultRating) * 1000) / 1000;
-    const record = await this.repository.find(sin);
-    const next: SetupRecord = { ...record, airconPhoto: { answers, kwhPerHour } };
-    await this.repository.save(sin, next);
-    if (next.grid?.aircon && (await this.appliances.list(sin)).updatedAt === next.gridWrittenAt) await this.writeGridAppliances(sin, next);
-    return { answers, kwhPerHour, tag: "Estimated from photo" as const };
   }
 
   /**
@@ -159,7 +172,7 @@ export class SetupService {
    */
   async airconCheck(sin: string, household: Household, aircon: import("./setup-repository.js").AirconPattern) {
     const chosen = routineHours("aircon", "eveningsWeekends", aircon)!;
-    const answers = (await this.repository.find(sin)).airconPhoto?.answers;
+    const answers = (await this.repository.find(sin)).photos?.aircon?.answers;
     if (household.meter_type === "traditional") {
       const proposal = await this.appliances.airconProposal(sin, household, answers);
       if (!proposal.canPropose || proposal.hours === null) return { source: "bills" as const, available: false, chosenHours: chosen, reason: proposal.reason };
