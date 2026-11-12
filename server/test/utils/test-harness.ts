@@ -14,7 +14,7 @@ import type { Bill } from "../../src/domain/bill.js";
 import { rateScheduleTable, type RateSchedule } from "../../src/domain/rate-schedule.js";
 import { inMemoryBillSource, type BillSource } from "../../src/bills/bill-source.js";
 import { inMemoryOutageSource, type OutageRecord, type OutageSource } from "../../src/bills/outage-source.js";
-import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, MY_MERALCO_SOURCE, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
+import { AUTH_CLOCK, BILL_SOURCE, COACH_PROVIDER, DAILY_WEATHER_SOURCE, MY_MERALCO_SOURCE, OUTAGE_SOURCE, RATE_SCHEDULES, READING_SOURCE, VISION_PROVIDER, WEATHER_PROVIDER } from "../../src/common/injection-tokens.js";
 import { inMemoryReadingSource, type ReadingSource } from "../../src/smart-meter/reading-source.interface.js";
 import type { HourlyReading } from "../../src/domain/meter-reading.js";
 import type { CoachProvider } from "../../src/coach/coach-provider.interface.js";
@@ -24,6 +24,7 @@ import { mockMyMeralcoSource, type MockMeralcoLogin, type MyMeralcoSource } from
 import type { RawBillReading, RawEnergyLabelReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
 import { FakeWeatherProvider } from "../../src/weather/fake-weather.provider.js";
 import type { WeatherProvider } from "../../src/weather/weather-provider.interface.js";
+import { inMemoryDailyWeatherSource, type DailyTemperature, type DailyWeatherSource } from "../../src/weather/daily-weather-source.interface.js";
 
 /** A small, round-number schedule so expected pesos are easy to check by hand. */
 export function schedule(period: string, perKwh: number, fixed = 50): RateSchedule {
@@ -80,6 +81,9 @@ export interface HarnessOptions {
   vision?: RawBillReading | VisionProvider;
   /** Fake weather observations or a custom weather provider. */
   weather?: WeatherProvider | Record<string, number>;
+  /** Daily heat per SIN, independent of monthly weather and reading fixtures. */
+  dailyWeather?: Record<string, DailyTemperature[]>;
+  dailyWeatherSource?: DailyWeatherSource;
   /** Outage records or custom outage source for brownouts. */
   outages?: OutageRecord[] | OutageSource;
   outageSource?: OutageSource;
@@ -119,6 +123,8 @@ export async function harness(opts: HarnessOptions = {}) {
     .useValue(opts.billSource ?? inMemoryBillSource(opts.bills ?? {}))
     .overrideProvider(READING_SOURCE)
     .useValue(opts.readingSource ?? inMemoryReadingSource(opts.readings ?? {}))
+    .overrideProvider(DAILY_WEATHER_SOURCE)
+    .useValue(opts.dailyWeatherSource ?? inMemoryDailyWeatherSource(opts.dailyWeather ?? {}))
     .overrideProvider(MY_MERALCO_SOURCE)
     .useValue(opts.myMeralco ?? mockMyMeralcoSource(testLogins))
     .overrideProvider(AUTH_CLOCK)

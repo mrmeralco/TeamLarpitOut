@@ -7,6 +7,8 @@ export const BILL_SOURCE = Symbol("BILL_SOURCE");
 export const VISION_PROVIDER = Symbol("VISION_PROVIDER");
 export const MY_MERALCO_SOURCE = Symbol("MY_MERALCO_SOURCE");
 export const WEATHER_PROVIDER = Symbol("WEATHER_PROVIDER");
+/** Daily heat keyed by Household, independent of monthly CDD and forecasts. */
+export const DAILY_WEATHER_SOURCE = Symbol("DAILY_WEATHER_SOURCE");
 export const READING_SOURCE = Symbol("READING_SOURCE");
 /** Injectable time source for session expiry. */
 export const AUTH_CLOCK = Symbol("AUTH_CLOCK");
