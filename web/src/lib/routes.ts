@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-export const TABS = ["home", "missions", "rewards", "account"] as const;
+export const TABS = ["home", "missions", "rewards", "leaderboards", "account"] as const;
 export type Tab = (typeof TABS)[number];
 export interface Route { tab: Tab; sub: string[] }
 

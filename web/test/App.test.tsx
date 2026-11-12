@@ -132,7 +132,7 @@ async function login() {
   await signIn();
   await screen.findByRole("navigation", { name: "Main" });
 }
-async function goTab(name: "Home" | "Missions" | "Rewards" | "Account") {
+async function goTab(name: "Home" | "Missions" | "Rewards" | "Leaderboards" | "Account") {
   const link = within(screen.getByRole("navigation", { name: "Main" })).getByRole("link", { name });
   await act(async () => { window.location.hash = link.getAttribute("href")!.slice(1); });
   await waitFor(() => expect(link.getAttribute("aria-current")).toBe("page"));
@@ -180,7 +180,8 @@ describe("My Meralco PWA", () => {
     await goTab("Missions");
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
     await goTab("Account");
-    expect(await screen.findByRole("heading", { name: "Appliances at home" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Account holder" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Where does it go?" })).toBeNull();
     expect(fetchMock.mock.calls.filter(([url]) => url.includes("/readings"))).toHaveLength(1);
   });
 
@@ -312,10 +313,12 @@ describe("My Meralco PWA", () => {
     expect(screen.queryByRole("table")).toBeNull();
     await goTab("Rewards");
     expect(await screen.findByRole("heading", { name: "Rewards" })).toBeTruthy();
+    await goTab("Leaderboards");
+    expect(await screen.findByRole("heading", { name: "Bayanihan Grid Shield" })).toBeTruthy();
     await goTab("Account");
     expect(screen.getByRole("heading", { name: "Your Households" })).toBeTruthy();
     const tabs = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
-    expect(tabs.map((t) => t.textContent)).toEqual(["Home", "Missions", "Rewards", "Account"]);
+    expect(tabs.map((t) => t.textContent)).toEqual(["Home", "Missions", "Rewards", "Leaderboards", "Account"]);
     expect(tabs.filter((t) => t.getAttribute("aria-current") === "page").map((t) => t.textContent)).toEqual(["Account"]);
   });
 
