@@ -2,7 +2,7 @@
 
 *Bakit ganito ang bill ko?* A phone-first PWA that explains why a household's Meralco Bill changed, split exactly into Rate, Billing Days, Weather and Habit Effects.
 
-Plan, glossary and decisions (ADR-0001, ADR-0002) live in `99lash/meralco-idol-2026` (`docs/challenge-2/KuryenteKo.md`, `GLOSSARY.md`, `docs/adr/`).
+Plan: [`docs/challenge-2/KuryenteKo.md`](docs/challenge-2/KuryenteKo.md) · Vocabulary: [`GLOSSARY.md`](GLOSSARY.md) · Decisions: [`docs/adr/`](docs/adr/) (ADR-0001, ADR-0002) · Challenge: [`docs/challenge-2/Challenge-2-Official-Description.md`](docs/challenge-2/Challenge-2-Official-Description.md). Copied from the planning repo `99lash/meralco-idol-2026` on 2026-11-12; update both when the plan changes.
 
 ## Layout
 
