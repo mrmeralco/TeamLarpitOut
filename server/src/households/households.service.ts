@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { MyMeralcoSource } from "../sources/myMeralcoSource.js";
-import { MY_MERALCO_SOURCE } from "../tokens.js";
+import type { MyMeralcoSource } from "../bills/myMeralcoSource.js";
+import { MY_MERALCO_SOURCE } from "../common/injection-tokens.js";
 
 @Injectable()
 export class HouseholdsService {

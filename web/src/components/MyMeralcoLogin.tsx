@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api, type LoginResult } from "../api";
+import { api, type LoginResult } from "../api/client";
 
 export function MyMeralcoLogin({ onLogin }: { onLogin: (session: LoginResult) => void }) {
   const [email, setEmail] = useState("");

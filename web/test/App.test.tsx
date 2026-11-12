@@ -8,6 +8,11 @@ const households = [
 ];
 const history = (kwh: number) => [{ period: "2026-10", kwh, billingDays: 30, chargeLines: [{ label: "Sample", amount: kwh * 10 }], provenance: { kind: "sample", note: "Synthetic" } }];
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const verdictResponse = (total = 50000) => ({
+  before: { period: "2026-09", kwh: 150, billingDays: 30, rebuiltTotal: 150000, printedTotal: null, estimated: false, extras: [], extrasTotal: 0 },
+  now: { period: "2026-10", kwh: 200, billingDays: 31, rebuiltTotal: 200000, printedTotal: null, estimated: false, extras: [], extrasTotal: 0 },
+  effects: [], lines: [], habitMeasurable: true, total, printedChange: null, extrasChange: 0, unexplained: null,
+});
 const expired = () => response({ error: "Mag-login muna gamit ang My Meralco." }, 401);
 let fetchMock: Mock<(input: string, init?: RequestInit) => Promise<Response>>;
 let historyRequest: (sin: string) => Promise<Response>;
@@ -29,7 +34,7 @@ beforeEach(() => {
     if (match) return failHistory ? response({ error: "Hindi makuha ang Bill History. Subukan ulit." }, 502) : historyRequest(match[1]!);
     if (input === "/api/bills/scan") return response({ status: "read", now: { period: "2026-10", kwh: 200, billingDays: 31 }, before: { period: "2026-09", kwh: 150, billingDays: 30 }, missing: [], estimated: [], serviceIdMasked: "••••••7890", scanToken: "a".repeat(43) });
     if (input === "/api/bills/scan-linkage") return response(linkage);
-    if (input === "/api/bakit-ganito") return response({ before: { period: "2026-09", rebuiltTotal: 150000 }, now: { period: "2026-10", rebuiltTotal: 200000 }, effects: [], total: 50000, printedChange: null });
+    if (input === "/api/bakit-ganito") return response(verdictResponse());
     throw new Error(`Unexpected request: ${input} ${init?.method ?? "GET"}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -99,7 +104,7 @@ describe("My Meralco PWA", () => {
     await waitFor(() => expect(resolveExplanation).toBeTypeOf("function"));
     select(households[1]!.sin);
     await screen.findByRole("cell", { name: "370" });
-    await act(async () => resolveExplanation(response({ before: { period: "2026-09", rebuiltTotal: 150000 }, now: { period: "2026-10", rebuiltTotal: 200000 }, effects: [], total: 11111, printedChange: null })));
+    await act(async () => resolveExplanation(response(verdictResponse(11111))));
     expect(screen.queryByText("₱111.11")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Bakit ganito?" })).toBeNull();
   });
@@ -162,5 +167,48 @@ describe("My Meralco PWA", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mag-logout" }));
     expect(screen.queryByText(/Naka-link sa Household/)).toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
+  });
+});
+
+
+describe("merged bill breakdown and scan linkage", () => {
+  function scannedBillsWithLines() {
+    const originalFetch = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input, init) => {
+      if (input === "/api/bills/scan") {
+        const result = await originalFetch(input, init);
+        const body = await result.json();
+        return response({ ...body, now: { ...body.now, chargeLines: [{ label: "Generation Charge", amount: 123 }] } });
+      }
+      if (input === "/api/bills/laman") return response({ groups: [], total: 12300, split: { passThrough: 12300, meralco: 0 } });
+      return originalFetch(input, init);
+    });
+  }
+
+  it("shows the printed-charge breakdown alongside an unlinked scan's quick verdict", async () => {
+    scannedBillsWithLines();
+    render(<App />); await login(); await scanAndConfirm();
+    await screen.findByText(/Hindi naka-link ang account na ito sa My Meralco mo\./);
+    fireEvent.click(screen.getByRole("button", { name: "Bakit ganito?" }));
+    await screen.findByRole("heading", { name: "Bakit ganito?" });
+    expect(screen.getByRole("heading", { name: "Ano'ng laman ng bill ko?" })).toBeTruthy();
+    expect(screen.getByText("Kabuuan ng mga linya").parentElement?.textContent).toContain("₱123.00");
+    const breakdownCall = fetchMock.mock.calls.find(([url]) => url === "/api/bills/laman")!;
+    expect(JSON.parse(String(breakdownCall[1]?.body)).now.chargeLines).toEqual([{ label: "Generation Charge", amount: 123 }]);
+  });
+
+  it("discards a delayed verdict and breakdown when a Bill is edited", async () => {
+    scannedBillsWithLines();
+    const originalFetch = fetchMock.getMockImplementation()!;
+    let resolveBreakdown!: (r: Response) => void;
+    fetchMock.mockImplementation((input, init) => input === "/api/bills/laman"
+      ? new Promise<Response>((resolve) => { resolveBreakdown = resolve; }) : originalFetch(input, init));
+    render(<App />); await scanAndConfirm();
+    fireEvent.click(screen.getByRole("button", { name: "Bakit ganito?" }));
+    await waitFor(() => expect(resolveBreakdown).toBeTypeOf("function"));
+    fireEvent.change(screen.getAllByLabelText("kWh na nagamit")[1]!, { target: { value: "201" } });
+    await act(async () => resolveBreakdown(response({ groups: [], total: 12300, split: { passThrough: 12300, meralco: 0 } })));
+    expect(screen.queryByRole("heading", { name: "Bakit ganito?" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Ano'ng laman ng bill ko?" })).toBeNull();
   });
 });

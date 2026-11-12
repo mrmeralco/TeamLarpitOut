@@ -1,10 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, ApiError, scanBill, type LoginResult, type BakitGanito, type BillInput, type ChargeLine, type DraftBill, type ScanOutcome } from "./api";
+import {
+  api,
+  ApiError,
+  fetchBillBreakdown,
+  scanBill,
+  type LoginResult,
+  type BakitGanito,
+  type BillBreakdown as BillBreakdownData,
+  type BillInput,
+  type ChargeLine,
+  type DraftBill,
+  type ExtraLineItem,
+  type ScanOutcome,
+} from "./api/client";
 import { MyMeralcoLogin } from "./components/MyMeralcoLogin";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
 import { ScanLinkageNotice } from "./components/ScanLinkageNotice";
-import { peso, monthLabel } from "./format";
+import { BillBreakdown } from "./components/BillBreakdown";
+import { peso, monthLabel } from "./lib/format";
 
 const EFFECT_HINT: Record<string, string> = {
   rate: "Nagbago ang singil kada kWh. Hindi mo ito kontrolado.",
@@ -26,6 +40,9 @@ interface FormBill {
   /** Fields the scan could not read, or only estimated. */
   missing: string[];
   estimated: string[];
+  /** The Bill says its reading was estimated. */
+  isEstimated: boolean;
+  lifelineEligible: boolean;
 }
 
 const emptyBill = (period = ""): FormBill => ({
@@ -38,6 +55,8 @@ const emptyBill = (period = ""): FormBill => ({
   lines: [],
   missing: [],
   estimated: [],
+  isEstimated: false,
+  lifelineEligible: false,
 });
 
 const s = (v: number | string | undefined) => (v === undefined ? "" : String(v));
@@ -53,6 +72,8 @@ function fromDraft(d: DraftBill, missing: string[] = [], estimated: string[] = [
     lines: (d.chargeLines ?? []).map((l) => ({ label: l.label, amount: String(l.amount) })),
     missing,
     estimated,
+    isEstimated: Boolean(d.estimated),
+    lifelineEligible: false,
   };
 }
 
@@ -73,6 +94,8 @@ function toInput(b: FormBill): BillInput | null {
     ...(b.dueDate ? { dueDate: b.dueDate } : {}),
     ...(opt(b.previousReading) !== undefined ? { previousReading: opt(b.previousReading) } : {}),
     ...(opt(b.presentReading) !== undefined ? { presentReading: opt(b.presentReading) } : {}),
+    ...(b.isEstimated ? { estimated: true } : {}),
+    ...(b.lifelineEligible ? { lifelineEligible: true } : {}),
   };
 }
 
@@ -171,6 +194,14 @@ function BillCard(props: {
         <Field label="kWh na nagamit" name="kwh" bill={bill} value={bill.kwh} onChange={(v) => set({ kwh: v })} inputMode="decimal" placeholder="hal. 220" />
         <Field label="Billing days" name="billingDays" bill={bill} value={bill.billingDays} onChange={(v) => set({ billingDays: v })} inputMode="numeric" placeholder="hal. 30" />
       </div>
+      <label className="check">
+        <input type="checkbox" checked={bill.isEstimated} onChange={(e) => set({ isEstimated: e.target.checked })} />
+        <span>Tantya (estimated) ang reading ng Bill na ito</span>
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={bill.lifelineEligible} onChange={(e) => set({ lifelineEligible: e.target.checked })} />
+        <span>Naka-register sa Lifeline discount</span>
+      </label>
       <details open={Boolean(hasReadings)}>
         <summary>Due date at meter readings (opsyonal)</summary>
         <Field label="Due date" name="dueDate" bill={bill} value={bill.dueDate} onChange={(v) => set({ dueDate: v })} type="date" />
@@ -198,9 +229,24 @@ function BillCard(props: {
   );
 }
 
+const LINE_HINT: Record<string, (l: ExtraLineItem) => string> = {
+  lifeline: (l) =>
+    l.status === "gained"
+      ? "Nakuha mo ang lifeline discount ngayong buwan."
+      : l.status === "lost"
+        ? "Nawala ang lifeline discount kasi lumampas ang gamit sa limit."
+        : "Nagbago ang laki ng lifeline discount mo.",
+  catchUp: (l) =>
+    (l.kwh ?? 0) >= 0
+      ? `Tantya lang ang nakaraang Bill. Mga ${l.kwh} kWh dito ay gamit pa noong nakaraang buwan.`
+      : `Sobra ang tantya noong nakaraang buwan. Ibinawas dito ang mga ${Math.abs(l.kwh ?? 0)} kWh.`,
+};
+
 function Result({ r }: { r: BakitGanito }) {
-  const max = Math.max(...r.effects.map((e) => Math.abs(e.amount)), 1);
-  const matches = r.printedChange === null || r.printedChange === r.total;
+  const rows = [...r.effects, ...r.lines];
+  const max = Math.max(...rows.map((e) => Math.abs(e.amount)), 1);
+  const extras = r.now.extras;
+  const reconciled = r.unexplained === null || r.unexplained === 0;
   return (
     <section className="card result" aria-live="polite">
       <h2>Bakit ganito?</h2>
@@ -208,8 +254,8 @@ function Result({ r }: { r: BakitGanito }) {
         {monthLabel(r.before.period)} {peso(r.before.rebuiltTotal)} → {monthLabel(r.now.period)} {peso(r.now.rebuiltTotal)}
       </p>
       <ul className="effects">
-        {r.effects.map((e) => (
-          <li key={e.key}>
+        {rows.map((e) => (
+          <li key={e.key} className={e.key === "lifeline" || e.key === "catchUp" ? "extra-line" : ""}>
             <div className="effect-head">
               <span>{e.label}</span>
               <strong className={e.amount < 0 ? "down" : e.amount > 0 ? "up" : ""}>{peso(e.amount, true)}</strong>
@@ -217,7 +263,13 @@ function Result({ r }: { r: BakitGanito }) {
             <div className="bar">
               <span className={e.amount < 0 ? "down" : "up"} style={{ width: `${(Math.abs(e.amount) / max) * 100}%` }} />
             </div>
-            <small>{EFFECT_HINT[e.key]}</small>
+            <small>
+              {"status" in e || e.key === "catchUp"
+                ? LINE_HINT[e.key]!(e as ExtraLineItem)
+                : e.key === "habit" && !r.habitMeasurable
+                  ? "Hindi pa masukat: tantya ang nakaraang Bill, kaya pinagsama ang dalawang buwan."
+                  : EFFECT_HINT[e.key]}
+            </small>
           </li>
         ))}
         <li className="total">
@@ -226,10 +278,35 @@ function Result({ r }: { r: BakitGanito }) {
             <strong>{peso(r.total, true)}</strong>
           </div>
           <small>
-            {matches ? "✓ Tugma sa totoong pagbabago ng Bill" : `Ang naka-print na pagbabago ay ${peso(r.printedChange!, true)}.`}
+            {reconciled
+              ? "✓ Tugma sa totoong pagbabago ng Bill"
+              : `May ${peso(r.unexplained!, true)} na hindi maipaliwanag mula sa mga singil. Titingnan ito sa Bill Checks.`}
           </small>
         </li>
       </ul>
+      {extras.length > 0 && (
+        <div className="extras">
+          <h3>Hindi kasama sa paliwanag</h3>
+          <p className="muted">Mga credit, refund, adjustment at balanse. Hiwalay ito sa gamit at singil ng buwan.</p>
+          <ul>
+            {extras.map((x, i) => (
+              <li key={i} className="effect-head">
+                <span>
+                  {x.label} <span className="muted">· {x.kindLabel}</span>
+                </span>
+                <strong>{peso(x.amount, true)}</strong>
+              </li>
+            ))}
+          </ul>
+          {r.printedChange !== null && (
+            <small className="muted">
+              Naka-print na pagbabago: {peso(r.printedChange, true)} = {peso(r.total, true)} sa itaas{" "}
+              {r.extrasChange >= 0 ? "+" : "−"} {peso(Math.abs(r.extrasChange))} na credits/adjustments
+              {r.unexplained ? ` + ${peso(r.unexplained, true)} na hindi maipaliwanag` : ""}
+            </small>
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -264,6 +341,7 @@ export function App() {
   const [scan, setScan] = useState<ScanState>(noScan);
   const [scanning, setScanning] = useState<Slot | null>(null);
   const [result, setResult] = useState<BakitGanito | null>(null);
+  const [breakdown, setBreakdown] = useState<BillBreakdownData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const scanVersion = useRef(0);
@@ -285,6 +363,7 @@ export function App() {
     verdictVersion.current++;
     setScanning(slot);
     setResult(null);
+    setBreakdown(null);
     setScan((st) => ({ ...st, pending: true, references: { ...st.references, [slot]: undefined }, problem: null }));
     const out: ScanOutcome = await scanBill(photo);
     if (version !== scanVersion.current) return;
@@ -322,6 +401,7 @@ export function App() {
     verdictVersion.current++;
     set(b);
     setResult(null);
+    setBreakdown(null);
   };
 
   const b = toInput(before);
@@ -335,10 +415,20 @@ export function App() {
     setBusy(true);
     setError(null);
     try {
-      const response = await api.bakitGanito(b, n);
-      if (version === verdictVersion.current) setResult(response);
+      const [r, l] = await Promise.all([
+        api.bakitGanito(b, n),
+        n.chargeLines.length ? fetchBillBreakdown(n, b) : Promise.resolve(null),
+      ]);
+      if (version === verdictVersion.current) {
+        setResult(r);
+        setBreakdown(l);
+      }
     } catch (err) {
-      if (version === verdictVersion.current) { setResult(null); setError((err as Error).message); }
+      if (version === verdictVersion.current) {
+        setResult(null);
+        setBreakdown(null);
+        setError((err as Error).message);
+      }
     } finally {
       setBusy(false);
     }
@@ -430,6 +520,7 @@ export function App() {
       </form>
       {error && <p className="error">{error}</p>}
       {result && <Result r={result} />}
+      {result && <BillBreakdown data={breakdown} missingLines={!n?.chargeLines.length} />}
       {session && !scan.pending && scanning === null && (scan.references.now || scan.references.before) &&
         <ScanLinkageNotice key={`${session.token}:${scan.references.now}:${scan.references.before}`} token={session.token}
           now={scan.references.now} before={scan.references.before} onExpired={onExpired} onSelect={setSelectedSin} />}

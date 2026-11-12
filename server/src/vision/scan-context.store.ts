@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { AuthClock } from "../auth/auth.service.js";
-import { AUTH_CLOCK } from "../tokens.js";
+import { AUTH_CLOCK } from "../common/injection-tokens.js";
 
 const TTL_MS = 15 * 60 * 1000;
 const MAX_CONTEXTS = 1000;

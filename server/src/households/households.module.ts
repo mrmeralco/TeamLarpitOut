@@ -1,7 +1,7 @@
 import { Controller, Get, Header, Module, Req, UseGuards } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module.js";
 import { SessionGuard, type AuthenticatedRequest } from "../auth/session.guard.js";
-import { MyMeralcoModule } from "../sources/my-meralco.module.js";
+import { MyMeralcoModule } from "../bills/my-meralco.module.js";
 import { HouseholdAccessGuard } from "./household-access.guard.js";
 import { HouseholdsService } from "./households.service.js";
 

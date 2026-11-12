@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { api, ApiError, type BakitGanito, type HistoryBill, type Household } from "../api";
-import { maskSin, monthLabel, peso } from "../format";
+import { api, ApiError, type BakitGanito, type HistoryBill, type Household } from "../api/client";
+import { maskSin, monthLabel, peso } from "../lib/format";
 
 /** Parent keys this component by session and SIN so old data disappears immediately. */
 export function BillHistory({ token, household, onExpired, renderExplanation }: {

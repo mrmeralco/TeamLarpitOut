@@ -1,8 +1,8 @@
 import { BadGatewayException, Controller, Get, Header, Inject, Param, UseGuards } from "@nestjs/common";
 import { SessionGuard } from "../auth/session.guard.js";
 import { HouseholdAccessGuard } from "../households/household-access.guard.js";
-import type { BillSource } from "../sources/billSource.js";
-import { BILL_SOURCE } from "../tokens.js";
+import type { BillSource } from "../bills/bill-source.js";
+import { BILL_SOURCE } from "../common/injection-tokens.js";
 
 @Controller("households")
 @UseGuards(SessionGuard, HouseholdAccessGuard)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { api, ApiError, type ScanLinkage } from "../api";
-import { maskSin } from "../format";
+import { api, ApiError, type ScanLinkage } from "../api/client";
+import { maskSin } from "../lib/format";
 
 export function ScanLinkageNotice({ token, now, before, onExpired, onSelect }: {
   token: string; now?: string; before?: string; onExpired: () => void; onSelect: (sin: string) => void;

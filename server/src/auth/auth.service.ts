@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { Inject, Injectable, UnauthorizedException } from "@nestjs/common";
-import type { MyMeralcoSource } from "../sources/myMeralcoSource.js";
-import { AUTH_CLOCK, MY_MERALCO_SOURCE } from "../tokens.js";
+import type { MyMeralcoSource } from "../bills/myMeralcoSource.js";
+import { AUTH_CLOCK, MY_MERALCO_SOURCE } from "../common/injection-tokens.js";
 
 export interface AuthClock { now(): number }
 export const SESSION_TTL_MS = 60 * 60 * 1000;

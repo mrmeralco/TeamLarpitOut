@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
-import { MeralcoApiSource } from "../sources/meralcoApiSource.js";
+import { MeralcoApiSource } from "./meralcoApiSource.js";
 import { HouseholdsModule } from "../households/households.module.js";
-import { BILL_SOURCE } from "../tokens.js";
+import { BILL_SOURCE } from "../common/injection-tokens.js";
 import { BillHistoryController } from "./bill-history.controller.js";
 
 /**

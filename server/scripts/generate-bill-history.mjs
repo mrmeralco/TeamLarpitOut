@@ -1,6 +1,6 @@
 // Run after `pnpm --filter @kuryenteko/server build` to reuse the actual cost engine.
 import { readFile, writeFile } from "node:fs/promises";
-import { costLines } from "../dist/domain/rateSchedule.js";
+import { costLines } from "../dist/domain/rate-schedule.js";
 
 const data = new URL("../src/data/", import.meta.url);
 const seed = JSON.parse(await readFile(new URL("meralco-demo-seed.json", data), "utf8"));

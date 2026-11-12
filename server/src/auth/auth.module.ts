@@ -1,6 +1,6 @@
 import { Body, Controller, Header, HttpCode, Module, Post, Req, UseGuards } from "@nestjs/common";
-import { MyMeralcoModule } from "../sources/my-meralco.module.js";
-import { AUTH_CLOCK } from "../tokens.js";
+import { MyMeralcoModule } from "../bills/my-meralco.module.js";
+import { AUTH_CLOCK } from "../common/injection-tokens.js";
 import { AuthService } from "./auth.service.js";
 import { LoginDto } from "./login.dto.js";
 import { SessionGuard, type AuthenticatedRequest } from "./session.guard.js";
