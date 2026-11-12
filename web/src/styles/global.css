@@ -625,3 +625,32 @@ button.wide { width: 100%; margin-top: 10px; }
 .tabbar a[aria-current="page"] { color: var(--primary); font-weight: 600; }
 .tabbar a:focus-visible { outline: 2px solid var(--ring); outline-offset: -4px; }
 @media (min-width: 520px) { .tabbar { left: 50%; width: 480px; transform: translateX(-50%); border-left: 1px solid var(--border); border-right: 1px solid var(--border); } }
+
+/* Home: the latest Bill explained (mockup screen 6) */
+.home2 { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.home2 h3 { margin: 4px 0 0; font-size: 0.95rem; }
+.home2 .card { margin-bottom: 0; }
+.home-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.home-top h2 { margin: 2px 0 0; font-size: 1.25rem; letter-spacing: -0.02em; }
+.home-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; background: color-mix(in oklch, var(--chart-1) 30%, transparent); }
+.home-badge .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--down); }
+.home-badge.yellow .dot { background: var(--chart-2); }
+.home-badge.red .dot { background: var(--destructive); }
+.home-due { display: flex; justify-content: space-between; align-items: center; }
+.home-due > div { display: flex; flex-direction: column; gap: 2px; }
+.home-amount { font-size: 1.65rem; letter-spacing: -0.03em; }
+.home-change { align-items: flex-end; }
+.effect-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; background: var(--muted); }
+.effect-bar span { display: block; min-width: 2px; }
+.effect-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.effect-tiles li { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); }
+.effect-tiles li.habit { border: 1.5px solid var(--primary); background: color-mix(in oklch, var(--primary) 8%, var(--card)); }
+.effect-tiles i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.charges { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.charge { display: flex; flex-direction: column; gap: 2px; min-height: 52px; padding: 9px 12px; text-align: left; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font-size: 0.8rem; }
+.charge-head { display: flex; justify-content: space-between; gap: 6px; font-weight: 600; font-size: 0.85rem; }
+.charge:focus-visible, .save-card:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.save-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border: 0; border-radius: 14px; background: var(--primary); color: var(--primary-foreground); text-align: left; }
+.save-card > span:first-child { display: flex; flex-direction: column; gap: 2px; font-size: 0.85rem; }
+.save-card strong { font-size: 0.95rem; }

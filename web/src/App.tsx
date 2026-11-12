@@ -93,7 +93,7 @@ export function App() {
       <main>
         {sessionNotice && <p role="status" className="muted">{sessionNotice}</p>}
         {tab === "home" && <>
-          <Home key={`home:${key}`} token={session.token} household={selected} onExpired={onExpired} />
+          <Home key={`home:${key}`} token={session.token} household={selected} onExpired={onExpired} onSave={() => go("missions")} />
           <BillHistory key={`history:${key}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <BakitGanitoResult r={r} />} />
           {selected.meter_type === "smart" && <SmartMeterUsage key={`usage:${key}`} token={session.token} household={selected} onExpired={onExpired} />}
         </>}

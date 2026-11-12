@@ -627,11 +627,29 @@ export const rewardsApi = {
 
 export type HomeBadge = "green" | "yellow" | "red";
 /** Amounts in centavos. Each card names the section ("screen") it links to. */
+export interface HomeChargeLine {
+  id: string;
+  label: string;
+  amount: number;
+  previous: number | null;
+  change: number | null;
+  kind: "perKwh" | "fixed" | "tax" | null;
+  payee: { type: "passThrough" | "meralco" | "government" | "subsidy"; name: string } | null;
+  goesTo: string | null;
+  printed: string[];
+}
+export interface HomePart { key: string; label: string; amount: number }
 export interface HomeSummary {
   meterType: "traditional" | "smart";
+  canMasked: string | null;
+  area: string;
+  chargeLines: { featured: HomeChargeLine[]; all: HomeChargeLine[] };
   bill: { period: string; amountDue: number | null; dueDate: string | null; billDate: string | null };
   badge: { status: HomeBadge; label: string };
-  bakitGanito: { sentence: string; total: number; screen: "bakit-ganito" } | null;
+  bakitGanito: {
+    sentence: string; total: number; screen: "bakit-ganito"; previousPeriod: string;
+    effects: HomePart[]; lines: HomePart[]; addsUp: boolean; habit: number;
+  } | null;
   bakitGanitoUnavailable: string | null;
   tamaBa: { status: HomeBadge; label: string; failedChecks: number; summary: string; screen: "tama-ba" };
   action:

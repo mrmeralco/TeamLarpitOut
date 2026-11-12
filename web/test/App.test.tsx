@@ -49,7 +49,8 @@ beforeEach(() => {
     if (input === "/api/appliances/catalog") return response({ appliances: [] });
     if (/^\/api\/households\/[^/]+\/appliances$/.test(input)) return response({ saved: false, updatedAt: null, appliances: [] });
     if (/^\/api\/households\/[^/]+\/home$/.test(input)) return response({
-      meterType: input.includes(households[0]!.sin) ? "traditional" : "smart",
+      meterType: input.includes(households[0]!.sin) ? "traditional" : "smart", canMasked: "39•• ••• 482", area: "Caloocan City",
+      chargeLines: { featured: [], all: [] },
       bill: { period: "2026-10", amountDue: 10000, dueDate: null, billDate: null },
       badge: { status: "green", label: "Tugma ang bill" }, bakitGanito: null, bakitGanitoUnavailable: "Kailangan ng dalawang Bill para maikumpara.",
       tamaBa: { status: "green", label: "Tugma ang bill", failedChecks: 0, summary: "OK", screen: "tama-ba" },
@@ -141,7 +142,7 @@ describe("My Meralco PWA", () => {
     render(<App />); await login(); await select(households[1]!.sin);
     await screen.findByText("12.345 kWh");
     expect(screen.getByRole("cell", { name: "370" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Ano ang gagawin ko/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Want to save on your next bill/ })).toBeTruthy();
     expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan")).toBe(false);
     await goTab("Missions");
     expect(screen.queryByRole("heading", { name: "Target at Missions" })).toBeNull();
