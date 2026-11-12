@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Home } from "../src/components/Home";
+import { clearHomeCache, Home } from "../src/components/Home";
 import type { ApplianceBreakdown, HomeChargeLine, HomeSummary, MissionPlan, SetupStatus } from "../src/api/client";
 
 const household = { sin: "1234567890", masked_address: "••• Caloocan City", meter_type: "traditional" as const };
@@ -73,9 +73,20 @@ const fetchMock = vi.fn(async (input: string) => {
 });
 
 beforeEach(() => { home = summary(); fetchMock.mockClear(); vi.stubGlobal("fetch", fetchMock); });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearHomeCache(); });
 
 describe("Home: gamified with Eelio", () => {
+  it("coming back to Home shows the last bill at once and refreshes it in the background", async () => {
+    const first = render(<Home token="t" household={household} onExpired={() => {}} />);
+    expect(await screen.findByRole("heading", { name: "Your October bill" })).toBeTruthy();
+    first.unmount();
+    const calls = fetchMock.mock.calls.length;
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    expect(screen.queryByText(/Eelio is reading your bill/)).toBeNull();
+    expect(screen.getByRole("heading", { name: "Your October bill" })).toBeTruthy();
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(calls);
+  });
+
   it("the hero shows the bill, the change and Eelio's title and charge", async () => {
     render(<Home token="t" household={household} onExpired={() => {}} setup={setupStatus([true, true, true])} />);
     expect(await screen.findByRole("heading", { name: "Your October bill" })).toBeTruthy();
@@ -122,13 +133,41 @@ describe("Home: gamified with Eelio", () => {
     const onAsk = vi.fn();
     render(<Home token="t" household={household} onExpired={() => {}} onAskCharge={onAsk} />);
     await screen.findByRole("heading", { name: "Your October bill" });
-    const side = within(screen.getByRole("complementary", { name: "Your bill's charges" }));
+    const side = within(screen.getByRole("region", { name: "Your bill's charges" }));
     expect(side.getByRole("img", { name: "Pass-through 67%, Meralco 20%, Government 13%" })).toBeTruthy();
     const rows = side.getAllByRole("button", { name: /Ask about this charge/ }).map((b) => b.getAttribute("aria-label")!.split(":")[0]);
     expect(rows).toEqual(["Generation", "Distribution", "Taxes", "Transmission"]);
     expect(side.getByText("+1 more charge at ₱0 on this bill.")).toBeTruthy();
     fireEvent.click(side.getByRole("button", { name: /^Distribution: ₱1,210\.00, −₱160\.00 vs\. last month, Meralco/ }));
     expect(onAsk.mock.calls[0]![0].id).toBe("distribution");
+  });
+
+  it("shows every charge as a tile across the page, biggest first, with the usage chart on the side", async () => {
+    const more = [...lines, line("supply", "Supply", 15200, 700, "Meralco"), line("metering", "Metering", 9600, null, "Meralco")];
+    home = summary({ chargeLines: { featured: more.slice(0, 4), all: more } });
+    render(<Home token="t" household={household} onExpired={() => {}} />);
+    const charges = await screen.findByRole("region", { name: "Your bill's charges" });
+    expect(charges.closest(".dash-wide")).toBeTruthy();
+    const asks = within(charges).getAllByRole("button", { name: /Ask about this charge/ }).map((b) => b.getAttribute("aria-label")!.split(":")[0]);
+    expect(asks).toEqual(["Generation", "Distribution", "Taxes", "Transmission", "Supply", "Metering"]);
+    expect(within(charges).getByRole("button", { name: /^Generation:.*Biggest charge\./ })).toBeTruthy();
+    const side = within(screen.getByRole("complementary", { name: "Your usage and savings" }));
+    expect(side.getByRole("heading", { name: "Your usage" })).toBeTruthy();
+  });
+
+  it("groups the charge tiles by 4 for swiping on phones, with a pager", async () => {
+    const more = [...lines, line("supply", "Supply", 15200, 700, "Meralco"), line("metering", "Metering", 9600, null, "Meralco")];
+    home = summary({ chargeLines: { featured: more.slice(0, 4), all: more } });
+    const onAsk = vi.fn();
+    render(<Home token="t" household={household} onExpired={() => {}} onAskCharge={onAsk} />);
+    const charges = within(await screen.findByRole("region", { name: "Your bill's charges" }));
+    const groups = charges.getAllByRole("list").filter((el) => el.classList.contains("charge-page"));
+    expect(groups.map((g) => within(g).getAllByRole("button").length)).toEqual([4, 2]);
+    expect(charges.getByRole("button", { name: "Show charges group 1 of 2" }).getAttribute("aria-current")).toBe("true");
+    fireEvent.click(charges.getByRole("button", { name: "Show charges group 2 of 2" }));
+    expect(charges.getByRole("button", { name: "Show charges group 2 of 2" }).getAttribute("aria-current")).toBe("true");
+    fireEvent.click(within(groups[1]!).getByRole("button", { name: /^Metering:/ }));
+    expect(onAsk.mock.calls[0]![0].id).toBe("metering");
   });
 
   it("before setup: the save card starts onboarding and there is no appliances card", async () => {
