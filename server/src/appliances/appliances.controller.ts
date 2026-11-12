@@ -11,12 +11,25 @@ import { SaveAppliancesDto } from "./dto/save-appliances.dto.js";
 import { ScanApplianceLabelDto } from "./dto/scan-appliance-label.dto.js";
 import { ApplianceLabelScanService } from "./appliance-label-scan.service.js";
 import { VisionUnavailableError } from "../vision/vision-provider.interface.js";
+import { AirconPatternService } from "./aircon-pattern.service.js";
+import { AirconPatternRequestDto } from "./dto/aircon-pattern-request.dto.js";
 
 /** A Household's appliances and "Saan napupunta?". Owner only. */
 @Controller("households/:sin/appliances")
 @UseGuards(SessionGuard, HouseholdAccessGuard)
 export class AppliancesController {
-  constructor(private readonly appliances: AppliancesService, private readonly labelScan: ApplianceLabelScanService) {}
+  constructor(
+    private readonly appliances: AppliancesService,
+    private readonly labelScan: ApplianceLabelScanService,
+    private readonly pattern: AirconPatternService,
+  ) {}
+
+  @Post("aircon-pattern-proposal")
+  @HttpCode(200)
+  @Header("Cache-Control", "no-store")
+  airconPattern(@Req() req: HouseholdRequest, @Body() body: AirconPatternRequestDto) {
+    return this.pattern.propose(req.household, body);
+  }
 
   @Post("scan-label")
   @HttpCode(200)

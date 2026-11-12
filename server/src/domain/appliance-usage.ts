@@ -92,8 +92,8 @@ export function rangeFromHours(hours: number, days: DaysOfWeek = "everyday"): Ti
   };
 }
 
-/** Problems with one appliance, in plain Tagalog; empty when valid. */
-export function validateAppliance(a: ApplianceInput): string[] {
+/** Validate the appliance rating without requiring a confirmed routine yet. */
+export function validateApplianceRating(a: ApplianceInput): string[] {
   const def = findAppliance(a.type);
   if (!def) return [`Hindi kilalang appliance: ${a.type}`];
   const errors: string[] = [];
@@ -121,6 +121,14 @@ export function validateAppliance(a: ApplianceInput): string[] {
     else if (value !== UNKNOWN && !q.options.some((o) => o.value === value)) errors.push(`${def.label}: hindi tanggap ang sagot na "${value}" sa "${key}"`);
   }
 
+  return errors;
+}
+
+/** Problems with one appliance, in plain Tagalog; empty when valid. */
+export function validateAppliance(a: ApplianceInput): string[] {
+  const errors = validateApplianceRating(a);
+  const def = findAppliance(a.type);
+  if (!def) return errors;
   if (def.routine === "timeRanges") {
     const ranges = a.timeRanges ?? [];
     if (ranges.length === 0) errors.push(`${def.label}: kailan ito bukas?`);
