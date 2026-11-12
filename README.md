@@ -52,6 +52,9 @@ pnpm typecheck
 
 - `GET  /api/rate-schedules` → `{ periods }`
 - `POST /api/bakit-ganito` `{ before: Bill, now: Bill }` → effects, total (centavos)
+- `POST /api/bills/laman` `{ now: Bill, before?: Bill }` → grouped charge lines, pass-through vs Meralco distribution split
+- `POST /api/bills/check` `{ now: Bill, before?: Bill, tolerancePesos?: number, payments?: PaymentRecord[] }` → Bill Checks ("Tama ba ito?"): line sum, reading continuity, rate schedule fidelity, payment reflection (overall green / red, disagreeing figures, copyable summary)
+- `GET  /api/households/:sin/check` → same Bill Checks for a Household's latest Bill in the Bill source
 - `POST /api/bills/scan` (multipart, field `photo`) → editable draft: `now`, `before` (from printed history), `missing`, `estimated`, masked Service ID Number. `422` unreadable, `503` no vision key. Nothing is used until the PWA confirms and posts to `/api/bakit-ganito`.
 - `GET  /api/households/:sin/bakit-ganito` → same, from the Household's two latest Bills in the Bill source
 

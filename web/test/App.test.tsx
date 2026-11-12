@@ -35,6 +35,32 @@ beforeEach(() => {
     if (input === "/api/bills/scan") return response({ status: "read", now: { period: "2026-10", kwh: 200, billingDays: 31 }, before: { period: "2026-09", kwh: 150, billingDays: 30 }, missing: [], estimated: [], serviceIdMasked: "••••••7890", scanToken: "a".repeat(43) });
     if (input === "/api/bills/scan-linkage") return response(linkage);
     if (input === "/api/bakit-ganito") return response(verdictResponse());
+    if (input === "/api/bills/check") {
+      return response({
+        overall: "green",
+        checks: [
+          { key: "lineSum", title: "Lines sum", status: "pass", message: "OK" },
+          { key: "readingContinuity", title: "Readings", status: "pass", message: "OK" },
+          { key: "rateSchedule", title: "Rates", status: "pass", message: "OK" },
+          { key: "paymentReflection", title: "Payments", status: "pass", message: "OK" },
+        ],
+        failedChecks: [],
+        summary: "Lahat ng nasuring Meralco figures ay nagtutugma.",
+      });
+    }
+    if (/^\/api\/households\/[^/]+\/check$/.test(input)) {
+      return response({
+        overall: "green",
+        checks: [
+          { key: "lineSum", title: "Lines sum", status: "pass", message: "OK" },
+          { key: "readingContinuity", title: "Readings", status: "pass", message: "OK" },
+          { key: "rateSchedule", title: "Rates", status: "pass", message: "OK" },
+          { key: "paymentReflection", title: "Payments", status: "pass", message: "OK" },
+        ],
+        failedChecks: [],
+        summary: "Lahat ng nasuring Meralco figures ay nagtutugma.",
+      });
+    }
     throw new Error(`Unexpected request: ${input} ${init?.method ?? "GET"}`);
   });
   vi.stubGlobal("fetch", fetchMock);
