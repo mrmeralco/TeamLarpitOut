@@ -6,6 +6,7 @@ import {
 import { peso } from "../lib/format";
 import { EelioLoader } from "./EelioLoader";
 import { greeting, HomeWrapped, month, plainPeso } from "./HomeWrapped";
+import { SmartMeterUsage } from "./SmartMeterUsage";
 
 /** Eelio's gamified states (docs/mascot/mascot-branding-eelio.md). Always active and helpful; never low battery. */
 type Mood = "charged" | "detective";
@@ -230,6 +231,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
   const [plan, setPlan] = useState<MissionPlan | null>(cached?.plan ?? null);
   const [appliances, setAppliances] = useState<ApplianceBreakdown | null>(cached?.appliances ?? null);
   const [playing, setPlaying] = useState(false);
+  const smart = household.meter_type === "smart";
   const planReady = !!setup?.complete;
   const appliancesReady = !!setup?.steps.find((st) => st.key === "appliances")?.done;
 
@@ -242,8 +244,11 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
       else if (!homeCache.get(cacheKey)?.data) setError(err instanceof Error ? err.message : "Couldn't load Home.");
     };
     homeApi.summary(token, household.sin, controller.signal).then((d) => { remember(cacheKey, { data: d }); setData(d); }).catch(fail);
-    homeApi.usage(token, household.sin, controller.signal).then((u) => { remember(cacheKey, { usage: u }); setUsage(u); })
-      .catch(() => { if (!controller.signal.aborted && !homeCache.get(cacheKey)?.usage) setUsage([]); });
+    // A smart meter Household's usage card reads the meter instead of the last 12 Bills.
+    if (!smart) {
+      homeApi.usage(token, household.sin, controller.signal).then((u) => { remember(cacheKey, { usage: u }); setUsage(u); })
+        .catch(() => { if (!controller.signal.aborted && !homeCache.get(cacheKey)?.usage) setUsage([]); });
+    }
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, household.sin]);
@@ -323,10 +328,12 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
 
       <aside className="dash-side" aria-label="Your usage and savings">
         {saveCard}
-        <div className="card usage-card">
-          <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh · last 12 bills</span></div>
-          {usage === null ? <p className="muted small">Loading…</p> : <UsageBars months={usage} />}
-        </div>
+        {smart
+          ? <SmartMeterUsage token={token} household={household} onExpired={onExpired} />
+          : <div className="card usage-card">
+            <div className="usage-head"><h3>Your usage</h3><span className="muted small">kWh · last 12 bills</span></div>
+            {usage === null ? <p className="muted small">Loading…</p> : <UsageBars months={usage} />}
+          </div>}
       </aside>
 
       <div className="dash-wide">
