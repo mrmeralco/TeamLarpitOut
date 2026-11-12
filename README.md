@@ -148,6 +148,30 @@ Switching intervals cancels the previous load and clears its chart. Switching Ho
 
 Run `pnpm test`, `pnpm typecheck`, and `pnpm build` for workspace checks. UI tests cover automatic smart-only loading, accessible values, interval switching, retry, and delayed-response isolation; API tests exercise injected reading sources.
 
+### Smart-meter aircon pattern proposals (issue #14)
+
+`POST /api/households/:sin/appliances/aircon-pattern-proposal` accepts the current aircon draft:
+
+```json
+{
+  "quantity": 1,
+  "answers": { "mount": "split", "inverter": "no", "room": "medium" },
+  "energyLabel": { "consumptionKwh": 270, "period": "monthly", "referenceDays": 30, "referenceHoursPerDay": 9, "confirmed": true }
+}
+```
+
+All three fields are optional. The server recomputes the expected kW using confirmed label → visual answers → default, then multiplies by quantity (units sharing the same routine). Client-derived kW and unconfirmed labels are not used. Requesting a proposal never writes appliances.
+
+The route uses the existing bearer session and current Household membership checks: `401` for missing, expired, or revoked login; the same `404` for unknown and unlinked Households; `422` for a traditional meter; `400` for invalid appliance details; `502` for failed or malformed reading-source data. Successful responses use `Cache-Control: no-store`.
+
+- A `200` proposal has `status: "proposal"`, `canPropose: true`, the actual `routine: { start, end, days: "everyday" }`, `hours`, estimated excess `stepKw`, tentative `prompt`, heat evidence, and coverage counts.
+- A valid insufficient-evidence response is `200` with `status: "fallback"`, `canPropose: false`, `fallback: "routine"`, and a machine-readable `reason`. Missing, failed, malformed, or incompatible daily weather also falls back to routine questions.
+- Both responses include `timeZone: "Asia/Manila"`, the analyzed `range` (null if no readings are available), `expectedKw`, `ratingSource`, and separate reading/weather provenance. Coverage reports complete nights, matching nights, and nights paired with weather; the weather provenance is null when unavailable.
+
+The bounded analysis ends at the reading source's advertised end and looks back at most 30 days, including the fixed simulation's dates. A complete 10 AM–10 AM frame supplies the median 10 AM–6 PM background and the following 6 PM–10 AM search window. Missing hours exclude that frame rather than becoming zero consumption. A proposed step must have at least four contiguous hours, a median magnitude within ±30% of the entered aircon's aggregate kW, and hourly excess within ±30% of its own median. The step must begin and end inside the search window; multiple sustained steps or unstable overlapping loads are excluded.
+
+At least seven nights must share the same window, covering at least 70% of complete frames. Daily temperatures are joined by Manila date across midnight and averaged over the proposed hours. At least seven paired nights, at least 1°C of heat variation, a slope of at least 0.02 kW/°C, and correlation of at least 0.5 are required. These are project heuristics for a tentative question, not validated appliance identification. Daily heat is independently injectable through `DAILY_WEATHER_SOURCE`; its default mock uses the same invented climate as the simulated readings. Synthetic readings are never paired with observed weather.
+
 ### Scan linkage
 
 A successful public `POST /api/bills/scan` now includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized Service ID Number is retained server-side, with a maximum of 1,000 active references; no photo or scanned Bill is saved. Complete ten-digit identifiers are required for matching; whitespace and hyphens are accepted. Missing or partial identifiers cannot identify a Household.

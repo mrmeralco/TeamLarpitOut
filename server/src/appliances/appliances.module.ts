@@ -10,11 +10,13 @@ import { AppliancesService } from "./appliances.service.js";
 import { InMemoryApplianceRepository } from "./in-memory-appliance.repository.js";
 import { VisionModule } from "../vision/vision.module.js";
 import { ApplianceLabelScanService } from "./appliance-label-scan.service.js";
+import { SmartMeterModule } from "../smart-meter/smart-meter.module.js";
+import { AirconPatternService } from "./aircon-pattern.service.js";
 
 @Module({
-  imports: [HouseholdsModule, BillsModule, RateSchedulesModule, WeatherModule, VisionModule],
+  imports: [HouseholdsModule, BillsModule, RateSchedulesModule, WeatherModule, VisionModule, SmartMeterModule],
   controllers: [ApplianceCatalogController, AppliancesController],
   exports: [AppliancesService],
-  providers: [AppliancesService, ApplianceLabelScanService, { provide: APPLIANCE_REPOSITORY, useFactory: () => new InMemoryApplianceRepository() }],
+  providers: [AppliancesService, ApplianceLabelScanService, AirconPatternService, { provide: APPLIANCE_REPOSITORY, useFactory: () => new InMemoryApplianceRepository() }],
 })
 export class AppliancesModule {}
