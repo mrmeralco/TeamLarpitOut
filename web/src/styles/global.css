@@ -266,3 +266,23 @@ label.check input { width: auto; accent-color: var(--primary); }
 .history th:first-child { text-align: left; }
 .history small { display: block; color: var(--muted-foreground); font-weight: normal; }
 .history tbody th { font-weight: 500; }
+
+/* Appliances and "Saan napupunta?" */
+.appliances h3 { margin: 0; font-size: 1rem; }
+.appliance-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.appliance { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+.appliance .qty { align-items: center; flex: 0 0 auto; gap: 6px; }
+.appliance .qty label { flex-direction: row; align-items: center; margin: 0; gap: 6px; }
+.appliance .qty input { width: 4.5rem; }
+.routine { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; font-size: 0.85rem; }
+.range { align-items: center; flex-wrap: wrap; gap: 6px; }
+.range input[type="time"] { width: auto; flex: 1 1 6.5rem; }
+.range select { flex: 1 1 7rem; width: auto; }
+.range span { color: var(--muted-foreground); font-size: 0.85rem; }
+button.wide { width: 100%; margin-top: 10px; }
+.usage { list-style: none; margin: 0; padding: 0; }
+.usage li { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.usage-bar { background: var(--primary); }
+.usage-total { border-top: 2px solid var(--foreground); padding-top: 10px; margin: 8px 0 4px; }
+.tag.source-answers { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border); }
+.tag.source-default { color: var(--muted-foreground); border-style: dashed; }
