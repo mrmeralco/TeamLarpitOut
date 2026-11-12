@@ -98,7 +98,7 @@ export function SetupChecklist({ status, onStep, onIntro, smart = false }: {
               </li>
             ))}
           </ol>
-          <p className="muted small" style={{ margin: "14px 0 0" }}>Welcome points appear in your balance right away and unlock after your first verified savings.</p>
+          <p className="muted small" style={{ margin: "14px 0 0" }}>Welcome points appear in your balance right away.</p>
         </div>
       </div>
 
@@ -107,7 +107,7 @@ export function SetupChecklist({ status, onStep, onIntro, smart = false }: {
         <div className="save-card" style={{ cursor: "default" }}>
           <span>
             <strong>{smart ? "Earn points every day" : "Earn points on your next bill"}</strong>
-            <span>Every ₱1 you save, verified {smart ? "every day by your smart meter" : "on your next bill"}, earns 1 point you can redeem for load, e-wallet credit and vouchers.</span>
+            <span>Every mission is worth points: 1 point per ₱2 it saves, added {smart ? "each day your smart meter reads" : "when your next bill comes in"}, with a bonus in hot El Niño months. Redeem them for load, e-wallet credit and vouchers.</span>
           </span>
           <span aria-hidden="true">→</span>
         </div>

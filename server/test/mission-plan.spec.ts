@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calibrateToBill, estimateAppliance } from "../src/domain/appliance-usage.js";
 import { findAppliance } from "../src/domain/appliance-catalog.js";
 import { rankMissions, type ApplianceUsage } from "../src/domain/mission-catalog.js";
-import { buildCandidates, greedyPlan, MAX_PLAN, planCoverage, validateAiPlan, wordingIsFactual } from "../src/domain/mission-plan.js";
+import { buildCandidates, dailyMissions, greedyPlan, MAX_PLAN, planCoverage, validateAiPlan, wordingIsFactual } from "../src/domain/mission-plan.js";
 import { appliancesFromGrid, type AirconPattern, type GridInput } from "../src/domain/routine-presets.js";
 
 const RATE = 11;
@@ -88,5 +88,35 @@ describe("AI plan validation", () => {
   it("rejects a plan that falls short of 5% when the candidates can reach it, or repeats a shown set", () => {
     expect(validateAiPlan([{ id: candidates.at(-1)!.id, title: candidates.at(-1)!.title, why: "" }], candidates)).toBeNull();
     expect(validateAiPlan(ok, candidates, { avoid: [best.map((m) => m.id)] })).toBeNull();
+  });
+});
+
+describe("dailyMissions (smart meter homes)", () => {
+  const cand = (id: string, group: string, pesoValue: number) => ({ id, group, pesoValue }) as unknown as Parameters<typeof dailyMissions>[0][number];
+  const pool = [cand("a", "g1", 500), cand("a2", "g1", 400), cand("b", "g2", 300), cand("c", "g3", 200), cand("d", "g4", 100), cand("e", "g5", 50)];
+
+  it("always includes one of the three biggest savings", () => {
+    for (let d = 1; d <= 9; d++) {
+      const ids = dailyMissions(pool, `2026-11-0${d}`).map((m) => m.id);
+      expect(ids.some((id) => ["a", "b", "c"].includes(id))).toBe(true);
+    }
+  });
+
+  it("picks three from different habit groups and a different set the next day", () => {
+    const today = dailyMissions(pool, "2026-11-14").map((m) => m.id);
+    const tomorrow = dailyMissions(pool, "2026-11-15").map((m) => m.id);
+    expect(today).toHaveLength(3);
+    expect(today).not.toContain("a2");
+    expect(tomorrow.sort()).not.toEqual([...today].sort());
+  });
+
+  it("gives every habit a turn over as many days as there are habits", () => {
+    const seen = new Set<string>();
+    for (let d = 1; d <= 5; d++) for (const m of dailyMissions(pool, `2026-11-0${d}`)) seen.add(m.id);
+    expect([...seen].sort()).toEqual(["a", "b", "c", "d", "e"]);
+  });
+
+  it("returns them all when a home has three habits or fewer", () => {
+    expect(dailyMissions(pool.slice(0, 3), "2026-11-14").map((m) => m.id)).toEqual(["a", "b"]);
   });
 });

@@ -58,6 +58,11 @@ export class UsagePlanController {
     return this.missionPlans.shuffle(sin);
   }
 
+  @Post("missions/:missionId/remind")
+  remind(@Param("sin") sin: string, @Param("missionId") missionId: string) {
+    return this.missionPlans.remind(sin, missionId);
+  }
+
   @Post("missions/:missionId/swap")
   @Header("Cache-Control", "no-store")
   swap(@Param("sin") sin: string, @Param("missionId") missionId: string) {

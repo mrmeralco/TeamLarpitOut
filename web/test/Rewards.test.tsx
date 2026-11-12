@@ -186,7 +186,7 @@ describe("locked Welcome Points", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ...mockCatalog, balance: 100, lockedPoints: 100, spendable: 0 }), { status: 200 })));
     render(<Rewards token="t" household={household} onExpired={() => {}} />);
     expect(await screen.findByText(/100 Points/)).toBeTruthy();
-    expect(screen.getByTestId("locked-points").textContent).toMatch(/100 Welcome Points are locked until your first Verified Savings/);
+    expect(screen.getByTestId("locked-points").textContent).toMatch(/100 Welcome Points unlock with your first savings on a coming Bill/);
   });
 });
 
@@ -208,6 +208,6 @@ describe("smart meter daily Points (ADR-0008)", () => {
     const list = await screen.findByTestId("earned-history");
     expect(within(list).getByText("+10 pts")).toBeTruthy();
     expect(within(list).getByText(/does not qualify for Points/)).toBeTruthy();
-    expect(screen.getByTestId("rewards-balance").textContent).toMatch(/verified every day by your smart meter/);
+    expect(screen.getByTestId("rewards-balance").textContent).toMatch(/each day your smart meter reads/);
   });
 });
