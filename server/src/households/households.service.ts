@@ -35,10 +35,12 @@ export class HouseholdsService {
     return item;
   }
 
-  async requireAccess(ownerId: string, sin: string): Promise<void> {
-    if (!(await this.list(ownerId)).some((household) => household.sin === sin)) {
+  async requireAccess(ownerId: string, sin: string): Promise<Household> {
+    const household = (await this.list(ownerId)).find((entry) => entry.sin === sin);
+    if (!household) {
       // Unknown and foreign services have the same response to avoid disclosing ownership.
       throw new NotFoundException({ error: "Hindi makita ang Household." });
     }
+    return household;
   }
 }

@@ -6,8 +6,8 @@
 export type Badge = "green" | "yellow" | "red";
 
 export interface BadgeInput {
-  /** From the Bill Checks: "red" when any check fails. */
-  checksOverall: "green" | "red";
+  /** From Bill Checks, including yellow when usage is an unexplained outlier. */
+  checksOverall: Badge;
   /** Usage Outlier (#6); undefined until it is computed. */
   usageOutlier?: boolean;
 }
@@ -15,7 +15,7 @@ export interface BadgeInput {
 /** 🔴 any failed Bill Check wins; 🟡 a Usage Outlier; otherwise 🟢 (plan §2.4). */
 export function homeBadge({ checksOverall, usageOutlier }: BadgeInput): Badge {
   if (checksOverall === "red") return "red";
-  if (usageOutlier) return "yellow";
+  if (checksOverall === "yellow" || usageOutlier) return "yellow";
   return "green";
 }
 

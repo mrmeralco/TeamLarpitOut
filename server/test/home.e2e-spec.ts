@@ -83,6 +83,23 @@ describe("GET /api/households/:sin/home", () => {
     expect(body.action.kind).toBe("missions");
   });
 
+  it("keeps the yellow Bill Checks badge and household-change action until a change explains the usage", async () => {
+    const history = [bill("2026-07", 100, 30), bill("2026-08", 100, 30), bill("2026-09", 100, 30), bill("2026-10", 250, 30)];
+    const api = await harness({ bills: { [TRADITIONAL]: history }, weather: { "2026-07": 2, "2026-08": 2, "2026-09": 2, "2026-10": 2 } });
+    const token = await api.login();
+    const yellow = await api.get(`/api/households/${TRADITIONAL}/home`, token);
+    expect(yellow.status).toBe(200);
+    expect(yellow.body.badge.status).toBe("yellow");
+    expect(yellow.body.tamaBa.status).toBe("yellow");
+    expect(yellow.body.action.kind).toBe("householdChange");
+
+    const recorded = await api.post(`/api/households/${TRADITIONAL}/changes`, { reason: "bisita", period: "2026-10" }, token);
+    expect(recorded.status).toBe(200);
+    const green = await api.get(`/api/households/${TRADITIONAL}/home`, token);
+    expect(green.body.badge.status).toBe("green");
+    expect(green.body.action.kind).toBe("missions");
+  });
+
   it("is only for the Household's owner, and needs a Bill", async () => {
     const api = await harness({ bills: { [TRADITIONAL]: bills() } });
     const token = await api.login();
@@ -98,6 +115,7 @@ describe("Home badge and action", () => {
   it("red wins over a Usage Outlier; yellow asks about the household, never Meralco", () => {
     expect(homeBadge({ checksOverall: "red", usageOutlier: true })).toBe("red");
     expect(homeBadge({ checksOverall: "green", usageOutlier: true })).toBe("yellow");
+    expect(homeBadge({ checksOverall: "yellow" })).toBe("yellow");
     expect(homeBadge({ checksOverall: "green" })).toBe("green");
 
     expect(homeAction("yellow", "summary")).toEqual({

@@ -17,6 +17,7 @@ import {
 import { MyMeralcoLogin } from "./components/MyMeralcoLogin";
 import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
+import { SmartMeterUsage } from "./components/SmartMeterUsage";
 import { Appliances } from "./components/Appliances";
 import { UsagePlan } from "./components/UsagePlan";
 import { Home } from "./components/Home";
@@ -497,6 +498,7 @@ export function App() {
       }} /> : <MyMeralcoLogin onLogin={(next) => { setSession(next); setSelectedSin(""); setSessionNotice(null); }} />}
       {session && selected && <Home key={`home:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />}
       {session && selected && <BillHistory key={`${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <Result r={r} />} />}
+      {session && selected?.meter_type === "smart" && <SmartMeterUsage key={`usage:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />}
       {session && selected && <Appliances key={`appliances:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} onSaved={() => setApplianceVersion((v) => v + 1)} />}
       {session && selected && selected.meter_type === "traditional" && <UsagePlan key={`plan:${session.token}:${selected.sin}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />}
 

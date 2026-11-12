@@ -8,6 +8,7 @@ import { HealthController } from "./health/health.controller.js";
 import { HomeModule } from "./home/home.module.js";
 import { HouseholdsModule } from "./households/households.module.js";
 import { RateSchedulesModule } from "./rate-schedules/rate-schedules.module.js";
+import { SmartMeterModule } from "./smart-meter/smart-meter.module.js";
 import { UsagePlanModule } from "./usage-plan/usage-plan.module.js";
 
 @Module({
@@ -17,6 +18,7 @@ import { UsagePlanModule } from "./usage-plan/usage-plan.module.js";
     BillScanModule,
     BillBreakdownModule,
     HouseholdsModule,
+    SmartMeterModule,
     AppliancesModule,
     BillChecksModule,
     UsagePlanModule,
