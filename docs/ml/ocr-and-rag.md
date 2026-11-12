@@ -91,7 +91,7 @@ ML_SERVICE_URL=http://127.0.0.1:8000
 | `VISION_PROVIDER` | `gemini-ml` | Who reads Bill photos (table above) |
 | `ML_SERVICE_URL` | `http://127.0.0.1:8000` | Where NestJS finds the ML service |
 | `VISION_PRIMARY_TIMEOUT_MS` | `15000` | How long to wait for Gemini before using the ML service |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | none, `gemini-3.8-flash` | Gemini for scanning and wording |
+| `GEMINI_API_KEY`, `GEMINI_MODEL` | none, `gemini-3.5-flash-lite` | Gemini for scanning and wording |
 
 Never commit `.env` files or paste keys in chat or screenshots. If a key leaks, delete it in AI Studio and make a new one.
 
