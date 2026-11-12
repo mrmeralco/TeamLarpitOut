@@ -382,6 +382,16 @@ export class UsagePlanService {
     };
   }
 
+  async recalculateDailyPoints(sin: string) {
+    if (!(await this.isSmartMeter(sin))) return;
+    const history = await this.bills.bills(sin);
+    if (!history.length) return;
+    const schedule = this.rates.get(history.at(-1)!.period);
+    if (schedule) {
+      await this.dailyPoints.settle(sin, schedule.perKwh.reduce((s, c) => s + c.rate, 0), { recalculate: true });
+    }
+  }
+
   private async autoSettle(sin: string) {
     const history = await this.bills.bills(sin);
     if (await this.isSmartMeter(sin)) {
@@ -405,7 +415,8 @@ export class UsagePlanService {
       }
     } else {
       const latest = history[history.length - 1]!;
-      if (!settled.has(latest.period)) {
+      // Seeded historical bills have provenance and precede any Mission Plan; only synthetic test-harness bills (no provenance) auto-settle without a plan.
+      if (!latest.provenance && !settled.has(latest.period)) {
         const prev = history[history.length - 2]!;
         await this.settlePeriod(sin, prev, latest);
         settled.add(latest.period);
@@ -448,7 +459,7 @@ export class UsagePlanService {
         : `No savings past the normal range on the ${monthName(result.period)} Bill`;
 
     const entry: PointsEntry = {
-      id: `pts-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: `bill-${sin}-${result.period}`,
       sin,
       period: result.period,
       points: result.points,

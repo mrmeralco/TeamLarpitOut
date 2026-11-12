@@ -75,6 +75,13 @@ export class MissionPlanService {
   }
 
   private async save(sin: string, period: string, goal: Awaited<ReturnType<MissionPlanService["candidates"]>>["goal"], plan: Plan, shown: string[][]) {
+    const timestamps = await this.usagePlan.planStartedAt(sin);
+    const smart = await this.usagePlan.isSmartMeter(sin);
+    const today = manilaDate(this.clock.now());
+    const monthFirst = `${today.slice(0, 7)}-01`;
+    const startedAt = smart && monthFirst < today && manilaDate(Date.parse(timestamps.startedAt)) >= today
+      ? `${monthFirst}T00:00:00+08:00`
+      : timestamps.startedAt;
     const stored: UsagePlan = {
       period,
       cut: GOAL_CUT,
@@ -85,7 +92,8 @@ export class MissionPlanService {
       source: plan.source,
       wording: plan.wording,
       shown: [...shown, plan.missions.map((m) => m.id)],
-      ...(await this.usagePlan.planStartedAt(sin)),
+      createdAt: timestamps.createdAt,
+      startedAt,
     };
     return this.plans.save(sin, stored);
   }
@@ -231,6 +239,12 @@ export class MissionPlanService {
     const stale = Boolean(stored && appliancesAt && new Date(appliancesAt).getTime() > new Date(stored.createdAt).getTime());
     if (!stored || stale || stored.period !== target.period || !stored.missions.every((m) => candidates.some((c) => c.id === m.id)) || stored.missions.length < minSize) {
       stored = await this.save(sin, target.period, goal, await this.pick(candidates, [], () => fallbackPlan(candidates)), []);
+    } else if (await this.usagePlan.isSmartMeter(sin)) {
+      const today = manilaDate(this.clock.now());
+      const monthFirst = `${today.slice(0, 7)}-01`;
+      if (monthFirst < today && (!stored.startedAt || manilaDate(Date.parse(stored.startedAt)) >= today)) {
+        stored = await this.plans.save(sin, { ...stored, startedAt: `${monthFirst}T00:00:00+08:00` });
+      }
     }
     return this.withReminders(sin, this.present(sin, target.period, goal, candidates, stored));
   }
@@ -266,6 +280,7 @@ export class MissionPlanService {
       return this.withReminders(sin, this.present(sin, target.period, goal, candidates, current, { changed: false }));
     }
     const stored = await this.save(sin, target.period, goal, next, fallback ? shown : []);
+    await this.usagePlan.recalculateDailyPoints(sin);
     return this.withReminders(sin, this.present(sin, target.period, goal, candidates, stored, { changed: true }));
   }
 
@@ -288,6 +303,7 @@ export class MissionPlanService {
     wording[replacement.id] = { title: replacement.title, why: replacement.why };
     const plan: Plan = { missions, wording, covered: planCoverage(missions), source: current.source === "ai" ? "ai" : "fallback" };
     const stored = await this.save(sin, target.period, goal, plan, current.shown ?? []);
+    await this.usagePlan.recalculateDailyPoints(sin);
     return this.withReminders(sin, this.present(sin, target.period, goal, candidates, stored, { swapped: { out: missionId, in: replacement.id } }));
   }
 }

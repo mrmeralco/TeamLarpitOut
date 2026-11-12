@@ -10,7 +10,14 @@ export class InMemoryPointsRepository implements PointsRepository {
 
   async addEntry(sin: string, entry: PointsEntry): Promise<void> {
     const list = this.byHousehold.get(sin) ?? [];
-    if (list.some((e) => e.id === entry.id)) return;
+    const idx = list.findIndex((e) => e.id === entry.id);
+    if (idx !== -1) {
+      if (entry.source === "meter_verified") {
+        list[idx] = structuredClone(entry);
+        this.byHousehold.set(sin, list);
+      }
+      return;
+    }
     list.push(structuredClone(entry));
     this.byHousehold.set(sin, list);
   }
