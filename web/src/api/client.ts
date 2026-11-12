@@ -83,7 +83,6 @@ export interface UsageReadings {
   readings: (ReadingRange & { kwh: number; partial: boolean })[];
 }
 export interface HistoryBill extends BillInput { provenance?: { kind: string; note: string } }
-export type ScanLinkage = { status: "linked"; householdSin: string } | { status: "unlinked" | "unknown" };
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }
 }
@@ -176,25 +175,22 @@ export const api = {
   householdExplanation: (token: string, sin: string, signal?: AbortSignal) => fetch(`/api/households/${encodeURIComponent(sin)}/bakit-ganito`, {
     headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
   }).then((r) => json<BakitGanito>(r)),
-  scanLinkage: (token: string, scanToken: string, signal?: AbortSignal) => fetch("/api/bills/scan-linkage", {
-    method: "POST", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify({ scanToken }), signal,
-  }).then((r) => json<ScanLinkage>(r)),
   periods: () => fetch("/api/rate-schedules").then((r) => json<{ periods: string[] }>(r)),
-  bakitGanito: (before: BillInput, now: BillInput) =>
+  bakitGanito: (token: string, before: BillInput, now: BillInput) =>
     fetch("/api/bakit-ganito", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ before, now }),
     }).then((r) => json<BakitGanito>(r)),
   billChecks: (
+    token: string,
     now: BillInput,
     before?: BillInput,
     options?: { tolerancePesos?: number; payments?: PaymentRecord[] },
   ) =>
     fetch("/api/bills/check", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
       body: JSON.stringify({ now, before, ...options }),
     }).then((r) => json<BillChecksResult>(r)),
   householdBillChecks: (token: string, sin: string, signal?: AbortSignal) =>
@@ -267,17 +263,18 @@ export type ScanOutcome =
   | { kind: "unavailable"; error: string };
 
 /** Send a Bill photo to be read. The result is a draft the user must confirm. */
-export async function scanBill(photo: File, token?: string): Promise<ScanOutcome> {
+export async function scanBill(photo: File, token: string): Promise<ScanOutcome> {
   const form = new FormData();
   form.append("photo", photo);
   let res: Response;
   try {
-    res = await fetch("/api/bills/scan", { method: "POST", body: form, ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) });
+    res = await fetch("/api/bills/scan", { method: "POST", body: form, headers: { Authorization: `Bearer ${token}` } });
   } catch {
     return { kind: "unavailable", error: "Hindi maabot ang server. I-type na lang ang Bill." };
   }
   const body = await res.json().catch(() => ({}));
   if (res.ok) return { kind: "read", ...body };
+  if (res.status === 401) return { kind: "unavailable", error: "HTTP 401: Mag-sign in muna." };
   if (res.status === 422 && body.status === "unreadable") return { kind: "unreadable", problem: body.problem };
   return { kind: "unavailable", error: body.error ?? `Hindi nabasa ang litrato (HTTP ${res.status}).` };
 }
@@ -300,10 +297,10 @@ export interface BillBreakdown {
   split: { passThrough: number; meralco: number };
 }
 
-export const fetchBillBreakdown = (now: BillInput, before: BillInput) =>
+export const fetchBillBreakdown = (token: string, now: BillInput, before?: BillInput) =>
   fetch("/api/bills/laman", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: JSON.stringify({ now, before }),
   }).then((r) => json<BillBreakdown>(r));
 
@@ -379,6 +376,23 @@ export interface AirconProposalResult {
   fallback?: "routine";
 }
 
+export type AirconPatternInput = Pick<ApplianceInput, "quantity" | "answers" | "energyLabel">;
+interface AirconPatternEvidence {
+  timeZone: "Asia/Manila";
+  range: ReadingRange | null;
+  expectedKw: number;
+  ratingSource: "label" | "answers" | "default";
+  coverage: { completeNights: number; matchingNights: number; heatMatchedNights: number };
+  provenance: {
+    readings: { kind: "synthetic"; note: string };
+    weather: { kind: "synthetic" | "observed"; note: string } | null;
+  };
+}
+export type AirconPatternResult = AirconPatternEvidence & ({
+  status: "proposal"; canPropose: true; routine: TimeRange; hours: number; stepKw: number; prompt: string;
+  heat: { temperatureSpanC: number; kwPerDegreeC: number; correlation: number };
+} | { status: "fallback"; canPropose: false; fallback: "routine"; reason: string });
+
 /** Create a standard daily time range yielding the given hours (starting at 22:00). */
 export function rangeFromHours(hours: number): TimeRange {
   const clamped = Math.max(1, Math.min(23, Math.round(hours)));
@@ -397,6 +411,12 @@ const authed = (token: string, signal?: AbortSignal): RequestInit => ({
 const householdPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/appliances`;
 
 export const appliancesApi = {
+  airconPattern: (token: string, sin: string, input: AirconPatternInput, signal?: AbortSignal) =>
+    fetch(`${householdPath(sin)}/aircon-pattern-proposal`, {
+      ...authed(token, signal), method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify(input),
+    }).then((r) => json<AirconPatternResult>(r)),
   scanLabel: (token: string, sin: string, type: "aircon" | "refrigerator", photo: File, signal?: AbortSignal) => {
     const body = new FormData();
     body.append("type", type);
@@ -532,6 +552,8 @@ export interface PointsHistoryEntry {
 export interface PointsResult {
   currency: string;
   balance: number;
+  lockedPoints?: number;
+  spendable?: number;
   history: PointsHistoryEntry[];
 }
 
@@ -552,6 +574,9 @@ export interface CatalogRewardItem {
 export interface RewardsCatalogResult {
   sin: string;
   balance: number;
+  /** Welcome Points that unlock at the first Verified Savings. */
+  lockedPoints?: number;
+  spendable?: number;
   tag: string;
   disclaimer: string;
   catalog: CatalogRewardItem[];
@@ -630,11 +655,29 @@ export const rewardsApi = {
 
 export type HomeBadge = "green" | "yellow" | "red";
 /** Amounts in centavos. Each card names the section ("screen") it links to. */
+export interface HomeChargeLine {
+  id: string;
+  label: string;
+  amount: number;
+  previous: number | null;
+  change: number | null;
+  kind: "perKwh" | "fixed" | "tax" | null;
+  payee: { type: "passThrough" | "meralco" | "government" | "subsidy"; name: string } | null;
+  goesTo: string | null;
+  printed: string[];
+}
+export interface HomePart { key: string; label: string; amount: number }
 export interface HomeSummary {
   meterType: "traditional" | "smart";
+  canMasked: string | null;
+  area: string;
+  chargeLines: { featured: HomeChargeLine[]; all: HomeChargeLine[] };
   bill: { period: string; amountDue: number | null; dueDate: string | null; billDate: string | null };
   badge: { status: HomeBadge; label: string };
-  bakitGanito: { sentence: string; total: number; screen: "bakit-ganito" } | null;
+  bakitGanito: {
+    sentence: string; total: number; screen: "bakit-ganito"; previousPeriod: string;
+    effects: HomePart[]; lines: HomePart[]; addsUp: boolean; habit: number;
+  } | null;
   bakitGanitoUnavailable: string | null;
   tamaBa: { status: HomeBadge; label: string; failedChecks: number; summary: string; screen: "tama-ba" };
   action:
@@ -646,4 +689,105 @@ export interface HomeSummary {
 export const homeApi = {
   summary: (token: string, sin: string, signal?: AbortSignal) =>
     fetch(`/api/households/${encodeURIComponent(sin)}/home`, authed(token, signal)).then((r) => json<HomeSummary>(r)),
+};
+
+export interface ChargeAnswer {
+  lineId: string;
+  kind: "answer" | "askMeralco" | "redirect";
+  source: "ai" | "template";
+  answer: string;
+  summary?: string | null;
+}
+
+export const chargeApi = {
+  ask: (token: string, sin: string, lineId: string, question: string) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/charges/${encodeURIComponent(lineId)}/ask`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ question }),
+    }).then((r) => json<ChargeAnswer>(r)),
+};
+
+export type HomePattern = "allDay" | "eveningsWeekends" | "daytime";
+export type AirconPattern = "sleeping" | "afternoonNight" | "mostOfDay";
+export interface SetupStatus {
+  steps: { key: "household" | "appliances" | "routine"; label: string; done: boolean }[];
+  doneCount: number;
+  total: number;
+  complete: boolean;
+  household: { size: number } | null;
+  routine: { home: HomePattern; aircon: AirconPattern | null } | null;
+  hasAircon: boolean;
+  grid?: Record<string, number> | null;
+  gridCatalog?: GridTile[];
+  welcomePoints: { points: number; granted: boolean; locked: boolean };
+}
+export interface GridTile { type: string; label: string; kwh: number; unit: string; tag: "Typical value" | "Estimated from photo" }
+export interface AirconCheck {
+  source: "bills" | "smartMeter"; available: boolean; chosenHours: number;
+  estimatedHours?: number; agrees?: boolean; message?: string; reason?: string;
+}
+
+const setupPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/setup`;
+export const setupApi = {
+  status: (token: string, sin: string, signal?: AbortSignal) =>
+    fetch(setupPath(sin), authed(token, signal)).then((r) => json<SetupStatus>(r)),
+  household: (token: string, sin: string, size: number) =>
+    fetch(`${setupPath(sin)}/household`, {
+      method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ size }),
+    }).then((r) => json<SetupStatus>(r)),
+  grid: (token: string, sin: string, counts: Record<string, number>) =>
+    fetch(`${setupPath(sin)}/appliances`, {
+      method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ counts }),
+    }).then((r) => json<SetupStatus>(r)),
+  airconPhoto: (token: string, sin: string, photo: File) => {
+    const form = new FormData();
+    form.append("photo", photo);
+    return fetch(`${setupPath(sin)}/aircon-photo`, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form })
+      .then((r) => json<{ answers: Record<string, string>; kwhPerHour: number; tag: "Estimated from photo" }>(r));
+  },
+  airconCheck: (token: string, sin: string, aircon: AirconPattern, signal?: AbortSignal) =>
+    fetch(`${setupPath(sin)}/aircon-check?aircon=${aircon}`, authed(token, signal)).then((r) => json<AirconCheck>(r)),
+  routine: (token: string, sin: string, home: HomePattern, aircon: AirconPattern | null) =>
+    fetch(`${setupPath(sin)}/routine`, {
+      method: "PUT", headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ home, aircon }),
+    }).then((r) => json<SetupStatus>(r)),
+};
+
+export interface PlanMission {
+  id: string;
+  title: string;
+  why: string;
+  how: string[];
+  appliance: string;
+  kwhSaved: number;
+  /** Centavos. */
+  pesoValue: number;
+  /** Percent of the Baseline (the goal is 5). */
+  percent: number;
+  /** Share of the 5% goal. */
+  share: number;
+  effort: "Easy" | "Medium";
+  basis: "physics" | "assumption";
+  assumptions: { key: string; label: string; value: number }[];
+}
+export interface MissionPlan {
+  period: string;
+  goal: { cut: number; kwh: number; pesos: number; baselineKwh: number; targetKwh: number; targetPesos: number };
+  covered: number;
+  coveredPercent: number;
+  source: "ai" | "fallback";
+  missions: PlanMission[];
+  points: string;
+  changed?: boolean;
+  swapped?: { out: string; in: string };
+}
+
+const missionPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/missions`;
+export const missionPlanApi = {
+  get: (token: string, sin: string, signal?: AbortSignal) => fetch(`${missionPath(sin)}/plan`, authed(token, signal)).then((r) => json<MissionPlan>(r)),
+  shuffle: (token: string, sin: string) =>
+    fetch(`${missionPath(sin)}/plan/shuffle`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then((r) => json<MissionPlan>(r)),
+  swap: (token: string, sin: string, id: string) =>
+    fetch(`${missionPath(sin)}/${encodeURIComponent(id)}/swap`, { method: "POST", headers: { Authorization: `Bearer ${token}` } }).then((r) => json<MissionPlan>(r)),
 };

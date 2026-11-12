@@ -36,11 +36,18 @@ describe("GET /api/households/:sin/home", () => {
     expect(body.bill).toEqual({ period: "2026-10", amountDue: 269_000, dueDate: "2026-11-15", billDate: "2026-11-01" });
     expect(body.badge).toEqual({ status: "green", label: "Tugma ang bill" });
     // ₱640 up; the biggest upward part is the household's own use (Habit ₱266.67 > Rate ₱240 > Days ₱133.33).
-    expect(body.bakitGanito).toEqual({
+    expect(body.bakitGanito).toMatchObject({
       sentence: "Tumaas ng ₱640.00 mula Setyembre, pinakamalaki ang mas maraming gamit sa bahay.",
       total: 64_000,
       screen: "bakit-ganito",
+      previousPeriod: "2026-09",
+      addsUp: true,
     });
+    expect(body.bakitGanito.effects.map((e: { key: string }) => e.key)).toEqual(["rate", "billingDays", "weather", "habit"]);
+    const parts = [...body.bakitGanito.effects, ...body.bakitGanito.lines];
+    expect(parts.reduce((sum: number, p: { amount: number }) => sum + p.amount, 0)).toBe(64_000);
+    expect(body.bakitGanito.habit).toBe(body.bakitGanito.effects[3].amount);
+    expect(body.canMasked).toBe("10•• ••• 001");
     expect(body.tamaBa).toMatchObject({ status: "green", failedChecks: 0, screen: "tama-ba" });
     expect(body.action).toEqual({ kind: "missions", label: "Tingnan ang Missions", screen: "missions" });
     expect(body.smartMeter).toBeNull();
@@ -125,5 +132,25 @@ describe("Home badge and action", () => {
     });
     expect(homeAction("red", "summary").kind).toBe("askMeralco");
     expect(homeAction("green", "summary").kind).toBe("missions");
+  });
+
+  it("lists every charge as its own line with amount, change and who gets the money; System loss and Taxes included", async () => {
+    const printed = (gen: number, sl: number, vat: number, lgu: number) => [
+      { label: "Generation Charge", amount: gen }, { label: "Transmission Charge", amount: 200 },
+      { label: "System Loss Charge", amount: sl }, { label: "Distribution Charge", amount: 300 },
+      { label: "Supply Charge (per customer)", amount: 16.38 }, { label: "VAT (per kWh lines)", amount: vat },
+      { label: "Local Franchise Tax", amount: lgu }, { label: "Mystery adjustment", amount: 5 },
+    ];
+    const history = [bill("2026-09", 200, 30, printed(1300, 120, 190, 10)), bill("2026-10", 240, 30, printed(1500, 145, 220, 12))];
+    const { body } = await home(TRADITIONAL, { [TRADITIONAL]: history });
+    const ids = body.chargeLines.featured.map((l: { id: string }) => l.id);
+    expect(ids).toEqual(["generation", "distribution", "system_loss", "transmission", "taxes"]);
+    const byId = Object.fromEntries(body.chargeLines.all.map((l: { id: string }) => [l.id, l]));
+    expect(byId.system_loss).toMatchObject({ label: "System loss", amount: 14_500, previous: 12_000, change: 2_500, goesTo: "Pass-through" });
+    expect(byId.taxes).toMatchObject({ amount: 23_200, previous: 20_000, change: 3_200, goesTo: "Government", printed: ["VAT (per kWh lines)", "Local Franchise Tax"] });
+    expect(byId.distribution.goesTo).toBe("Meralco");
+    expect(byId["other-mystery-adjustment"]).toMatchObject({ goesTo: null, payee: null, amount: 500 });
+    const sum = body.chargeLines.all.reduce((s: number, l: { amount: number }) => s + l.amount, 0);
+    expect(sum).toBe(Math.round(printed(1500, 145, 220, 12).reduce((s, l) => s + l.amount, 0) * 100));
   });
 });

@@ -7,7 +7,7 @@ export interface PointsEntry {
   savedKwh: number;
   baselineKwh: number;
   actualKwh: number;
-  source: "bill_verified" | "self_report" | "redemption";
+  source: "bill_verified" | "self_report" | "redemption" | "welcome";
   hasOutage: boolean;
   excludedReason?: string | null;
   description: string;
