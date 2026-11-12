@@ -20,9 +20,17 @@ let loginHouseholds = households;
 let linkage: { status: string; householdSin?: string };
 let loginFails = false;
 let failHistory = false;
+let readingsRequest: (sin: string) => Promise<Response>;
+const usage = (sin: string) => ({
+  sin, interval: "day", timeZone: "Asia/Manila",
+  range: { from: "2026-11-01T16:00:00Z", to: "2026-11-02T16:00:00Z" }, available: null,
+  provenance: { kind: "synthetic", note: "Test readings." },
+  readings: [{ from: "2026-11-01T16:00:00Z", to: "2026-11-02T16:00:00Z", kwh: 12.345, partial: false }],
+});
 
 beforeEach(() => {
   historyRequest = async (sin) => response(history(sin === households[0]!.sin ? 230 : 370));
+  readingsRequest = async (sin) => response(usage(sin));
   loginHouseholds = households;
   linkage = { status: "unlinked" };
   loginFails = false; failHistory = false;
@@ -32,6 +40,8 @@ beforeEach(() => {
     if (input === "/api/auth/logout") return new Response(null, { status: 204 });
     const match = /^\/api\/households\/([^/]+)\/bills$/.exec(input);
     if (match) return failHistory ? response({ error: "Hindi makuha ang Bill History. Subukan ulit." }, 502) : historyRequest(match[1]!);
+    const readingsMatch = /^\/api\/households\/([^/]+)\/readings\?interval=(hour|day|week)$/.exec(input);
+    if (readingsMatch) return readingsRequest(readingsMatch[1]!);
     if (input === "/api/bills/scan") return response({ status: "read", now: { period: "2026-10", kwh: 200, billingDays: 31 }, before: { period: "2026-09", kwh: 150, billingDays: 30 }, missing: [], estimated: [], serviceIdMasked: "••••••7890", scanToken: "a".repeat(43) });
     if (input === "/api/bills/scan-linkage") return response(linkage);
     if (input === "/api/bakit-ganito") return response(verdictResponse());
@@ -52,10 +62,68 @@ async function scanAndConfirm() {
   const photo = new File(["fake-jpeg"], "bill.jpg", { type: "image/jpeg" });
   const input = document.querySelector('input[type="file"]')!;
   fireEvent.change(input, { target: { files: [photo] } });
-  fireEvent.click(await screen.findByRole("button", { name: "Oo, tama" }));
+  const confirm = await screen.findByRole("button", { name: "Oo, tama" });
+  await waitFor(() => expect((confirm as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(confirm);
 }
 
 describe("My Meralco PWA", () => {
+  it("resets to daily and isolates readings when changing between smart Households", async () => {
+    const secondSmart = { sin: "1111111111", masked_address: "••• Manila", meter_type: "smart" };
+    loginHouseholds = [...households, secondSmart];
+    render(<App />); await login(); select(households[1]!.sin);
+    await screen.findByText("12.345 kWh");
+    let resolve!: (r: Response) => void;
+    readingsRequest = (sin) => sin === households[1]!.sin ? new Promise((r) => { resolve = r; })
+      : Promise.resolve(response({ ...usage(sin), readings: [{ ...usage(sin).readings[0]!, kwh: 2.345 }] }));
+    fireEvent.click(screen.getByRole("button", { name: "Week" }));
+    await waitFor(() => expect(resolve).toBeTypeOf("function"));
+    select(secondSmart.sin);
+    expect(screen.queryByText("12.345 kWh")).toBeNull();
+    expect(screen.getByRole("button", { name: "Day" }).getAttribute("aria-pressed")).toBe("true");
+    await screen.findByText("2.345 kWh");
+    await act(async () => resolve(response(usage(households[1]!.sin))));
+    expect(screen.queryByText("12.345 kWh")).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => url === `/api/households/${secondSmart.sin}/readings?interval=day`)).toBe(true);
+  });
+
+  it("loads smart readings and Bills without uploading and clears usage on traditional selection", async () => {
+    render(<App />); await login(); select(households[1]!.sin);
+    await screen.findByText("12.345 kWh");
+    expect(screen.getByRole("cell", { name: "370" })).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => url === "/api/bills/scan")).toBe(false);
+    select(households[0]!.sin);
+    expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
+    await screen.findByRole("cell", { name: "230" });
+    expect(fetchMock.mock.calls.filter(([url]) => url.includes("/readings"))).toHaveLength(1);
+  });
+
+  it("keeps Bills usable if readings fail and expires the session if readings return 401", async () => {
+    readingsRequest = async () => response({ error: "Readings unavailable" }, 502);
+    render(<App />); await login(); select(households[1]!.sin);
+    await screen.findByText("Readings unavailable");
+    expect(screen.getByRole("cell", { name: "370" })).toBeTruthy();
+    readingsRequest = async () => expired();
+    fireEvent.click(screen.getByRole("button", { name: "Subukan ulit ang readings" }));
+    await screen.findByText(/Nag-expire ang session/);
+    expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
+    expect(screen.queryByRole("table")).toBeNull();
+  });
+
+  it.each(["traditional", "logout", "clear"])('ignores late readings after %s', async (action) => {
+    let resolve!: (r: Response) => void;
+    readingsRequest = () => new Promise((r) => { resolve = r; });
+    render(<App />); await login(); select(households[1]!.sin);
+    await waitFor(() => expect(resolve).toBeTypeOf("function"));
+    const signal = fetchMock.mock.calls.find(([url]) => url.includes("/readings"))![1]!.signal!;
+    if (action === "logout") fireEvent.click(screen.getByRole("button", { name: "Mag-logout" }));
+    else select(action === "clear" ? "" : households[0]!.sin);
+    expect(signal.aborted).toBe(true);
+    expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
+    await act(async () => resolve(response(usage(households[1]!.sin))));
+    expect(screen.queryByText("12.345 kWh")).toBeNull();
+  });
+
   it("logs in, masks Household details, and shows the chosen history without an upload", async () => {
     render(<App />); await login();
     expect(screen.getByRole("option", { name: /Caloocan.*Traditional meter/ }).textContent).toContain("••••••7890");
@@ -64,6 +132,8 @@ describe("My Meralco PWA", () => {
     const table = await screen.findByRole("table");
     expect(within(table).getByRole("cell", { name: "230" })).toBeTruthy();
     expect(screen.getByText(/Hindi ito totoong Bill History/)).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Smart meter usage" })).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("/readings"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url, init]) => url.includes("/households/") && new Headers(init?.headers).get("authorization") === "Bearer test-session")).toBe(true);
   });
 

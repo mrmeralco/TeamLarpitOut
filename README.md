@@ -80,7 +80,7 @@ Scanning and `POST /api/bakit-ganito` remain public. A scan grants no access to 
 - Regenerate deterministically with `pnpm --filter @kuryenteko/server build` followed by `node server/scripts/generate-bill-history.mjs`. The script reuses the actual `costLines()` implementation, preserves supplied recent Bill fields and rejects missing schedules or nonconsecutive periods.
 - `HouseholdStore` holds isolated snapshots under each Service ID Number. Restarting recreates the demo fixture; there is no database migration. Future appliance, Mission, typed-reading and Points records must use the same Household boundary, with ownership checked before access. Their feature behavior is outside this ticket.
 
-### Mock smart meter readings (issue #10, Slice 1)
+### Mock smart meter readings and usage chart (issue #10)
 
 `GET /api/households/:sin/readings?from=<ISO timestamp>&to=<ISO timestamp>&interval=hour|day|week`
 
@@ -110,7 +110,13 @@ The sample above illustrates the response shape; the kWh value and shortened not
 
 For a logged-in demo session, `GET /api/households/9876543210/readings` returns the default daily window. `GET /api/households/9876543210/readings?interval=hour` returns hourly usage. Explicit example: `GET /api/households/9876543210/readings?from=2026-11-02T00:00:00%2B08:00&to=2026-11-03T00:00:00%2B08:00&interval=day`.
 
-Run `pnpm --filter @kuryenteko/server test` and `pnpm --filter @kuryenteko/server typecheck` to verify the API. The frontend chart and Meter Type rendering are later slices and are not implemented by Slice 1.
+Log in with `demo@example.com` / `kuryenteko-demo`, then choose the **Smart meter** Household. Bill History and daily usage load automatically; no Bill upload is needed. Traditional Households load Bills without requesting or displaying interval usage.
+
+The **Hour / Day / Week** buttons show the latest 24 hours / 30 days / 12 weeks available from the source, with Day selected initially. The frontend omits date bounds and lets the API choose these windows from its metadata; they are simulation dates, not a live rolling window. Charts and expandable readings tables use `Asia/Manila`, kWh per interval, exact start/end times, and partial coverage indicators. Weeks begin Monday. Totals include only returned readings; missing hours are not zero-filled. Synthetic usage is independent of the demo Bills and need not match their consumption totals.
+
+Switching intervals cancels the previous load and clears its chart. Switching Household, clearing selection, logout, and session expiry clear protected usage immediately. Reading errors have their own retry and leave Bills usable; a protected `401` returns the app to login. Retry keeps the selected interval; choosing a different Household resets to Day.
+
+Run `pnpm test`, `pnpm typecheck`, and `pnpm build` for workspace checks. UI tests cover automatic smart-only loading, accessible values, interval switching, retry, and delayed-response isolation; API tests exercise injected reading sources.
 
 ### Scan linkage
 

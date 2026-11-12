@@ -266,3 +266,25 @@ label.check input { width: auto; accent-color: var(--primary); }
 .history th:first-child { text-align: left; }
 .history small { display: block; color: var(--muted-foreground); font-weight: normal; }
 .history tbody th { font-weight: 500; }
+
+/* Smart meter usage */
+.usage { min-width: 0; }
+.usage-intervals { display: flex; gap: 6px; }
+.usage-intervals button { flex: 1; padding: 10px 8px; color: var(--foreground); background: var(--muted); border: 1px solid var(--border); }
+.usage-intervals button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); font-weight: 600; }
+.usage .notice { border-left: 3px solid var(--primary); padding: 8px 10px; font-size: .85rem; }
+.usage-window { font-size: .8rem; overflow-wrap: anywhere; }
+.usage-total strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.usage-chart { margin: 16px 0; }
+.usage-chart figcaption { font-weight: 600; font-size: .9rem; }
+.usage-chart svg { display: block; width: 100%; height: auto; }
+.usage-chart text { fill: var(--foreground); font: 10px system-ui, sans-serif; }
+.usage-grid { stroke: var(--border); }
+.usage-bar { fill: var(--chart-4); }
+.usage-bar.partial { fill: var(--chart-2); stroke: var(--foreground); stroke-dasharray: 2 2; }
+.usage table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.usage caption { text-align: left; color: var(--muted-foreground); margin-bottom: 8px; }
+.usage th, .usage td { border-bottom: 1px solid var(--border); padding: 8px 4px; text-align: right; }
+.usage th:first-child { text-align: left; font-weight: 500; }
+.usage th small { display: block; font-weight: normal; }
+.usage summary:focus-visible, .usage button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }

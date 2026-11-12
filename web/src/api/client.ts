@@ -21,6 +21,17 @@ export interface Household {
   meter_type: "traditional" | "smart";
 }
 export interface LoginResult { token: string; households: Household[] }
+export type ReadingInterval = "hour" | "day" | "week";
+export interface ReadingRange { from: string; to: string }
+export interface UsageReadings {
+  sin: string;
+  interval: ReadingInterval;
+  timeZone: "Asia/Manila";
+  range: ReadingRange | null;
+  available: ReadingRange | null;
+  provenance: { kind: "synthetic"; note: string };
+  readings: (ReadingRange & { kwh: number; partial: boolean })[];
+}
 export interface HistoryBill extends BillInput { provenance?: { kind: string; note: string } }
 export type ScanLinkage = { status: "linked"; householdSin: string } | { status: "unlinked" | "unknown" };
 export class ApiError extends Error {
@@ -98,6 +109,11 @@ export const api = {
   history: (token: string, sin: string, signal?: AbortSignal) => fetch(`/api/households/${encodeURIComponent(sin)}/bills`, {
     headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
   }).then((r) => json<HistoryBill[]>(r)),
+  /** Omit bounds so the server selects its latest available window for this interval. */
+  readings: (token: string, sin: string, interval: ReadingInterval, signal?: AbortSignal) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/readings?${new URLSearchParams({ interval })}`, {
+      headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
+    }).then((r) => json<UsageReadings>(r)),
   householdExplanation: (token: string, sin: string, signal?: AbortSignal) => fetch(`/api/households/${encodeURIComponent(sin)}/bakit-ganito`, {
     headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal,
   }).then((r) => json<BakitGanito>(r)),
