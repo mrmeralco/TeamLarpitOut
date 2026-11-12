@@ -48,6 +48,8 @@ pnpm test         # API-level tests
 pnpm typecheck
 ```
 
+Optional ML service (bill OCR fallback when Gemini fails, and Meralco bill-guide passages in the charge chat): run `ml-service/` on :8000. Setup and how it works: [`docs/ml/ocr-and-rag.md`](docs/ml/ocr-and-rag.md).
+
 ## API
 
 - Sign up (like My Meralco): `POST /api/auth/signup` `{ email, phone: "+639…" }` → `202 { channel: "sms", sentTo, expiresInSeconds }` (a 6-digit code by SMS; `409` if the account already exists). `POST /api/auth/signup/resend` `{ email, channel: "sms" | "email" }` resends, or sends it by email instead. `POST /api/auth/signup/verify` `{ email, code }` confirms the mobile number and emails a verification link (`/#/create-password/<token>`, 24 h, single-use). `POST /api/auth/signup/link` `{ token }` → `{ email }`; `POST /api/auth/signup/password` `{ token, password }` (8+ characters, a letter and a number) → `{ token }` (signed in). Codes are stored hashed, expire after 10 minutes and lock after 5 wrong tries. The demo notifier logs only the code or link; with `AUTH_FIXED_CODE` every code is that value and the verify response carries a `demoLink`.
