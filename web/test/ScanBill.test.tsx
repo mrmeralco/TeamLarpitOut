@@ -43,7 +43,7 @@ describe("Scan and confirm (mockup screens 5–6)", () => {
     expect(screen.getByText("September")).toBeTruthy();
     expect(screen.getByText("October")).toBeTruthy();
     expect((screen.getByLabelText("Usage (kWh)") as HTMLInputElement).value).toBe("610");
-    expect((screen.getByLabelText("Total due") as HTMLInputElement).value).toBe("₱6,817");
+    expect((screen.getByLabelText("Total due") as HTMLInputElement).value).toBe("₱6,817.00");
     expect(screen.getByText("520")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Yes, explain my bill" }));
     await waitFor(() => expect(onLinked).toHaveBeenCalledWith("1234567890"));
@@ -76,6 +76,34 @@ describe("Scan and confirm (mockup screens 5–6)", () => {
     await scan();
     fireEvent.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("heading", { name: "Scan your latest Meralco bill" })).toBeTruthy();
+  });
+
+  it("supports float 2f decimals on bill charges, total due, and usage", async () => {
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
+      if (input !== "/api/bills/scan") return original(input, init);
+      const body = await (await original(input, init)).json();
+      return response({
+        ...body,
+        now: {
+          ...body.now,
+          kwh: 610.75,
+          chargeLines: [
+            { label: "Generation", amount: 4500.5 },
+            { label: "Distribution", amount: 2316.95 },
+          ],
+        },
+      });
+    });
+    await scan();
+    expect((screen.getByLabelText("Usage (kWh)") as HTMLInputElement).value).toBe("610.75");
+    expect((screen.getByLabelText("Total due") as HTMLInputElement).value).toBe("₱6,817.45");
+
+    fireEvent.change(screen.getByLabelText("Total due"), { target: { value: "₱6,820.50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Yes, explain my bill" }));
+    await waitFor(() => expect(onLinked).toHaveBeenCalledWith("1234567890"));
+    const call = fetchMock.mock.calls.find(([u]) => u === "/api/households/link/confirm")!;
+    expect(JSON.parse(String(call[1]!.body))).toEqual({ scanToken: "a".repeat(43), totalAmount: 6820.5 });
   });
 });
 
