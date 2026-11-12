@@ -277,6 +277,7 @@ label.check input { width: auto; accent-color: var(--primary); }
   text-transform: uppercase;
 }
 .status-badge.green { background: var(--down); color: #fff; }
+.status-badge.yellow { background: oklch(0.75 0.16 80); color: #1e293b; }
 .status-badge.red { background: var(--up); color: #fff; }
 
 .checks-banner {
@@ -288,9 +289,55 @@ label.check input { width: auto; accent-color: var(--primary); }
   background: oklch(0.92 0.05 150 / 20%);
   border: 1px solid var(--down);
 }
+.banner-yellow {
+  background: oklch(0.96 0.08 90 / 30%);
+  border: 1px solid oklch(0.75 0.16 80);
+  color: oklch(0.35 0.1 75);
+}
 .banner-red {
   background: oklch(0.92 0.08 27 / 20%);
   border: 1px solid var(--up);
+}
+
+.household-change-section {
+  margin-top: 18px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: oklch(0.98 0.02 90 / 40%);
+  border: 1px solid var(--border);
+}
+.household-change-section h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.change-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.change-opt-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.change-opt-btn:hover {
+  background: var(--muted);
+  border-color: var(--ring);
+}
+.change-opt-btn.selected {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.change-confirmed {
+  margin-top: 12px;
+}
+.missions-btn {
+  margin-top: 8px;
+  width: 100%;
 }
 
 .checks-list { list-style: none; margin: 0; padding: 0; }

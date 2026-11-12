@@ -19,17 +19,29 @@ export interface SingleCheckResult {
   discrepancy?: DisagreeingFigures;
 }
 
+export interface OutlierEvaluation {
+  isOutlier: boolean;
+  dailyKwh: number;
+  predictedDailyKwh: number;
+  thresholdDailyKwh: number;
+  ratio: number;
+  hasHouseholdChange: boolean;
+}
+
 export interface BillChecksResult {
-  overall: "green" | "red";
+  overall: "green" | "yellow" | "red";
   checks: SingleCheckResult[];
   failedChecks: SingleCheckResult[];
   summary: string;
+  outlier?: OutlierEvaluation;
 }
 
 export interface BillCheckOptions {
   tolerancePesos?: number;
   householdSin?: string;
   payments?: PaymentRecord[];
+  predictedDailyKwh?: number;
+  hasHouseholdChange?: boolean;
 }
 
 export function areConsecutivePeriods(beforePeriod: string, nowPeriod: string): boolean {
@@ -385,13 +397,49 @@ export function runBillChecks(
   checks.push(checkPaymentReflection(now, options.payments, tolerance));
 
   const failedChecks = checks.filter((c) => c.status === "fail");
-  const overall = failedChecks.length > 0 ? "red" : "green";
-  const summary = buildSummary(now, failedChecks, options.householdSin);
+
+  // Outlier evaluation: kwh_now / days_now > predicted_kwh_per_day * 1.30 and no household change
+  let outlier: OutlierEvaluation | undefined;
+  let isOutlier = false;
+  if (options.predictedDailyKwh !== undefined && options.predictedDailyKwh > 0 && now.billingDays > 0) {
+    const dailyKwh = now.kwh / now.billingDays;
+    const thresholdDailyKwh = options.predictedDailyKwh * 1.30;
+    const hasHouseholdChange = Boolean(options.hasHouseholdChange);
+    isOutlier = dailyKwh > thresholdDailyKwh && !hasHouseholdChange;
+    outlier = {
+      isOutlier,
+      dailyKwh: Math.round(dailyKwh * 100) / 100,
+      predictedDailyKwh: Math.round(options.predictedDailyKwh * 100) / 100,
+      thresholdDailyKwh: Math.round(thresholdDailyKwh * 100) / 100,
+      ratio: Math.round((dailyKwh / options.predictedDailyKwh) * 100) / 100,
+      hasHouseholdChange,
+    };
+  }
+
+  // Precedence: Red wins over Yellow, Yellow wins over Green
+  // Yellow only when Bill Checks pass (failedChecks.length === 0) and usage exceeds the threshold
+  let overall: "green" | "yellow" | "red";
+  if (failedChecks.length > 0) {
+    overall = "red";
+  } else if (isOutlier) {
+    overall = "yellow";
+  } else {
+    overall = "green";
+  }
+
+  // Summary: only build Meralco inquiry for red. Yellow and green never point to Meralco.
+  const summary =
+    overall === "red"
+      ? buildSummary(now, failedChecks, options.householdSin)
+      : overall === "yellow"
+      ? "Mas mataas kaysa karaniwan mo para sa ganitong panahon pero tugma ang lahat ng opisyal na numero ng Meralco."
+      : "Lahat ng nasuring Meralco figures ay nagtutugma. Walang nakitang discrepancy.";
 
   return {
     overall,
     checks,
     failedChecks,
     summary,
+    outlier,
   };
 }

@@ -315,6 +315,119 @@ describe("POST /api/bills/check", () => {
       expect(body.failedChecks).toHaveLength(0);
       expect(body.summary).toContain("Lahat ng nasuring Meralco figures ay nagtutugma");
     });
+
+    it("returns yellow when all checks pass and usage exceeds threshold (Usage Outlier)", async () => {
+      const api = await harness({ schedules: [sched202512, sched202601] });
+      const before: Bill = {
+        period: "2025-12",
+        kwh: 100,
+        billingDays: 30,
+        previousReading: 1000,
+        presentReading: 1100,
+      };
+      // now: 200 kWh in 30 days = 6.67 kWh/day.
+      // predictedDailyKwh: 4.0 kWh/day. Threshold: 4.0 * 1.30 = 5.2 kWh/day.
+      // 6.67 > 5.2 -> Outlier!
+      const now: Bill = {
+        period: "2026-01",
+        kwh: 200,
+        billingDays: 30,
+        totalAmount: 2050,
+        previousReading: 1100,
+        presentReading: 1300,
+        chargeLines: [
+          { label: "Generation", amount: 1200, rate: 6.0 },
+          { label: "Distribution", amount: 800, rate: 4.0 },
+          { label: "Supply (per customer)", amount: 50 },
+        ],
+      };
+
+      const { status, body } = await api.post("/api/bills/check", {
+        now,
+        before,
+        predictedDailyKwh: 4.0,
+      });
+
+      expect(status).toBe(200);
+      expect(body.overall).toBe("yellow");
+      expect(body.outlier.isOutlier).toBe(true);
+      // Acceptance criterion: yellow never includes a Meralco inquiry
+      expect(body.summary).not.toContain("Meralco Customer Care");
+      expect(body.summary).not.toContain("Itanong kay Meralco");
+      expect(body.summary).not.toContain("Maaari po bang paki-verify");
+    });
+
+    it("red wins over yellow: returns red when check fails even if usage is an outlier", async () => {
+      const api = await harness({ schedules: [sched202512, sched202601] });
+      const before: Bill = {
+        period: "2025-12",
+        kwh: 100,
+        billingDays: 30,
+        previousReading: 1000,
+        presentReading: 1100,
+      };
+      // now: Outlier usage, but lines sum does NOT match totalAmount (1500 != 2050)
+      const now: Bill = {
+        period: "2026-01",
+        kwh: 200,
+        billingDays: 30,
+        totalAmount: 2050,
+        previousReading: 1100,
+        presentReading: 1300,
+        chargeLines: [
+          { label: "Generation", amount: 900, rate: 6.0 },
+          { label: "Distribution", amount: 600, rate: 4.0 },
+        ],
+      };
+
+      const { status, body } = await api.post("/api/bills/check", {
+        now,
+        before,
+        predictedDailyKwh: 4.0,
+      });
+
+      expect(status).toBe(200);
+      // Acceptance criterion: red wins over yellow
+      expect(body.overall).toBe("red");
+      expect(body.failedChecks.length).toBeGreaterThan(0);
+      expect(body.summary).toContain("Meralco Customer Care");
+    });
+
+    it("returns green when usage exceeds threshold but household change is reported", async () => {
+      const api = await harness({ schedules: [sched202512, sched202601] });
+      const before: Bill = {
+        period: "2025-12",
+        kwh: 100,
+        billingDays: 30,
+        previousReading: 1000,
+        presentReading: 1100,
+      };
+      const now: Bill = {
+        period: "2026-01",
+        kwh: 200,
+        billingDays: 30,
+        totalAmount: 2050,
+        previousReading: 1100,
+        presentReading: 1300,
+        chargeLines: [
+          { label: "Generation", amount: 1200, rate: 6.0 },
+          { label: "Distribution", amount: 800, rate: 4.0 },
+          { label: "Supply (per customer)", amount: 50 },
+        ],
+      };
+
+      const { status, body } = await api.post("/api/bills/check", {
+        now,
+        before,
+        predictedDailyKwh: 4.0,
+        hasHouseholdChange: true,
+      });
+
+      expect(status).toBe(200);
+      expect(body.overall).toBe("green");
+      expect(body.outlier.isOutlier).toBe(false);
+      expect(body.outlier.hasHouseholdChange).toBe(true);
+    });
   });
 });
 
@@ -359,6 +472,96 @@ describe("GET /api/households/:sin/check", () => {
     expect(status).toBe(200);
     expect(body.overall).toBe("green");
     expect(body.checks).toHaveLength(4);
+  });
+
+  it("turns yellow on usage outlier and clears to green when household change is recorded", async () => {
+    const sin = testLogins[0].households[0].sin;
+    // 3 historical bills + 1 outlier current bill
+    const bills: Bill[] = [
+      {
+        period: "2025-10",
+        kwh: 100,
+        billingDays: 30,
+        previousReading: 800,
+        presentReading: 900,
+      },
+      {
+        period: "2025-11",
+        kwh: 100,
+        billingDays: 30,
+        previousReading: 900,
+        presentReading: 1000,
+      },
+      {
+        period: "2025-12",
+        kwh: 100,
+        billingDays: 30,
+        previousReading: 1000,
+        presentReading: 1100,
+      },
+      {
+        period: "2026-01",
+        kwh: 250, // 8.33 kWh/day vs baseline ~3.33 kWh/day -> > 1.30x predicted
+        billingDays: 30,
+        totalAmount: 2550,
+        previousReading: 1100,
+        presentReading: 1350,
+        chargeLines: [
+          { label: "Generation", amount: 1500, rate: 6.0 },
+          { label: "Distribution", amount: 1000, rate: 4.0 },
+          { label: "Supply (per customer)", amount: 50 },
+        ],
+      },
+    ];
+
+    const weather = {
+      "2025-10": 2.0,
+      "2025-11": 2.0,
+      "2025-12": 2.0,
+      "2026-01": 2.0,
+    };
+
+    const api = await harness({
+      schedules: [sched202512, sched202601],
+      bills: { [sin]: bills },
+      weather,
+    });
+
+    const loginRes = await api.post("/api/auth/login", {
+      email: testLogins[0].email,
+      password: testLogins[0].password,
+    });
+    const token = loginRes.body.token;
+
+    // 1. Initial check: yellow badge because of usage outlier
+    const res1 = await api.get(`/api/households/${sin}/check`, token);
+    expect(res1.status).toBe(200);
+    expect(res1.body.overall).toBe("yellow");
+    expect(res1.body.outlier.isOutlier).toBe(true);
+
+    // 2. Answering a household change is stored on the Household
+    const changeRes = await api.post(
+      `/api/households/${sin}/changes`,
+      { reason: "bisita", period: "2026-01" },
+      token,
+    );
+    expect(changeRes.status).toBe(200);
+    expect(changeRes.body.ok).toBe(true);
+    expect(changeRes.body.change.reason).toBe("bisita");
+
+    // Verify stored on Household list
+    const hhList = await api.get("/api/households", token);
+    const targetHh = hhList.body.find((h: any) => h.sin === sin);
+    expect(targetHh.changes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ reason: "bisita" })]),
+    );
+
+    // 3. Re-running check turns to green (outlier explained by household change)
+    const res2 = await api.get(`/api/households/${sin}/check`, token);
+    expect(res2.status).toBe(200);
+    expect(res2.body.overall).toBe("green");
+    expect(res2.body.outlier.isOutlier).toBe(false);
+    expect(res2.body.outlier.hasHouseholdChange).toBe(true);
   });
 
   it("returns 401 when missing bearer token", async () => {
