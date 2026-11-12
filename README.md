@@ -214,3 +214,26 @@ Changing the rating answers, quantity, or confirmed label cancels an outstanding
 ### Account Linking
 
 A signed-in `POST /api/bills/scan` includes `scanToken`, an opaque reference valid for fifteen minutes. Only the normalized CAN printed on the Bill is retained server-side (at most 1,000 active references); no photo or scanned Bill is saved. Complete ten-digit CANs are required; whitespace and hyphens are accepted. The CAN the scan read is what "Yes, explain my bill" links; a scan reference is never a login token. The old `POST /api/bills/scan-linkage` and the anonymous quick verdict were removed with ADR-0005.
+
+## Third-Party Services, Libraries, Assets & Data Attributions
+
+### AI Models & Local ML
+- **Google Gemini API** (`@google/genai` `^3.2.0`, default `gemini-3.8-flash` via `GEMINI_MODEL`): Used in `server/src/coach/gemini-coach.provider.ts` (charge chat and mission plan coaching) and `server/src/vision/gemini-vision.provider.ts` (bill photo, DOE energy label, and appliance photo reading).
+- **RapidOCR / PaddleOCR on ONNX Runtime** (`rapidocr==3.10.0`, `onnxruntime==1.31.1`, `pillow==13.0.0`): Local offline OCR fallback for bill photos in `ml-service/app/ocr/engine.py` (no network calls; photos are decoded in memory and not saved to disk).
+- **BM25 Local Retrieval** (`ml-service/app/rag/search.py`): Pure-Python BM25 keyword search with Tagalog/Taglish synonym mapping over `ml-service/app/rag/meralco-knowledge.json` (no external embedding model).
+
+### External APIs & Services
+- **Open-Meteo API** (`server/src/weather/open-meteo-weather.provider.ts`): Historical daily mean temperature (`archive-api.open-meteo.com/v1/archive`) and 14-day forecast (`api.open-meteo.com/v1/forecast`, `Asia/Manila`) for weather and heat-sensitivity analysis.
+- **Supabase / PostgreSQL** (`postgres` `^3.4.7`, `supabase/migrations/`): Optional database persistence via `DATABASE_URL` (falls back to in-memory storage when unset).
+- **Google Fonts** (`web/index.html`): `Inter` font loaded via `fonts.googleapis.com`.
+
+### Open-Source Frameworks & Key Packages
+- **Web (`web/package.json`):** React `^19.3.1`, React DOM `^19.3.1`, Vite `^8.3.8`, TypeScript `^7.0.2`, Vitest `^5.1.0`, `@testing-library/react` `^16.3.3`.
+- **Server (`server/package.json`):** NestJS `^12.4.2` (`@nestjs/core`, `@nestjs/common`, `@nestjs/platform-express`), `class-validator` `^0.15.1`, `class-transformer` `^0.5.1`, `rxjs` `^7.8.2`, TypeScript `~5.9.3`, Vitest `^5.1.0`, Supertest `^7.3.2`.
+- **ML Service (`ml-service/requirements.txt`):** FastAPI `0.162.5`, Uvicorn `0.54.0`, Pydantic `2.14.3`, `python-multipart` `0.0.33`, `httpx` `0.28.1`, `pytest` `9.2.0`.
+
+### Datasets, Content & Design Assets
+- **Meralco Public Bill Guide** (`ml-service/app/rag/meralco-knowledge.json`, `docs/kyb/images/`): Passages and reference visuals sourced from Meralco's public "Understand Your Bill" pages (`https://www.meralco.com.ph/residential/understand-your-bill`, `#SolutionsFaq-2168`, `#SolutionsFaq-2178`, and `/senior-citizen-discount`).
+- **Sanitized Bill & Rate-Schedule Fixtures** (`server/src/data/`): `meralco-real-bill.json` and `rate-schedules.json` are derived from a September 2026 residential bill with account-holder consent and placeholder identifiers (no real name, address, CAN, SIN, or meter number is stored in git); synthetic demo months and sample lifeline tiers are explicitly labeled.
+- **Appliance Wattage Catalog** (`data/appliances.json`): Curated household appliance wattage reference table.
+- **Eelio Mascot Assets** (`web/public/mascot/`, `docs/mascot/`): Custom Eelio mascot illustrations, sprite frames, and app icons created for this project.
