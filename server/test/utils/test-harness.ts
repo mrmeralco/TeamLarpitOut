@@ -89,6 +89,8 @@ const defaultLinks = () => Object.fromEntries(testLogins.map((l) => [l.email, l.
 /** The password every test login signs up with. */
 export const TEST_PASSWORD = "test-pass-1";
 export const TEST_PHONE = "+639171234567";
+/** The name every test login signs up with; fake Bill scans print it unless a test says otherwise. */
+export const TEST_NAME = "Juan Dela Cruz";
 
 /** Records every code and verification link "sent", so tests can read them like an inbox. */
 export function fakeNotifier() {
@@ -141,7 +143,8 @@ export function fakeVision(reading: RawBillReading, labelReading: RawEnergyLabel
   const provider: VisionProvider = {
     async readBill(image) {
       seen.push({ mimeType: image.mimeType, bytes: image.data.length });
-      return reading;
+      // A readable Bill is in the test login's name unless the test sets accountName.
+      return reading.readable && !("accountName" in reading) ? { ...reading, accountName: TEST_NAME } : reading;
     },
     async readEnergyLabel(image) {
       labelsSeen.push({ mimeType: image.mimeType, bytes: image.data.length });
@@ -221,7 +224,7 @@ export async function harness(opts: HarnessOptions = {}) {
       const signIn = () => request(server).post("/api/auth/signin").send({ email: address, password: TEST_PASSWORD });
       let res = await signIn();
       if (res.status === 200) return res.body.token;
-      const started = await request(server).post("/api/auth/signup").send({ email: address, phone: TEST_PHONE });
+      const started = await request(server).post("/api/auth/signup").send({ email: address, phone: TEST_PHONE, name: TEST_NAME });
       if (started.status !== 202) throw new Error(`Test sign-up failed: HTTP ${started.status}`);
       const verified = await request(server).post("/api/auth/signup/verify").send({ email: address, code: notifier.codes.at(-1)!.code });
       if (verified.status !== 200) throw new Error(`Test code check failed: HTTP ${verified.status}`);

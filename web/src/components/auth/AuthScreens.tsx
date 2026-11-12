@@ -39,17 +39,19 @@ function useCountdown(seconds: number) {
   return [left, () => setLeft(seconds)] as const;
 }
 
-/** 1 · Sign up: email + contact number (like My Meralco). */
+/** 1 · Sign up: full name + email + contact number (like My Meralco). */
 export function SignUp({ onCodeSent, onSignIn }: { onCodeSent: (email: string, sent: CodeSent) => void; onSignIn: () => void }) {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const phoneOk = /^9\d{9}$/.test(phone.replace(/\D/g, "").replace(/^0/, "").replace(/^63/, ""));
+  const nameOk = name.trim().split(/\s+/).filter((w) => /\p{L}{2,}/u.test(w)).length >= 2;
 
   async function submit() {
     setBusy(true); setError(null);
-    try { onCodeSent(email.trim(), await api.signUp(email.trim(), normalizePhone(phone))); }
+    try { onCodeSent(email.trim(), await api.signUp(email.trim(), normalizePhone(phone), name.trim())); }
     catch (err) { setError(message(err, "We couldn't create your account right now.")); }
     finally { setBusy(false); }
   }
@@ -66,6 +68,10 @@ export function SignUp({ onCodeSent, onSignIn }: { onCodeSent: (email: string, s
       <li><span className="feature-icon"><Icon d={ICON.star} size={16} width={2.2} /></span>Points for verified savings</li>
     </ul>
     <div className="screen-bottom">
+      <label className="field-label" htmlFor="signup-name">Full name</label>
+      <input id="signup-name" className="input-lg" type="text" autoComplete="name" required maxLength={100} placeholder="Juan Dela Cruz"
+        aria-describedby="signup-name-hint" value={name} onChange={(e) => setName(e.target.value)} />
+      <p id="signup-name-hint" className="small muted" style={{ margin: "-4px 0 4px" }}>As printed on your Meralco bill. Only bills in this name can be linked.</p>
       <label className="field-label" htmlFor="signup-email">Email address</label>
       <input id="signup-email" className="input-lg" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} />
       <label className="field-label" htmlFor="signup-phone">Contact number</label>
@@ -75,7 +81,7 @@ export function SignUp({ onCodeSent, onSignIn }: { onCodeSent: (email: string, s
           value={phone} onChange={(e) => setPhone(e.target.value.replace(/[^\d\s]/g, ""))} />
       </div>
       {error && <p className="error" role="alert">{error}</p>}
-      <button className="btn-primary" disabled={busy || !email.trim() || !phoneOk}>{busy ? "Creating…" : "Create account"}</button>
+      <button className="btn-primary" disabled={busy || !nameOk || !email.trim() || !phoneOk}>{busy ? "Creating…" : "Create account"}</button>
       <p className="screen-switch">Already have an account? <button type="button" className="link" onClick={onSignIn}>Sign in</button></p>
       <p className="fine">We'll text you a 6-digit code, then email you a link to create your password.<br />By continuing you agree to our <a href="#">Terms</a> and <a href="#">Privacy Notice</a>.</p>
     </div>

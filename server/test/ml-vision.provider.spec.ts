@@ -40,7 +40,7 @@ describe("MlVisionProvider (bill scan through the ML service)", () => {
       status: 200,
       body: {
         readable: true, period: "2026-05", billingDays: 30, kwh: 200, dueDate: "2026-05-20", previousReading: 47643, presentReading: 47843,
-        estimated: false, serviceIdNumber: null, customerAccountNumber: "1234567890",
+        estimated: false, serviceIdNumber: null, customerAccountNumber: "1234567890", accountName: "OLIVIA DELA CRUZ",
         chargeLines: [{ label: "Generation", amount: 1758.84 }], history: [{ period: "2026-04", kwh: 180 }],
         chargesTotal: 1758.84, chargesAddUp: true, seconds: 9.1, ocrText: null,
       },
@@ -52,7 +52,7 @@ describe("MlVisionProvider (bill scan through the ML service)", () => {
     expect(lastRequest.body).toContain("fake-jpeg-bytes");
     expect(r).toEqual({
       readable: true, problem: undefined, period: "2026-05", billingDays: 30, kwh: 200, dueDate: "2026-05-20",
-      previousReading: 47643, presentReading: 47843, estimated: false, serviceIdNumber: null, customerAccountNumber: "1234567890",
+      previousReading: 47643, presentReading: 47843, estimated: false, serviceIdNumber: null, customerAccountNumber: "1234567890", accountName: "OLIVIA DELA CRUZ",
       chargeLines: [{ label: "Generation", amount: 1758.84 }], history: [{ period: "2026-04", kwh: 180 }],
     });
   });

@@ -34,6 +34,7 @@ class BillReading(BaseModel):
     estimated: bool | None = None
     serviceIdNumber: str | None = None
     customerAccountNumber: str | None = Field(None, description="CAN, 10 digits.")
+    accountName: str | None = Field(None, description="Account holder's name from the Bill's top-left corner (for the ownership check).")
     chargeLines: list[ChargeLine] | None = None
     history: list[HistoryEntry] | None = Field(None, description="Printed monthly kWh history (last 12 months).")
     chargesTotal: float | None = Field(None, description="'Charges for this billing period' as printed.")

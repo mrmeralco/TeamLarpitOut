@@ -11,12 +11,12 @@ import { randomSignInCode, SignupService } from "./signup.service.js";
 export class AuthController {
   constructor(private readonly auth: AuthService, private readonly signup: SignupService) {}
 
-  /** Sign up 1/3: email + mobile number; a one-time code goes to the phone by SMS. */
+  /** Sign up 1/3: email + mobile number + full name; a one-time code goes to the phone by SMS. */
   @Post("signup")
   @HttpCode(202)
   @Header("Cache-Control", "no-store")
   start(@Body() body: StartSignupDto) {
-    return this.signup.start(body.email, body.phone);
+    return this.signup.start(body.email, body.phone, body.name);
   }
 
   @Post("signup/resend")

@@ -16,6 +16,8 @@ export interface RawBillReading {
   serviceIdNumber?: string | null;
   /** Customer Account Number (CAN) as printed. */
   customerAccountNumber?: string | null;
+  /** The account holder's name as printed (used only to check it matches the person linking). */
+  accountName?: string | null;
   period?: string | null;
   billingDays?: number | null;
   kwh?: number | null;

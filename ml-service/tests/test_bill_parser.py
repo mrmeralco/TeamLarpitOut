@@ -66,10 +66,24 @@ def test_box_order_does_not_matter():
     assert_sample(parse_bill(list(reversed(sample_boxes()))))
 
 
-def test_never_returns_the_name_or_address():
-    out = json.dumps(parse_bill(sample_boxes()))
+def test_reads_the_account_name_from_the_top_left_corner_only():
+    r = parse_bill(sample_boxes())
+    assert r["accountName"] == "OLIVIA DELA CRUZ"
+    out = json.dumps({k: v for k, v in r.items() if k != "accountName"})
     for personal in ["OLIVIA", "DELA CRUZ", "MALIWANAG", "KAUNLARAN", "123AB456789"]:
         assert personal not in out
+    assert "MALIWANAG" not in r["accountName"] and "MANILA" not in r["accountName"]
+
+
+@pytest.mark.parametrize("degrees", [-8, 8])
+def test_account_name_survives_a_tilted_photo(degrees):
+    assert parse_bill(rotated(sample_boxes(), degrees))["accountName"] == "OLIVIA DELA CRUZ"
+
+
+def test_account_name_from_text_only_ocr():
+    assert parse_bill(boxes_from_text([text("rapid-left")]))["accountName"] == "OLIVIA DELA CRUZ"
+    # Columns merged into one line ("OLIVIA DELA CRUZ Billing Invoice"): no name rather than a wrong one.
+    assert parse_bill(boxes_from_text([text("tesseract-full")]))["accountName"] is None
 
 
 def test_present_reading_never_takes_a_year_from_a_date():

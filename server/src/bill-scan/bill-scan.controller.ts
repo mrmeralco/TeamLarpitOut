@@ -60,9 +60,10 @@ export class BillScanController {
         error: "We couldn't read the photo right now. Please try again.",
       });
     }
-    const { result, can } = scanned;
+    const { result, can, accountName } = scanned;
     if (result.status === "unreadable") throw new UnprocessableEntityException(result);
-    // Account Linking: what the printed CAN points to. Nothing is linked until the person confirms.
-    return { ...result, account: await this.linking.preview(request.auth.ownerId, can) };
+    // Account Linking: what the printed CAN points to, if the Bill is in this person's name.
+    // Nothing is linked until the person confirms.
+    return { ...result, account: await this.linking.preview(request.auth.ownerId, can, accountName) };
   }
 }

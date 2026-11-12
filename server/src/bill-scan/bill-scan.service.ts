@@ -106,10 +106,12 @@ export class BillScanService {
   async scan(image: BillImage) {
     const raw = await this.vision.readBill(image);
     const result = toScanResult(raw);
-    if (result.status !== "read") return { result, can: null };
+    if (result.status !== "read") return { result, can: null, accountName: null };
+    const accountName = typeof raw.accountName === "string" && raw.accountName.trim() ? raw.accountName.trim().slice(0, 120) : null;
     return {
-      result: { ...result, scanToken: this.contexts.create(raw.customerAccountNumber, result.now) },
+      result: { ...result, scanToken: this.contexts.create(raw.customerAccountNumber, result.now, accountName) },
       can: tenDigits(raw.customerAccountNumber),
+      accountName,
     };
   }
 }

@@ -39,6 +39,7 @@ export class MlVisionProvider implements VisionProvider {
       problem: r.problem ?? undefined,
       serviceIdNumber: r.serviceIdNumber ?? null,
       customerAccountNumber: r.customerAccountNumber ?? null,
+      accountName: r.accountName ?? null,
       period: r.period ?? null,
       billingDays: r.billingDays ?? null,
       kwh: r.kwh ?? null,

@@ -60,13 +60,14 @@ export class SignupService {
   }
 
   /** Step 1: email + mobile number. A finished account is told to sign in instead. */
-  async start(rawEmail: string, phone: string) {
+  async start(rawEmail: string, phone: string, rawName: string) {
     const email = normalizeEmail(rawEmail);
     const existing = await this.accounts.find(email);
     if (existing?.passwordHash) {
       throw new ConflictException({ error: "An account with this email already exists. Sign in instead.", reason: "accountExists" });
     }
-    await this.accounts.save({ email, phone, phoneVerified: false, passwordHash: null, createdAt: existing?.createdAt ?? new Date(this.clock.now()).toISOString() });
+    const name = rawName.trim().replace(/\s+/g, " ");
+    await this.accounts.save({ email, phone, name, phoneVerified: false, passwordHash: null, createdAt: existing?.createdAt ?? new Date(this.clock.now()).toISOString() });
     return this.sendCode(email, phone, "sms");
   }
 

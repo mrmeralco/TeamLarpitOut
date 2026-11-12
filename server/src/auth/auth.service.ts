@@ -52,6 +52,11 @@ export class AuthService {
     return session.ownerId;
   }
 
+  /** The full name the login signed up with (null for logins made before names were asked). */
+  async nameFor(ownerId: string): Promise<string | null> {
+    return (await this.accounts.findByOwner(ownerId))?.name ?? null;
+  }
+
   logout(token: string): void {
     this.sessions.delete(token);
   }
