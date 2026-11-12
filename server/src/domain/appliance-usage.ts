@@ -56,6 +56,21 @@ export function hoursPerDay(ranges: TimeRange[]): number {
   }, 0);
 }
 
+/**
+ * Create a standard daily time range yielding the given hours.
+ * Starts at 22:00 (standard night cooling).
+ */
+export function rangeFromHours(hours: number, days: DaysOfWeek = "everyday"): TimeRange {
+  const clamped = Math.max(1, Math.min(23, Math.round(hours)));
+  const startHour = 22;
+  const endHour = (startHour + clamped) % 24;
+  return {
+    start: "22:00",
+    end: `${String(endHour).padStart(2, "0")}:00`,
+    days,
+  };
+}
+
 /** Problems with one appliance, in plain Tagalog; empty when valid. */
 export function validateAppliance(a: ApplianceInput): string[] {
   const def = findAppliance(a.type);

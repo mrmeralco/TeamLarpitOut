@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Header, Param, Put, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, Param, Put, Query, Req, UseGuards } from "@nestjs/common";
 import { SessionGuard } from "../auth/session.guard.js";
-import { HouseholdAccessGuard } from "../households/household-access.guard.js";
+import { HouseholdAccessGuard, type HouseholdRequest } from "../households/household-access.guard.js";
 import { AppliancesService } from "./appliances.service.js";
 import { SaveAppliancesDto } from "./dto/save-appliances.dto.js";
 
@@ -14,6 +14,16 @@ export class AppliancesController {
   @Header("Cache-Control", "no-store")
   list(@Param("sin") sin: string) {
     return this.appliances.list(sin);
+  }
+
+  @Get("aircon-proposal")
+  @Header("Cache-Control", "no-store")
+  airconProposal(
+    @Param("sin") sin: string,
+    @Req() req: HouseholdRequest,
+    @Query() query: Record<string, string>,
+  ) {
+    return this.appliances.airconProposal(sin, req.household, query);
   }
 
   @Put()

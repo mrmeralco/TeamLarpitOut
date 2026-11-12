@@ -107,3 +107,31 @@ export function calculateHeatSensitivity(
     hotDayKwh: rounded,
   };
 }
+
+/**
+ * Estimate daily aircon hours from the cooling part of Heat Sensitivity divided
+ * by the aircon's power rating in kW (kWh per hour).
+ * Cooling kWh/day = mean daily kWh - baseKwhPerDay.
+ */
+export function estimateAirconHoursFromHistory(
+  history: BillWithWeather[],
+  airconKw: number,
+): { hours: number; coolingKwhPerDay: number } | null {
+  if (history.length < 3 || airconKw <= 0) return null;
+  const sensitivity = calculateHeatSensitivity(history);
+  if (sensitivity.source !== "history" || sensitivity.heatSensitivity <= 0) return null;
+
+  const valid = history.filter(
+    (b) => b.billingDays > 0 && Number.isFinite(b.kwh) && Number.isFinite(b.cddPerDay) && b.cddPerDay >= 0,
+  );
+  if (valid.length < 3) return null;
+
+  const meanDaily = valid.reduce((acc, b) => acc + b.kwh / b.billingDays, 0) / valid.length;
+  const coolingKwhPerDay = Math.max(0, meanDaily - sensitivity.baseKwhPerDay);
+  if (coolingKwhPerDay <= 0) return null;
+
+  const hours = Math.round(coolingKwhPerDay / airconKw);
+  if (hours < 1 || hours > 24) return null;
+
+  return { hours, coolingKwhPerDay: Math.round(coolingKwhPerDay * 100) / 100 };
+}
