@@ -1,5 +1,8 @@
 import { Body, Controller, Header, HttpCode, Module, Post, Req, UseGuards } from "@nestjs/common";
-import { ACCOUNT_REPOSITORY, AUTH_CLOCK, NOTIFIER, SIGN_IN_CODE_GENERATOR } from "../common/injection-tokens.js";
+import { ACCOUNT_REPOSITORY, AUTH_CLOCK, DATABASE, NOTIFIER, SIGN_IN_CODE_GENERATOR } from "../common/injection-tokens.js";
+import type { Sql } from "../database/database.module.js";
+import { PgAccountRepository } from "../database/pg-account.repository.js";
+import { demoAccounts, demoLoginsEnabled } from "./demo-logins.js";
 import { InMemoryAccountRepository } from "./account.repository.js";
 import { AuthService } from "./auth.service.js";
 import { CreatePasswordDto, ResendOtpDto, SignInDto, StartSignupDto, VerificationLinkDto, VerifyOtpDto } from "./dto/signup.dto.js";
@@ -79,7 +82,16 @@ const fixedCode = () => {
     { provide: AUTH_CLOCK, useValue: { now: () => Date.now() } },
     { provide: NOTIFIER, useFactory: () => new LogNotifier() },
     { provide: SIGN_IN_CODE_GENERATOR, useFactory: fixedCode },
-    { provide: ACCOUNT_REPOSITORY, useFactory: () => new InMemoryAccountRepository() },
+    {
+      provide: ACCOUNT_REPOSITORY,
+      inject: [DATABASE],
+      useFactory: async (db: Sql | null) => {
+        if (db) return new PgAccountRepository(db);
+        const accounts = new InMemoryAccountRepository();
+        if (demoLoginsEnabled()) for (const account of await demoAccounts()) await accounts.save(account);
+        return accounts;
+      },
+    },
   ],
   exports: [AuthService, SessionGuard, AUTH_CLOCK],
 })

@@ -12,43 +12,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1363.72
+              "amount": 1842.44
             },
             {
               "label": "Transmission Charge",
-              "amount": 209.07
+              "amount": 259.09
             },
             {
               "label": "System Loss Charge",
-              "amount": 125.44
+              "amount": 179.74
             },
             {
               "label": "Distribution Charge",
-              "amount": 276.98
+              "amount": 55.46
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 99.99
+              "amount": 100.58
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 65.25
+              "amount": 67.67
             },
             {
               "label": "Universal Charges",
-              "amount": 45.73
+              "amount": 64.96
             },
             {
               "label": "FIT-All",
-              "amount": 16.93
+              "amount": 67.85
             },
             {
               "label": "Subsidies",
-              "amount": 0.32
+              "amount": 2.02
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 199.37
+              "amount": 252.09
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 23.22
             },
             {
               "label": "Supply Charge (per customer)",
@@ -78,43 +82,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1354.89
+              "amount": 1830.52
             },
             {
               "label": "Transmission Charge",
-              "amount": 205.96
+              "amount": 255.24
             },
             {
               "label": "System Loss Charge",
-              "amount": 123.58
+              "amount": 177.07
             },
             {
               "label": "Distribution Charge",
-              "amount": 272.87
+              "amount": 54.64
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 98.51
+              "amount": 99.08
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 64.28
+              "amount": 66.67
             },
             {
               "label": "Universal Charges",
-              "amount": 45.05
+              "amount": 63.99
             },
             {
               "label": "FIT-All",
-              "amount": 16.68
+              "amount": 66.84
             },
             {
               "label": "Subsidies",
-              "amount": 0.32
+              "amount": 1.99
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 196.41
+              "amount": 248.34
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 22.87
             },
             {
               "label": "Supply Charge (per customer)",
@@ -144,43 +152,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1380.07
+              "amount": 1864.54
             },
             {
               "label": "Transmission Charge",
-              "amount": 208.04
+              "amount": 257.8
             },
             {
               "label": "System Loss Charge",
-              "amount": 124.82
+              "amount": 178.85
             },
             {
               "label": "Distribution Charge",
-              "amount": 275.61
+              "amount": 55.19
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 99.5
+              "amount": 100.08
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 64.92
+              "amount": 67.34
             },
             {
               "label": "Universal Charges",
-              "amount": 45.51
+              "amount": 64.64
             },
             {
               "label": "FIT-All",
-              "amount": 16.84
+              "amount": 67.52
             },
             {
               "label": "Subsidies",
-              "amount": 0.32
+              "amount": 2.01
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 198.39
+              "amount": 250.84
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 23.1
             },
             {
               "label": "Supply Charge (per customer)",
@@ -210,43 +222,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1779.31
+              "amount": 2403.95
             },
             {
               "label": "Transmission Charge",
-              "amount": 266
+              "amount": 329.63
             },
             {
               "label": "System Loss Charge",
-              "amount": 159.6
+              "amount": 228.68
             },
             {
               "label": "Distribution Charge",
-              "amount": 352.4
+              "amount": 70.57
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 127.22
+              "amount": 127.96
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 83.01
+              "amount": 86.1
             },
             {
               "label": "Universal Charges",
-              "amount": 58.18
+              "amount": 82.64
             },
             {
               "label": "FIT-All",
-              "amount": 21.54
+              "amount": 86.33
             },
             {
               "label": "Subsidies",
-              "amount": 0.41
+              "amount": 2.57
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 253.66
+              "amount": 320.72
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 29.54
             },
             {
               "label": "Supply Charge (per customer)",
@@ -276,43 +292,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1989.56
+              "amount": 2687.98
             },
             {
               "label": "Transmission Charge",
-              "amount": 294.97
+              "amount": 365.54
             },
             {
               "label": "System Loss Charge",
-              "amount": 176.99
+              "amount": 253.59
             },
             {
               "label": "Distribution Charge",
-              "amount": 390.79
+              "amount": 78.26
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 141.07
+              "amount": 141.9
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 92.06
+              "amount": 95.48
             },
             {
               "label": "Universal Charges",
-              "amount": 64.52
+              "amount": 91.65
             },
             {
               "label": "FIT-All",
-              "amount": 23.88
+              "amount": 95.73
             },
             {
               "label": "Subsidies",
-              "amount": 0.46
+              "amount": 2.85
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 281.3
+              "amount": 355.67
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 32.76
             },
             {
               "label": "Supply Charge (per customer)",
@@ -342,43 +362,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2139.67
+              "amount": 2924.46
             },
             {
               "label": "Transmission Charge",
-              "amount": 314.64
+              "amount": 389.91
             },
             {
               "label": "System Loss Charge",
-              "amount": 188.78
+              "amount": 270.5
             },
             {
               "label": "Distribution Charge",
-              "amount": 416.84
+              "amount": 83.47
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 150.48
+              "amount": 151.36
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 98.19
+              "amount": 101.84
             },
             {
               "label": "Universal Charges",
-              "amount": 68.83
+              "amount": 97.76
             },
             {
               "label": "FIT-All",
-              "amount": 25.48
+              "amount": 102.11
             },
             {
               "label": "Subsidies",
-              "amount": 0.49
+              "amount": 3.04
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 300.05
+              "amount": 379.38
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 34.94
             },
             {
               "label": "Supply Charge (per customer)",
@@ -408,43 +432,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1852
+              "amount": 2551.24
             },
             {
               "label": "Transmission Charge",
-              "amount": 270.14
+              "amount": 334.76
             },
             {
               "label": "System Loss Charge",
-              "amount": 162.08
+              "amount": 232.24
             },
             {
               "label": "Distribution Charge",
-              "amount": 357.88
+              "amount": 71.67
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 129.2
+              "amount": 129.95
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 84.3
+              "amount": 87.44
             },
             {
               "label": "Universal Charges",
-              "amount": 59.09
+              "amount": 83.93
             },
             {
               "label": "FIT-All",
-              "amount": 21.87
+              "amount": 87.67
             },
             {
               "label": "Subsidies",
-              "amount": 0.42
+              "amount": 2.61
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 257.61
+              "amount": 325.71
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 30
             },
             {
               "label": "Supply Charge (per customer)",
@@ -474,43 +502,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1838.4
+              "amount": 2515.54
             },
             {
               "label": "Transmission Charge",
-              "amount": 266
+              "amount": 329.63
             },
             {
               "label": "System Loss Charge",
-              "amount": 159.6
+              "amount": 228.68
             },
             {
               "label": "Distribution Charge",
-              "amount": 352.4
+              "amount": 70.57
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 127.22
+              "amount": 127.96
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 83.01
+              "amount": 86.1
             },
             {
               "label": "Universal Charges",
-              "amount": 58.18
+              "amount": 82.64
             },
             {
               "label": "FIT-All",
-              "amount": 21.54
+              "amount": 86.33
             },
             {
               "label": "Subsidies",
-              "amount": 0.41
+              "amount": 2.57
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 253.66
+              "amount": 320.72
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 29.54
             },
             {
               "label": "Supply Charge (per customer)",
@@ -540,43 +572,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1824.31
+              "amount": 2465.16
             },
             {
               "label": "Transmission Charge",
-              "amount": 261.85
+              "amount": 324.5
             },
             {
               "label": "System Loss Charge",
-              "amount": 157.11
+              "amount": 225.12
             },
             {
               "label": "Distribution Charge",
-              "amount": 346.91
+              "amount": 69.47
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 125.24
+              "amount": 125.97
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 81.72
+              "amount": 84.76
             },
             {
               "label": "Universal Charges",
-              "amount": 57.28
+              "amount": 81.36
             },
             {
               "label": "FIT-All",
-              "amount": 21.2
+              "amount": 84.98
             },
             {
               "label": "Subsidies",
-              "amount": 0.4
+              "amount": 2.53
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 249.71
+              "amount": 315.73
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 29.08
             },
             {
               "label": "Supply Charge (per customer)",
@@ -606,43 +642,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1580.04
+              "amount": 2134.7
             },
             {
               "label": "Transmission Charge",
-              "amount": 227.7
+              "amount": 282.17
             },
             {
               "label": "System Loss Charge",
-              "amount": 136.62
+              "amount": 195.76
             },
             {
               "label": "Distribution Charge",
-              "amount": 301.66
+              "amount": 60.41
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 108.9
+              "amount": 109.54
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 71.06
+              "amount": 73.7
             },
             {
               "label": "Universal Charges",
-              "amount": 49.81
+              "amount": 70.75
             },
             {
               "label": "FIT-All",
-              "amount": 18.44
+              "amount": 73.9
             },
             {
               "label": "Subsidies",
-              "amount": 0.35
+              "amount": 2.2
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 217.14
+              "amount": 274.55
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 25.29
             },
             {
               "label": "Supply Charge (per customer)",
@@ -672,43 +712,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1862.75
+              "amount": 2516.65
             },
             {
               "label": "Transmission Charge",
-              "amount": 261.75
+              "amount": 320.65
             },
             {
               "label": "System Loss Charge",
-              "amount": 161.38
+              "amount": 222.45
             },
             {
               "label": "Distribution Charge",
-              "amount": 342.8
+              "amount": 68.64
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 123.75
+              "amount": 124.48
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 80.75
+              "amount": 83.75
             },
             {
               "label": "Universal Charges",
-              "amount": 56.6
+              "amount": 80.39
             },
             {
               "label": "FIT-All",
-              "amount": 20.95
+              "amount": 83.98
             },
             {
               "label": "Subsidies",
-              "amount": 0.4
+              "amount": 2.5
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 255.38
+              "amount": 311.99
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 28.74
             },
             {
               "label": "Supply Charge (per customer)",
@@ -738,43 +782,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 1615.29
+              "amount": 2182.33
             },
             {
               "label": "Transmission Charge",
-              "amount": 232.76
+              "amount": 295
             },
             {
               "label": "System Loss Charge",
-              "amount": 139.15
+              "amount": 204.65
             },
             {
               "label": "Distribution Charge",
-              "amount": 315.38
+              "amount": 63.15
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 113.85
+              "amount": 114.52
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 74.29
+              "amount": 77.05
             },
             {
               "label": "Universal Charges",
-              "amount": 52.07
+              "amount": 73.96
             },
             {
               "label": "FIT-All",
-              "amount": 19.27
+              "amount": 77.26
             },
             {
               "label": "Subsidies",
-              "amount": 0.37
+              "amount": 2.3
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 222.18
+              "amount": 287.03
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 26.44
             },
             {
               "label": "Supply Charge (per customer)",
@@ -809,43 +857,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2126.6
+              "amount": 2873.12
             },
             {
               "label": "Transmission Charge",
-              "amount": 326.02
+              "amount": 404.02
             },
             {
               "label": "System Loss Charge",
-              "amount": 195.62
+              "amount": 280.29
             },
             {
               "label": "Distribution Charge",
-              "amount": 431.93
+              "amount": 86.49
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 155.93
+              "amount": 156.84
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 101.75
+              "amount": 105.53
             },
             {
               "label": "Universal Charges",
-              "amount": 71.32
+              "amount": 101.3
             },
             {
               "label": "FIT-All",
-              "amount": 26.4
+              "amount": 105.81
             },
             {
               "label": "Subsidies",
-              "amount": 0.5
+              "amount": 3.15
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 310.9
+              "amount": 393.1
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 36.21
             },
             {
               "label": "Supply Charge (per customer)",
@@ -875,43 +927,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2103.83
+              "amount": 2842.37
             },
             {
               "label": "Transmission Charge",
-              "amount": 319.82
+              "amount": 396.32
             },
             {
               "label": "System Loss Charge",
-              "amount": 191.89
+              "amount": 274.95
             },
             {
               "label": "Distribution Charge",
-              "amount": 423.7
+              "amount": 84.84
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 152.96
+              "amount": 153.85
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 99.81
+              "amount": 103.52
             },
             {
               "label": "Universal Charges",
-              "amount": 69.96
+              "amount": 99.37
             },
             {
               "label": "FIT-All",
-              "amount": 25.89
+              "amount": 103.79
             },
             {
               "label": "Subsidies",
-              "amount": 0.49
+              "amount": 3.09
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 304.98
+              "amount": 385.62
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 35.52
             },
             {
               "label": "Supply Charge (per customer)",
@@ -941,43 +997,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2183.39
+              "amount": 2949.86
             },
             {
               "label": "Transmission Charge",
-              "amount": 329.13
+              "amount": 407.87
             },
             {
               "label": "System Loss Charge",
-              "amount": 197.48
+              "amount": 282.96
             },
             {
               "label": "Distribution Charge",
-              "amount": 436.04
+              "amount": 87.32
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 157.41
+              "amount": 158.33
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 102.71
+              "amount": 106.53
             },
             {
               "label": "Universal Charges",
-              "amount": 72
+              "amount": 102.26
             },
             {
               "label": "FIT-All",
-              "amount": 26.65
+              "amount": 106.82
             },
             {
               "label": "Subsidies",
-              "amount": 0.51
+              "amount": 3.18
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 313.87
+              "amount": 396.85
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 36.55
             },
             {
               "label": "Supply Charge (per customer)",
@@ -1007,43 +1067,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2866.29
+              "amount": 3872.51
             },
             {
               "label": "Transmission Charge",
-              "amount": 428.49
+              "amount": 531
             },
             {
               "label": "System Loss Charge",
-              "amount": 257.09
+              "amount": 368.38
             },
             {
               "label": "Distribution Charge",
-              "amount": 567.68
+              "amount": 113.68
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 204.93
+              "amount": 206.13
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 133.72
+              "amount": 138.69
             },
             {
               "label": "Universal Charges",
-              "amount": 93.73
+              "amount": 133.13
             },
             {
               "label": "FIT-All",
-              "amount": 34.69
+              "amount": 139.06
             },
             {
               "label": "Subsidies",
-              "amount": 0.66
+              "amount": 4.14
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 408.62
+              "amount": 516.65
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 47.59
             },
             {
               "label": "Supply Charge (per customer)",
@@ -1073,43 +1137,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 3260.08
+              "amount": 4404.51
             },
             {
               "label": "Transmission Charge",
-              "amount": 483.35
+              "amount": 598.97
             },
             {
               "label": "System Loss Charge",
-              "amount": 290.01
+              "amount": 415.54
             },
             {
               "label": "Distribution Charge",
-              "amount": 640.35
+              "amount": 128.23
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 231.17
+              "amount": 232.52
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 150.84
+              "amount": 156.45
             },
             {
               "label": "Universal Charges",
-              "amount": 105.73
+              "amount": 150.18
             },
             {
               "label": "FIT-All",
-              "amount": 39.13
+              "amount": 156.87
             },
             {
               "label": "Subsidies",
-              "amount": 0.75
+              "amount": 4.67
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 460.93
+              "amount": 582.79
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 53.68
             },
             {
               "label": "Supply Charge (per customer)",
@@ -1139,43 +1207,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 3526.24
+              "amount": 4819.59
             },
             {
               "label": "Transmission Charge",
-              "amount": 518.54
+              "amount": 642.58
             },
             {
               "label": "System Loss Charge",
-              "amount": 311.12
+              "amount": 445.79
             },
             {
               "label": "Distribution Charge",
-              "amount": 686.97
+              "amount": 137.56
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 248
+              "amount": 249.45
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 161.82
+              "amount": 167.84
             },
             {
               "label": "Universal Charges",
-              "amount": 113.43
+              "amount": 161.11
             },
             {
               "label": "FIT-All",
-              "amount": 41.98
+              "amount": 168.29
             },
             {
               "label": "Subsidies",
-              "amount": 0.8
+              "amount": 5.01
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 494.49
+              "amount": 625.22
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 57.59
             },
             {
               "label": "Supply Charge (per customer)",
@@ -1205,43 +1277,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 3015.71
+              "amount": 4154.32
             },
             {
               "label": "Transmission Charge",
-              "amount": 439.87
+              "amount": 545.11
             },
             {
               "label": "System Loss Charge",
-              "amount": 263.93
+              "amount": 378.17
             },
             {
               "label": "Distribution Charge",
-              "amount": 582.76
+              "amount": 116.7
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 210.38
+              "amount": 211.61
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 137.28
+              "amount": 142.38
             },
             {
               "label": "Universal Charges",
-              "amount": 96.22
+              "amount": 136.67
             },
             {
               "label": "FIT-All",
-              "amount": 35.62
+              "amount": 142.76
             },
             {
               "label": "Subsidies",
-              "amount": 0.68
+              "amount": 4.25
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 419.48
+              "amount": 530.38
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 48.85
             },
             {
               "label": "Supply Charge (per customer)",
@@ -1271,43 +1347,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2961.47
+              "amount": 4052.28
             },
             {
               "label": "Transmission Charge",
-              "amount": 428.49
+              "amount": 531
             },
             {
               "label": "System Loss Charge",
-              "amount": 257.09
+              "amount": 368.38
             },
             {
               "label": "Distribution Charge",
-              "amount": 567.68
+              "amount": 113.68
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 204.93
+              "amount": 206.13
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 133.72
+              "amount": 138.69
             },
             {
               "label": "Universal Charges",
-              "amount": 93.73
+              "amount": 133.13
             },
             {
               "label": "FIT-All",
-              "amount": 34.69
+              "amount": 139.06
             },
             {
               "label": "Subsidies",
-              "amount": 0.66
+              "amount": 4.14
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 408.62
+              "amount": 516.65
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 47.59
             },
             {
               "label": "Supply Charge (per customer)",
@@ -1337,43 +1417,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2941.97
+              "amount": 3975.44
             },
             {
               "label": "Transmission Charge",
-              "amount": 422.28
+              "amount": 523.3
             },
             {
               "label": "System Loss Charge",
-              "amount": 253.37
+              "amount": 363.04
             },
             {
               "label": "Distribution Charge",
-              "amount": 559.45
+              "amount": 112.03
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 201.96
+              "amount": 203.14
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 131.78
+              "amount": 136.68
             },
             {
               "label": "Universal Charges",
-              "amount": 92.37
+              "amount": 131.2
             },
             {
               "label": "FIT-All",
-              "amount": 34.19
+              "amount": 137.05
             },
             {
               "label": "Subsidies",
-              "amount": 0.65
+              "amount": 4.08
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 402.7
+              "amount": 509.16
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 46.9
             },
             {
               "label": "Supply Charge (per customer)",
@@ -1403,43 +1487,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2513.7
+              "amount": 3396.12
             },
             {
               "label": "Transmission Charge",
-              "amount": 362.25
+              "amount": 448.91
             },
             {
               "label": "System Loss Charge",
-              "amount": 217.35
+              "amount": 311.43
             },
             {
               "label": "Distribution Charge",
-              "amount": 479.92
+              "amount": 96.1
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 173.25
+              "amount": 174.27
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 113.05
+              "amount": 117.25
             },
             {
               "label": "Universal Charges",
-              "amount": 79.24
+              "amount": 112.55
             },
             {
               "label": "FIT-All",
-              "amount": 29.33
+              "amount": 117.57
             },
             {
               "label": "Subsidies",
-              "amount": 0.56
+              "amount": 3.5
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 345.45
+              "amount": 436.78
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 40.23
             },
             {
               "label": "Supply Charge (per customer)",
@@ -1469,43 +1557,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2980.4
+              "amount": 4026.64
             },
             {
               "label": "Transmission Charge",
-              "amount": 418.8
+              "amount": 513.04
             },
             {
               "label": "System Loss Charge",
-              "amount": 258.2
+              "amount": 355.92
             },
             {
               "label": "Distribution Charge",
-              "amount": 548.48
+              "amount": 109.83
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 198
+              "amount": 199.16
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 129.2
+              "amount": 134
             },
             {
               "label": "Universal Charges",
-              "amount": 90.56
+              "amount": 128.63
             },
             {
               "label": "FIT-All",
-              "amount": 33.52
+              "amount": 134.36
             },
             {
               "label": "Subsidies",
-              "amount": 0.64
+              "amount": 4
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 408.6
+              "amount": 499.18
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 45.98
             },
             {
               "label": "Supply Charge (per customer)",
@@ -1535,43 +1627,47 @@
           "chargeLines": [
             {
               "label": "Generation Charge",
-              "amount": 2598.51
+              "amount": 3510.71
             },
             {
               "label": "Transmission Charge",
-              "amount": 374.44
+              "amount": 474.56
             },
             {
               "label": "System Loss Charge",
-              "amount": 223.85
+              "amount": 329.23
             },
             {
               "label": "Distribution Charge",
-              "amount": 507.34
+              "amount": 101.59
             },
             {
               "label": "Supply Charge (per kWh)",
-              "amount": 183.15
+              "amount": 184.22
             },
             {
               "label": "Metering Charge (per kWh)",
-              "amount": 119.51
+              "amount": 123.95
             },
             {
               "label": "Universal Charges",
-              "amount": 83.77
+              "amount": 118.98
             },
             {
               "label": "FIT-All",
-              "amount": 31.01
+              "amount": 124.28
             },
             {
               "label": "Subsidies",
-              "amount": 0.59
+              "amount": 3.7
             },
             {
               "label": "VAT (per kWh lines)",
-              "amount": 357.42
+              "amount": 461.74
+            },
+            {
+              "label": "Local Franchise and Real Property Taxes",
+              "amount": 42.53
             },
             {
               "label": "Supply Charge (per customer)",
