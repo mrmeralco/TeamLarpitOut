@@ -8,6 +8,7 @@ import demo from "../data/meralco-demo.json" with { type: "json" };
 import rateTable from "../data/rate-schedules.json" with { type: "json" };
 import type { Bill } from "../domain/bill.js";
 import { datesBetween } from "../domain/daily-points.js";
+import { DEMO_BONUS_POINTS, demoBonusId } from "../domain/demo-points.js";
 import { DEMO_CLIMATE_DATES, DEMO_SMART_SIN, demoTemperatureC } from "../domain/demo-climate.js";
 import type { HourlyReading } from "../domain/meter-reading.js";
 import type { RateSchedule } from "../domain/rate-schedule.js";
@@ -133,6 +134,7 @@ export async function seedDatabase(sql: Sql, data: SeedData) {
         on conflict (owner_id, sin) do update set can = excluded.can, status = excluded.status`;
     }
     await seedReferenceData(tx, data.reference);
+    for (const { account } of data.households) await grantDemoBonus(tx, account.sin);
   });
   const ref = data.reference;
   return {
@@ -140,6 +142,14 @@ export async function seedDatabase(sql: Sql, data: SeedData) {
     readings: ref.readings.reduce((s, r) => s + r.rows.length, 0), outages: ref.outages.length,
     rateSchedules: ref.rateSchedules.length, weatherDays: ref.weather.length, rewards: ref.rewards.length,
   };
+}
+
+/** Gives a demo Household DEMO_BONUS_POINTS of spendable Points (set, not added, on every re-seed). */
+export async function grantDemoBonus(tx: Sql, sin: string, points = DEMO_BONUS_POINTS) {
+  await tx`
+    insert into public.points_entries (id, sin, points, source, description)
+    values (${demoBonusId(sin)}, ${sin}, ${points}, 'demo_bonus', ${`Demo Points: ${points.toLocaleString("en-PH")} to try the Rewards shop`})
+    on conflict (id) do update set points = excluded.points, description = excluded.description`;
 }
 
 /**
