@@ -1,0 +1,2877 @@
+{
+  "note": "One real Meralco Bill (September 2026), used with the account holder's consent. Every amount, rate, reading and date is transcribed from the printed Bill. Identifiers are placeholders: the holder's name, street address, CAN, Service ID Number, meter number and invoice/reference numbers are not stored. A git-ignored local seed file can map the real CAN for live scans (see server/seed.local.example.json).",
+  "account": {
+    "can": "0900000273",
+    "sin": "090000027300",
+    "holderName": "Test Household (real Bill, placeholder name)",
+    "area": "Caloocan City",
+    "meterNumber": "DEMO0273",
+    "lifelineEligible": false,
+    "meter_type": "traditional"
+  },
+  "bills": [
+    {
+      "period": "2025-10",
+      "periodStart": "2025-09-29",
+      "periodEnd": "2025-10-28",
+      "billingDays": 30,
+      "billDate": "2025-10-28",
+      "dueDate": "2025-11-09",
+      "meterNumber": "DEMO0273",
+      "previousReading": 2791,
+      "presentReading": 2994,
+      "multiplier": 1,
+      "kwh": 203,
+      "estimated": false,
+      "total": 292199,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total priced with a sample Generation rate. Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 182006
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 26037
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 18063
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 24620
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 6528
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 6819
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 203
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 27923
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 8.9658,
+          "priceUnit": "per_kwh",
+          "amount": 182006
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 26037
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 18063
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 5574
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 10107
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 6801
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 6528
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 6819
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 203
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 25333
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 203,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 2333
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2025-11",
+      "periodStart": "2025-10-29",
+      "periodEnd": "2025-11-28",
+      "billingDays": 31,
+      "billDate": "2025-11-28",
+      "dueDate": "2025-12-10",
+      "meterNumber": "DEMO0273",
+      "previousReading": 2994,
+      "presentReading": 3207,
+      "multiplier": 1,
+      "kwh": 213,
+      "estimated": false,
+      "total": 308128,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total priced with a sample Generation rate. Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 192624
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 27319
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 18953
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 25728
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 6850
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 7155
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 213
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 29286
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 9.0434,
+          "priceUnit": "per_kwh",
+          "amount": 192624
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 27319
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 18953
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 5849
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 10605
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 7136
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 6850
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 7155
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 213
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 26581
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 213,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 2448
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2025-12",
+      "periodStart": "2025-11-29",
+      "periodEnd": "2025-12-28",
+      "billingDays": 30,
+      "billDate": "2025-12-28",
+      "dueDate": "2026-01-09",
+      "meterNumber": "DEMO0273",
+      "previousReading": 3207,
+      "presentReading": 3403,
+      "multiplier": 1,
+      "kwh": 196,
+      "estimated": false,
+      "total": 285249,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total priced with a sample Generation rate. Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 178772
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 25139
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 17440
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 23845
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 6303
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 6584
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 196
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 26970
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 9.121,
+          "priceUnit": "per_kwh",
+          "amount": 178772
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 25139
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 17440
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 5382
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 9759
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 6566
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 6303
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 6584
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 196
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 24460
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 196,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 2253
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2026-01",
+      "periodStart": "2025-12-29",
+      "periodEnd": "2026-01-28",
+      "billingDays": 31,
+      "billDate": "2026-01-28",
+      "dueDate": "2026-02-09",
+      "meterNumber": "DEMO0273",
+      "previousReading": 3403,
+      "presentReading": 3605,
+      "multiplier": 1,
+      "kwh": 202,
+      "estimated": false,
+      "total": 295475,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total priced with a sample Generation rate. Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 185812
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 25909
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 17974
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 24509
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 6496
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 6785
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 202
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 27788
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 9.1986,
+          "priceUnit": "per_kwh",
+          "amount": 185812
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 25909
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 17974
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 5546
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 10058
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 6767
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 6496
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 6785
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 202
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 25209
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 202,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 2322
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2026-02",
+      "periodStart": "2026-01-29",
+      "periodEnd": "2026-02-28",
+      "billingDays": 31,
+      "billDate": "2026-02-28",
+      "dueDate": "2026-03-12",
+      "meterNumber": "DEMO0273",
+      "previousReading": 3605,
+      "presentReading": 3841,
+      "multiplier": 1,
+      "kwh": 236,
+      "estimated": false,
+      "total": 346637,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total priced with a sample Generation rate. Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 218921
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 30269
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 20999
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 28274
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 7589
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 7927
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 236
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 32422
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 9.2763,
+          "priceUnit": "per_kwh",
+          "amount": 218921
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 30269
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 20999
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 6480
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 11750
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 7906
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 7589
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 7927
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 236
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 29452
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 236,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 2713
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2026-03",
+      "periodStart": "2026-03-01",
+      "periodEnd": "2026-03-28",
+      "billingDays": 28,
+      "billDate": "2026-03-28",
+      "dueDate": "2026-04-09",
+      "meterNumber": "DEMO0273",
+      "previousReading": 3841,
+      "presentReading": 4072,
+      "multiplier": 1,
+      "kwh": 231,
+      "estimated": false,
+      "total": 341136,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total priced with a sample Generation rate. Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 216075
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 29628
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 20554
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 27721
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 7428
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 7759
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 231
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 31740
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 9.3539,
+          "priceUnit": "per_kwh",
+          "amount": 216075
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 29628
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 20554
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 6343
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 11501
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 7739
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 7428
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 7759
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 231
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 28828
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 231,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 2655
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2026-04",
+      "periodStart": "2026-03-29",
+      "periodEnd": "2026-04-28",
+      "billingDays": 31,
+      "billDate": "2026-04-28",
+      "dueDate": "2026-05-10",
+      "meterNumber": "DEMO0273",
+      "previousReading": 4072,
+      "presentReading": 4362,
+      "multiplier": 1,
+      "kwh": 290,
+      "estimated": false,
+      "total": 429906,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total priced with a sample Generation rate. Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 273514
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 37195
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 25804
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 34255
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 9326
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 9741
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 290
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 39781
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 9.4315,
+          "priceUnit": "per_kwh",
+          "amount": 273514
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 37195
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 25804
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 7963
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 14439
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 9715
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 9326
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 9741
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 290
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 36191
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 290,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 3333
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2026-05",
+      "periodStart": "2026-04-29",
+      "periodEnd": "2026-05-28",
+      "billingDays": 30,
+      "billDate": "2026-05-28",
+      "dueDate": "2026-06-09",
+      "meterNumber": "DEMO0273",
+      "previousReading": 4362,
+      "presentReading": 4681,
+      "multiplier": 1,
+      "kwh": 319,
+      "estimated": false,
+      "total": 478669,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total = the ₱4786.69 paid (\"What you've paid\"). Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 306876
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 40915
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 28385
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 37467
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 10258
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 10715
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 319
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 43734
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 9.619937,
+          "priceUnit": "per_kwh",
+          "amount": 306876
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 40915
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 28385
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 8759
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 15883
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 10687
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 10258
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 10715
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 319
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 39810
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 319,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 3667
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2026-06",
+      "periodStart": "2026-05-29",
+      "periodEnd": "2026-06-28",
+      "billingDays": 31,
+      "billDate": "2026-06-28",
+      "dueDate": "2026-07-10",
+      "meterNumber": "DEMO0273",
+      "previousReading": 4681,
+      "presentReading": 4987,
+      "multiplier": 1,
+      "kwh": 306,
+      "estimated": false,
+      "total": 464000,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total = the ₱4640.00 paid (\"What you've paid\"). Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 299111
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 39248
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 27228
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 36027
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 9840
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 10279
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 306
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 41961
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 9.774869,
+          "priceUnit": "per_kwh",
+          "amount": 299111
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 39248
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 27228
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 8402
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 15236
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 10251
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 9840
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 10279
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 306
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 38187
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 306,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 3517
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2026-07",
+      "periodStart": "2026-06-29",
+      "periodEnd": "2026-07-28",
+      "billingDays": 30,
+      "billDate": "2026-07-28",
+      "dueDate": "2026-08-09",
+      "meterNumber": "DEMO0273",
+      "previousReading": 4987,
+      "presentReading": 5278,
+      "multiplier": 1,
+      "kwh": 291,
+      "estimated": false,
+      "total": 441758,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total = the ₱4417.58 paid (\"What you've paid\"). Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 284834
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 37324
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 25893
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 34366
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 9358
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 9775
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 291
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 39917
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 9.78811,
+          "priceUnit": "per_kwh",
+          "amount": 284834
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 37324
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 25893
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 7990
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 14489
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 9749
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 9358
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 9775
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 291
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 36315
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 291,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 3345
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2026-08",
+      "periodStart": "2026-07-29",
+      "periodEnd": "2026-08-28",
+      "billingDays": 31,
+      "billDate": "2026-08-28",
+      "dueDate": "2026-09-09",
+      "meterNumber": "DEMO0273",
+      "previousReading": 5278,
+      "presentReading": 5566,
+      "multiplier": 1,
+      "kwh": 288,
+      "estimated": false,
+      "total": 435949,
+      "previousBalance": 0,
+      "paymentsCredited": null,
+      "provenance": {
+        "kind": "reconstructed",
+        "note": "Reconstructed from the September 2026 Bill: kWh from its consumption chart, readings counted back from its previous reading, total = the ₱4359.49 paid (\"What you've paid\"). Charge lines rebuilt with this month's Rate Schedule."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 280619
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 36939
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 25626
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 34034
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 9261
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 9674
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 288
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 39508
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 9.743715,
+          "priceUnit": "per_kwh",
+          "amount": 280619
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 1.2826,
+          "priceUnit": "per_kwh",
+          "amount": 36939
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 25626
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 0.274579,
+          "priceUnit": "per_kwh",
+          "amount": 7908
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge (per kWh)",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 14340
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge (per kWh)",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 9648
+        },
+        {
+          "groupCode": "universal",
+          "code": "universal",
+          "scheduleCode": "universal",
+          "label": "Universal Charges",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 0.321575,
+          "priceUnit": "per_kwh",
+          "amount": 9261
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FIT-All",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 9674
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "subsidies",
+          "scheduleCode": "subsidies",
+          "label": "Subsidies",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 288
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT (per kWh lines)",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 1.247949,
+          "priceUnit": "per_kwh",
+          "amount": 35941
+        },
+        {
+          "groupCode": "taxes",
+          "code": "local_tax",
+          "scheduleCode": "local_tax",
+          "label": "Local Franchise and Real Property Taxes",
+          "base": 288,
+          "baseUnit": "kwh",
+          "price": 0.114945,
+          "priceUnit": "per_kwh",
+          "amount": 3310
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_fixed",
+          "scheduleCode": "supply_fixed",
+          "label": "Supply Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_fixed",
+          "scheduleCode": "metering_fixed",
+          "label": "Metering Charge (per customer)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT (per customer lines)",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 2.57,
+          "priceUnit": "per_month",
+          "amount": 257
+        }
+      ]
+    },
+    {
+      "period": "2026-09",
+      "periodStart": "2026-08-29",
+      "periodEnd": "2026-09-28",
+      "billingDays": 31,
+      "billDate": "2026-09-28",
+      "dueDate": "2026-10-10",
+      "meterNumber": "DEMO0273",
+      "previousReading": 5566,
+      "presentReading": 5839,
+      "multiplier": 1,
+      "kwh": 273,
+      "estimated": false,
+      "total": 412263,
+      "previousBalance": 0,
+      "paymentsCredited": 435949,
+      "provenance": {
+        "kind": "real",
+        "note": "A real Meralco Bill, transcribed line by line with the account holder's consent. Identifiers are placeholders."
+      },
+      "groups": [
+        {
+          "groupCode": "generation",
+          "label": "Generation",
+          "amount": 264897
+        },
+        {
+          "groupCode": "transmission",
+          "label": "Transmission",
+          "amount": 35015
+        },
+        {
+          "groupCode": "system_loss",
+          "label": "System Loss",
+          "amount": 24292
+        },
+        {
+          "groupCode": "distribution",
+          "label": "Distribution (Meralco)",
+          "amount": 32373
+        },
+        {
+          "groupCode": "senior_citizen",
+          "label": "Senior Citizen",
+          "amount": 0
+        },
+        {
+          "groupCode": "taxes",
+          "label": "Government Taxes",
+          "amount": 37464
+        },
+        {
+          "groupCode": "universal",
+          "label": "Universal Charges",
+          "amount": 8779
+        },
+        {
+          "groupCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "amount": 9170
+        },
+        {
+          "groupCode": "gea_all",
+          "label": "GEA-All (Renewable)",
+          "amount": 0
+        },
+        {
+          "groupCode": "lifeline",
+          "label": "Lifeline",
+          "amount": 273
+        }
+      ],
+      "lines": [
+        {
+          "groupCode": "generation",
+          "code": "generation_charge",
+          "scheduleCode": "generation",
+          "label": "Generation Charge",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 9.7032,
+          "priceUnit": "per_kwh",
+          "amount": 264897
+        },
+        {
+          "groupCode": "generation",
+          "code": "power_act_reduction",
+          "scheduleCode": "generation",
+          "label": "Power Act Reduction",
+          "base": null,
+          "baseUnit": null,
+          "price": null,
+          "priceUnit": null,
+          "amount": 0
+        },
+        {
+          "groupCode": "transmission",
+          "code": "transmission_charge",
+          "scheduleCode": "transmission",
+          "label": "Transmission Charge",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.5485,
+          "priceUnit": "per_kwh",
+          "amount": 14974
+        },
+        {
+          "groupCode": "transmission",
+          "code": "ancillary_service_charge",
+          "scheduleCode": "transmission",
+          "label": "Ancillary Service Charge",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.7341,
+          "priceUnit": "per_kwh",
+          "amount": 20041
+        },
+        {
+          "groupCode": "system_loss",
+          "code": "system_loss_charge",
+          "scheduleCode": "system_loss",
+          "label": "System Loss Charge",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.8898,
+          "priceUnit": "per_kwh",
+          "amount": 24292
+        },
+        {
+          "groupCode": "distribution",
+          "code": "distribution_charge",
+          "scheduleCode": "distribution",
+          "label": "Distribution Charge",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 1.2908,
+          "priceUnit": "per_kwh",
+          "amount": 35239
+        },
+        {
+          "groupCode": "distribution",
+          "code": "fixed_metering_charge",
+          "scheduleCode": "metering_fixed",
+          "label": "Fixed Metering Charge",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 5,
+          "priceUnit": "per_month",
+          "amount": 500
+        },
+        {
+          "groupCode": "distribution",
+          "code": "metering_charge_kwh",
+          "scheduleCode": "metering_kwh",
+          "label": "Metering Charge per kWh",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.335,
+          "priceUnit": "per_kwh",
+          "amount": 9146
+        },
+        {
+          "groupCode": "distribution",
+          "code": "fixed_supply_charge",
+          "scheduleCode": "supply_fixed",
+          "label": "Fixed Supply Charge",
+          "base": 1,
+          "baseUnit": "month",
+          "price": 16.38,
+          "priceUnit": "per_month",
+          "amount": 1638
+        },
+        {
+          "groupCode": "distribution",
+          "code": "supply_charge_kwh",
+          "scheduleCode": "supply_kwh",
+          "label": "Supply Charge per kWh",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.4979,
+          "priceUnit": "per_kwh",
+          "amount": 13593
+        },
+        {
+          "groupCode": "distribution",
+          "code": "awat_collect_1",
+          "scheduleCode": "distribution",
+          "label": "AWAT (Refund)/Collect 1",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": -0.4278,
+          "priceUnit": "per_kwh",
+          "amount": -11679
+        },
+        {
+          "groupCode": "distribution",
+          "code": "awat_collect_2",
+          "scheduleCode": "distribution",
+          "label": "AWAT (Refund)/Collect 2",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": -0.5861,
+          "priceUnit": "per_kwh",
+          "amount": -16001
+        },
+        {
+          "groupCode": "distribution",
+          "code": "regulatory_reset_fee_adj",
+          "scheduleCode": "distribution",
+          "label": "Regulatory Reset Fee Adj",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": -0.0023,
+          "priceUnit": "per_kwh",
+          "amount": -63
+        },
+        {
+          "groupCode": "distribution",
+          "code": "lifeline_rate_adj",
+          "scheduleCode": "subsidies",
+          "label": "Lifeline Rate Adjustment",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": -0.0001,
+          "priceUnit": "per_kwh",
+          "amount": -3
+        },
+        {
+          "groupCode": "distribution",
+          "code": "senior_citizen_subsidy",
+          "scheduleCode": "subsidies",
+          "label": "Senior Citizen Subsidy",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.0001,
+          "priceUnit": "per_kwh",
+          "amount": 3
+        },
+        {
+          "groupCode": "taxes",
+          "code": "rpt_charge",
+          "scheduleCode": "local_tax",
+          "label": "RPT Charge",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.0067,
+          "priceUnit": "per_kwh",
+          "amount": 183
+        },
+        {
+          "groupCode": "taxes",
+          "code": "rpt_adj",
+          "scheduleCode": "local_tax",
+          "label": "RPT Adj.",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.0015,
+          "priceUnit": "per_kwh",
+          "amount": 41
+        },
+        {
+          "groupCode": "taxes",
+          "code": "lft_charge",
+          "scheduleCode": "local_tax",
+          "label": "LFT Charge",
+          "base": 3568.01,
+          "baseUnit": "pesos",
+          "price": 0.825,
+          "priceUnit": "percent",
+          "amount": 2944
+        },
+        {
+          "groupCode": "taxes",
+          "code": "lft_adj",
+          "scheduleCode": "local_tax",
+          "label": "LFT Adj.",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": -0.0011,
+          "priceUnit": "per_kwh",
+          "amount": -30
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_generation",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT: Generation Charge",
+          "base": 2648.97,
+          "baseUnit": "pesos",
+          "price": 9.21,
+          "priceUnit": "percent",
+          "amount": 24397
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_transmission",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT: Transmission Charge",
+          "base": 149.74,
+          "baseUnit": "pesos",
+          "price": 11.99,
+          "priceUnit": "percent",
+          "amount": 1795
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_ancillary",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT: Ancillary Service Charge",
+          "base": 200.41,
+          "baseUnit": "pesos",
+          "price": 9.83,
+          "priceUnit": "percent",
+          "amount": 1970
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_system_loss",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT: System Loss Charge",
+          "base": 242.92,
+          "baseUnit": "pesos",
+          "price": 9.38,
+          "priceUnit": "percent",
+          "amount": 2279
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_distribution_kwh",
+          "scheduleCode": "vat_kwh",
+          "label": "VAT: Distribution Charge (per-kWh part of the printed ₱38.85)",
+          "base": 302.35,
+          "baseUnit": "pesos",
+          "price": 12,
+          "priceUnit": "percent",
+          "amount": 3628
+        },
+        {
+          "groupCode": "taxes",
+          "code": "vat_distribution_fixed",
+          "scheduleCode": "vat_fixed",
+          "label": "VAT: Distribution Charge (fixed-charge part of the printed ₱38.85)",
+          "base": 21.38,
+          "baseUnit": "pesos",
+          "price": 12,
+          "priceUnit": "percent",
+          "amount": 257
+        },
+        {
+          "groupCode": "universal",
+          "code": "missionary_npc_spug",
+          "scheduleCode": "universal",
+          "label": "Missionary Elec for NPC-SPUG",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.2662,
+          "priceUnit": "per_kwh",
+          "amount": 7267
+        },
+        {
+          "groupCode": "universal",
+          "code": "missionary_redci",
+          "scheduleCode": "universal",
+          "label": "Missionary Elec for REDCI",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.0101,
+          "priceUnit": "per_kwh",
+          "amount": 276
+        },
+        {
+          "groupCode": "universal",
+          "code": "environmental_fund",
+          "scheduleCode": "universal",
+          "label": "Environmental Fund",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.0025,
+          "priceUnit": "per_kwh",
+          "amount": 68
+        },
+        {
+          "groupCode": "universal",
+          "code": "npc_stranded_debts",
+          "scheduleCode": "universal",
+          "label": "NPC Stranded Debts",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.0428,
+          "priceUnit": "per_kwh",
+          "amount": 1168
+        },
+        {
+          "groupCode": "fit_all",
+          "code": "fit_all",
+          "scheduleCode": "fit_all",
+          "label": "FiT-All (Renewable)",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.3359,
+          "priceUnit": "per_kwh",
+          "amount": 9170
+        },
+        {
+          "groupCode": "lifeline",
+          "code": "lifeline_subsidy",
+          "scheduleCode": "subsidies",
+          "label": "Lifeline Subsidy Rate",
+          "base": 273,
+          "baseUnit": "kwh",
+          "price": 0.01,
+          "priceUnit": "per_kwh",
+          "amount": 273
+        }
+      ]
+    }
+  ],
+  "payments": [
+    {
+      "forPeriod": "2026-05",
+      "postedOn": "2026-05-28",
+      "channel": "Meralco Headquarters",
+      "amount": 5
+    },
+    {
+      "forPeriod": "2026-05",
+      "postedOn": "2026-06-11",
+      "channel": "Bayad Bank Partner - OTC",
+      "amount": 478664
+    },
+    {
+      "forPeriod": "2026-06",
+      "postedOn": "2026-06-28",
+      "channel": "Meralco Headquarters",
+      "amount": 36
+    },
+    {
+      "forPeriod": "2026-06",
+      "postedOn": "2026-07-15",
+      "channel": "Bayad Partner - Digital",
+      "amount": 463964
+    },
+    {
+      "forPeriod": "2026-07",
+      "postedOn": "2026-08-14",
+      "channel": "Bayad Partner - Digital",
+      "amount": 441758
+    },
+    {
+      "forPeriod": "2026-08",
+      "postedOn": "2026-09-15",
+      "channel": "Bayad Partner - Digital",
+      "amount": 435949
+    }
+  ]
+}

@@ -9,3 +9,6 @@ dist/
 ml-service/.venv/
 __pycache__/
 .pytest_cache/
+
+# Real identifiers for the real-Bill Household (never committed)
+server/seed.local.json
