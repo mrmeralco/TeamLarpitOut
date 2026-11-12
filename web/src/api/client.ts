@@ -41,17 +41,34 @@ export interface SingleCheckResult {
   discrepancy?: DisagreeingFigures;
 }
 
+export interface OutlierEvaluation {
+  isOutlier: boolean;
+  dailyKwh: number;
+  predictedDailyKwh: number;
+  thresholdDailyKwh: number;
+  ratio: number;
+  hasHouseholdChange: boolean;
+}
+
 export interface BillChecksResult {
-  overall: "green" | "red";
+  overall: "green" | "yellow" | "red";
   checks: SingleCheckResult[];
   failedChecks: SingleCheckResult[];
   summary: string;
+  outlier?: OutlierEvaluation;
+}
+
+export interface HouseholdChange {
+  reason: string;
+  period?: string;
+  recordedAt?: string;
 }
 
 export interface Household {
   sin: string;
   masked_address: string;
   meter_type: "traditional" | "smart";
+  changes?: HouseholdChange[];
 }
 export interface LoginResult { token: string; households: Household[] }
 export interface HistoryBill extends BillInput { provenance?: { kind: string; note: string } }
@@ -164,6 +181,12 @@ export const api = {
       cache: "no-store",
       signal,
     }).then((r) => json<BillChecksResult>(r)),
+  recordHouseholdChange: (token: string, sin: string, reason: string, period?: string) =>
+    fetch(`/api/households/${encodeURIComponent(sin)}/changes`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ reason, period }),
+    }).then((r) => json<{ ok: boolean; change: HouseholdChange }>(r)),
 };
 
 export interface DraftBill {

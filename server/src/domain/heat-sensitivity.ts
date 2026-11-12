@@ -10,6 +10,8 @@ export type SensitivitySource = "history" | "cooling_appliance_estimate";
 export interface HeatSensitivityResult {
   /** Extra kWh per day per cooling degree day. */
   heatSensitivity: number;
+  /** Baseline daily kWh when CDD = 0. */
+  baseKwhPerDay: number;
   source: SensitivitySource;
   label: string;
   hotDayKwh: number;
@@ -17,6 +19,19 @@ export interface HeatSensitivityResult {
 
 /** Baseline cooling sensitivity when no bill history is available (1.0 kWh/CDD). */
 export const DEFAULT_COOLING_SENSITIVITY = 1.0;
+
+/**
+ * Predict daily kWh given a learned or fallback HeatSensitivityResult and CDD/day.
+ * predicted_kwh_per_day(cdd) = base + s * cdd
+ */
+export function predictKwhPerDay(
+  sensitivity: HeatSensitivityResult,
+  cddPerDay: number,
+  fallbackBaseDailyKwh?: number,
+): number {
+  const base = sensitivity.baseKwhPerDay || fallbackBaseDailyKwh || 0;
+  return Math.max(0, Math.round((base + sensitivity.heatSensitivity * Math.max(0, cddPerDay)) * 100) / 100);
+}
 
 /**
  * Learn heat sensitivity (slope of daily kWh vs CDD/day) from historical bills.
@@ -32,8 +47,12 @@ export function calculateHeatSensitivity(
   );
 
   if (valid.length < 3) {
+    const meanDaily =
+      valid.length > 0 ? valid.reduce((acc, b) => acc + b.kwh / b.billingDays, 0) / valid.length : 0;
+    const base = Math.max(0, meanDaily - fallbackSensitivity * 0);
     return {
       heatSensitivity: fallbackSensitivity,
+      baseKwhPerDay: Math.round(base * 100) / 100,
       source: "cooling_appliance_estimate",
       label: "Cooling Appliance estimate",
       hotDayKwh: fallbackSensitivity,
@@ -64,8 +83,10 @@ export function calculateHeatSensitivity(
 
   // If there's no variation in CDD, slope is undefined; fall back to estimate.
   if (varX <= 1e-6) {
+    const base = Math.max(0, meanY - fallbackSensitivity * meanX);
     return {
       heatSensitivity: fallbackSensitivity,
+      baseKwhPerDay: Math.round(base * 100) / 100,
       source: "cooling_appliance_estimate",
       label: "Cooling Appliance estimate",
       hotDayKwh: fallbackSensitivity,
@@ -76,9 +97,11 @@ export function calculateHeatSensitivity(
   // Energy consumption increases with heat, so sensitivity is non-negative.
   const clamped = Math.max(0, slope);
   const rounded = Math.round(clamped * 10) / 10;
+  const base = Math.max(0, meanY - rounded * meanX);
 
   return {
     heatSensitivity: rounded,
+    baseKwhPerDay: Math.round(base * 100) / 100,
     source: "history",
     label: "Mula sa Bill History",
     hotDayKwh: rounded,

@@ -21,4 +21,11 @@ export class BillChecksRequestDto {
   @ValidateNested({ each: true })
   @Type(() => PaymentRecordDto)
   payments?: PaymentRecordDto[];
+
+  @IsOptional()
+  @IsNumber()
+  predictedDailyKwh?: number;
+
+  @IsOptional()
+  hasHouseholdChange?: boolean;
 }

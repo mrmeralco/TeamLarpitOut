@@ -239,6 +239,7 @@ describe("merged bill breakdown and scan linkage", () => {
   });
 
   it("taps Weather Effect in 'Bakit ganito?' to reveal bawat mas mainit na araw", async () => {
+    const originalFetch = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (input, init) => {
       if (input === "/api/bakit-ganito") {
         return response({
@@ -271,12 +272,13 @@ describe("merged bill breakdown and scan linkage", () => {
         });
       }
       if (input === "/api/rate-schedules") return response({ periods: ["2026-09", "2026-10"] });
-      throw new Error(`Unexpected request: ${input}`);
+      return originalFetch(input, init);
     });
 
     render(<App />);
     await scanAndConfirm();
-    fireEvent.click(screen.getByRole("button", { name: "Bakit ganito?" }));
+    const decodeBtn = await screen.findByRole("button", { name: /Bakit ganito/ });
+    fireEvent.click(decodeBtn);
     await screen.findByRole("heading", { name: "Bakit ganito?" });
 
     const weatherRow = screen.getByRole("button", { name: /Weather Effect/ });

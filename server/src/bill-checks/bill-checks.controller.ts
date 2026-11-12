@@ -15,6 +15,8 @@ export class BillChecksController {
     return this.billChecks.check(body.now, body.before, {
       tolerancePesos: body.tolerancePesos,
       payments: body.payments,
+      predictedDailyKwh: body.predictedDailyKwh,
+      hasHouseholdChange: body.hasHouseholdChange,
     });
   }
 
