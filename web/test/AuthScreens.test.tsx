@@ -26,6 +26,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 async function signUp() {
+  fireEvent.change(screen.getByLabelText("Full name"), { target: { value: "Rosa Dela Cruz" } });
   fireEvent.change(screen.getByLabelText("Email address"), { target: { value: "rosa@gmail.com" } });
   fireEvent.change(screen.getByLabelText("Contact number"), { target: { value: "917 123 4567" } });
   fireEvent.click(screen.getByRole("button", { name: "Create account" }));
@@ -33,13 +34,13 @@ async function signUp() {
 }
 
 describe("Sign up (mockup screens 1–3)", () => {
-  it("asks only email + contact number and sends the code by SMS", async () => {
+  it("asks full name, email + contact number and sends the code by SMS", async () => {
     render(<AuthFlow initial="signup" onSignedIn={() => {}} />);
     expect(screen.getByRole("heading", { name: "Create your account" })).toBeTruthy();
     expect(screen.queryByLabelText(/password/i)).toBeNull();
     expect((screen.getByRole("button", { name: "Create account" }) as HTMLButtonElement).disabled).toBe(true);
     await signUp();
-    expect(body("/api/auth/signup")).toEqual({ email: "rosa@gmail.com", phone: "+639171234567" });
+    expect(body("/api/auth/signup")).toEqual({ email: "rosa@gmail.com", phone: "+639171234567", name: "Rosa Dela Cruz" });
     expect(screen.getByText("+63 917 ••• 4567")).toBeTruthy();
     expect(screen.getByText(/Resend code in 2:00/)).toBeTruthy();
   });

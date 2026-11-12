@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RawBillReading, VisionProvider } from "../src/vision/vision-provider.interface.js";
-import { bill, harness, testAccounts } from "./utils/test-harness.js";
+import { bill, harness, TEST_NAME, testAccounts } from "./utils/test-harness.js";
 
 const A = testAccounts[0]!; // CAN 1000000001 → SIN 1234567890, traditional
 const SMART = testAccounts[1]!; // CAN 1000000002 → SIN 9876543210, smart
@@ -8,17 +8,18 @@ const twelve = Array.from({ length: 14 }, (_, i) => {
   const d = new Date(Date.UTC(2025, 8 + i, 1));
   return bill(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`, 200 + i, 30, [{ label: "Generation", amount: 1234.56 }]);
 });
-const reading = (can: string | null): RawBillReading => ({
-  readable: true, customerAccountNumber: can, serviceIdNumber: null, period: "2026-10", kwh: 213, billingDays: 30,
+const reading = (can: string | null, accountName: string | null = TEST_NAME): RawBillReading => ({
+  readable: true, customerAccountNumber: can, accountName, serviceIdNumber: null, period: "2026-10", kwh: 213, billingDays: 30,
 });
 /** Vision that reads whatever CAN the test sets next. */
-function switchableVision(initial: string | null = A.can) {
+function switchableVision(initial: string | null = A.can, initialName: string | null = TEST_NAME) {
   let can = initial;
+  let name = initialName;
   const provider: VisionProvider = {
-    async readBill() { return reading(can); },
+    async readBill() { return reading(can, name); },
     async readEnergyLabel() { return { readable: false }; },
   };
-  return Object.assign(provider, { set(next: string | null) { can = next; } });
+  return Object.assign(provider, { set(next: string | null) { can = next; }, setName(next: string | null) { name = next; } });
 }
 const NEW = "new-person@example.test";
 const PER_HOUSEHOLD = (sin: string) => [
@@ -167,5 +168,32 @@ describe("demo fallback (AUTH_FIXED_CODE set)", () => {
     const { api, token, scan } = await scanned(switchableVision("5512345678"));
     expect(scan.body.account.status).toBe("unknownAccount");
     expect((await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken }, token)).status).toBe(404);
+  });
+});
+
+describe("Account Linking checks the name on the Bill", () => {
+  it("links a Bill printed as \"DELA CRUZ, JUAN P.\" for a login named Juan Dela Cruz", async () => {
+    const { api, token, scan } = await scanned(switchableVision(A.can, "DELA CRUZ, JUAN P."));
+    expect(scan.body.account.status).toBe("found");
+    const linked = await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken }, token);
+    expect(linked.status).toBe(200);
+  });
+
+  it("refuses a Bill in someone else's name, at the scan and at confirm", async () => {
+    const { api, token, scan } = await scanned(switchableVision(A.can, "SANTOS, MARIA L."));
+    expect(scan.body.account).toMatchObject({ status: "nameMismatch", billNameMasked: "S*** M***" });
+    expect(JSON.stringify(scan.body)).not.toContain("SANTOS");
+    const linked = await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken }, token);
+    expect(linked.status).toBe(403);
+    expect(linked.body.reason).toBe("nameMismatch");
+    expect((await api.get("/api/households", token)).body).toEqual([]);
+  });
+
+  it("refuses when the name on the Bill can't be read", async () => {
+    const { api, token, scan } = await scanned(switchableVision(A.can, null));
+    expect(scan.body.account.status).toBe("nameUnread");
+    const linked = await api.post("/api/households/link/confirm", { scanToken: scan.body.scanToken }, token);
+    expect(linked.status).toBe(403);
+    expect(linked.body.reason).toBe("nameUnread");
   });
 });

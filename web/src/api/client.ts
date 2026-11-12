@@ -69,8 +69,8 @@ const post = <T>(path: string, body: unknown) => fetch(path, {
 }).then((r) => json<T>(r));
 
 export const api = {
-  /** Sign up 1/3: email + mobile number; a one-time code goes to the phone. */
-  signUp: (email: string, phone: string) => post<CodeSent>("/api/auth/signup", { email, phone }),
+  /** Sign up 1/3: email + mobile number + full name (as on the bill); a one-time code goes to the phone. */
+  signUp: (email: string, phone: string, name: string) => post<CodeSent>("/api/auth/signup", { email, phone, name }),
   resendCode: (email: string, channel: "sms" | "email") => post<CodeSent>("/api/auth/signup/resend", { email, channel }),
   /** Sign up 2/3: the code; the email then gets a verification link. */
   verifyCode: (email: string, code: string) =>
@@ -120,7 +120,11 @@ export type ScannedAccount =
   | ({ status: "alreadyLinked"; householdSin: string } & AccountSummary)
   | { status: "canUnread" }
   | { status: "unknownAccount"; canMasked: string }
-  | { status: "ownedByAnother"; canMasked: string; message: string };
+  | { status: "ownedByAnother"; canMasked: string; message: string }
+  /** The bill is in a different name than this login (initials only, e.g. "S*** M***"). */
+  | { status: "nameMismatch"; billNameMasked: string; message: string }
+  /** The account name on the bill couldn't be read. */
+  | { status: "nameUnread"; message: string };
 
 export interface LinkCorrections { kwh?: number; billingDays?: number; totalAmount?: number }
 

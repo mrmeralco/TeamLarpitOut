@@ -1,5 +1,7 @@
-import { BadRequestException, Body, ConflictException, Controller, Header, HttpCode, Inject, Injectable, Module, NotFoundException, Post, Req, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Header, HttpCode, Inject, Injectable, Module, NotFoundException, Post, Req, UseGuards } from "@nestjs/common";
 import { SessionGuard, type AuthenticatedRequest } from "../auth/session.guard.js";
+import { AuthService } from "../auth/auth.service.js";
+import { compareNames } from "../domain/name-match.js";
 import type { BillSource } from "../bills/bill-source.js";
 import { BillsModule } from "../bills/bills.module.js";
 import type { MeralcoAccount, MeralcoAccountSource } from "../bills/meralco-accounts.js";
@@ -21,11 +23,19 @@ export type ScannedAccount =
   | { status: "alreadyLinked"; canMasked: string; householdSin: string; area: string; meterType: MeralcoAccount["meter_type"]; billsOnRecord: number; firstPeriod: string | null; lastPeriod: string | null; demo?: true }
   | { status: "canUnread" }
   | { status: "unknownAccount"; canMasked: string }
-  | { status: "ownedByAnother"; canMasked: string; message: string };
+  | { status: "ownedByAnother"; canMasked: string; message: string }
+  /** The Bill is in a different name than the login that scanned it. */
+  | { status: "nameMismatch"; billNameMasked: string; message: string }
+  /** The account name on the Bill could not be read, so ownership can't be checked. */
+  | { status: "nameUnread"; message: string };
+
+export const NAME_MISMATCH = "This bill is in a different name than your Eelio account. Only the account holder named on the bill can link it.";
+export const NAME_UNREAD = "We couldn't read the account name on this bill. Retake the photo so the name is clear.";
 
 /**
- * Account Linking without a CAN screen: the scan reads the CAN from the Bill (the Bill
- * in hand is the ownership check) and "Yes, explain my bill" links it.
+ * Account Linking without a CAN screen: the scan reads the CAN and the account name from the
+ * Bill. The Bill must be in the name the person signed up with (the ownership check), then
+ * "Yes, explain my bill" links it.
  */
 @Injectable()
 export class AccountLinkingService {
@@ -33,7 +43,22 @@ export class AccountLinkingService {
     @Inject(MERALCO_ACCOUNTS) private readonly meralco: MeralcoAccountSource,
     @Inject(HOUSEHOLD_LINKS) private readonly links: HouseholdLinkRepository,
     @Inject(BILL_SOURCE) private readonly bills: BillSource,
+    private readonly auth: AuthService,
   ) {}
+
+  /**
+   * The Bill's printed name against the login's sign-up name. Logins made before names were
+   * asked have none to compare, so they are not checked.
+   */
+  async nameCheck(ownerId: string, billName: string | null) {
+    const mine = await this.auth.nameFor(ownerId);
+    if (mine === null) return null;
+    const check = compareNames(mine, billName);
+    if (check.status === "match") return null;
+    return check.status === "mismatch"
+      ? { status: "nameMismatch" as const, billNameMasked: check.billNameMasked, message: NAME_MISMATCH }
+      : { status: "nameUnread" as const, message: NAME_UNREAD };
+  }
 
   /** Area, Meter Type and how many Bills are on record. Never amounts, kWh or the address. */
   private async summary(account: MeralcoAccount) {
@@ -63,7 +88,9 @@ export class AccountLinkingService {
     return this.meralco.household(process.env.DEMO_FALLBACK_SIN ?? "1234567890");
   }
 
-  async preview(ownerId: string, can: string | null): Promise<ScannedAccount> {
+  async preview(ownerId: string, can: string | null, billName: string | null = null): Promise<ScannedAccount> {
+    const name = await this.nameCheck(ownerId, billName);
+    if (name) return name;
     if (can === null) return { status: "canUnread" };
     const account = await this.meralco.findByCan(can);
     if (!account || account.demo) {
@@ -80,7 +107,10 @@ export class AccountLinkingService {
   }
 
   /** `scanned` is the confirmed Bill; only a demo Household uses it (as its latest Bill). */
-  async link(ownerId: string, can: string, scanned: ScannedBill = {}) {
+  async link(ownerId: string, can: string, scanned: ScannedBill = {}, billName: string | null = null) {
+    const name = await this.nameCheck(ownerId, billName);
+    if (name?.status === "nameMismatch") throw new ForbiddenException({ error: name.message, reason: "nameMismatch", billNameMasked: name.billNameMasked });
+    if (name) throw new ForbiddenException({ error: name.message, reason: "nameUnread" });
     const account = await this.meralco.findByCan(can);
     if (!account || account.demo) {
       const sample = await this.demoFallback();
@@ -130,7 +160,7 @@ export class AccountLinkingController {
     const corrections = Object.fromEntries(
       (["kwh", "billingDays", "totalAmount"] as const).filter((k) => body[k] !== undefined).map((k) => [k, body[k]]),
     );
-    return this.linking.link(request.auth.ownerId, can, { ...scanned.bill, ...corrections });
+    return this.linking.link(request.auth.ownerId, can, { ...scanned.bill, ...corrections }, scanned.accountName);
   }
 }
 

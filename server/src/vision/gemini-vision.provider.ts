@@ -12,6 +12,7 @@ Extract only what is printed. Never guess or compute a value that is not printed
 - estimated: true only if the bill marks the reading as estimated (e.g. "ESTIMATED", "EST"); otherwise false.
 - serviceIdNumber: the Service ID Number (SIN), digits only.
 - customerAccountNumber: the Customer Account Number (CAN), digits only.
+- accountName: the customer/account holder's name exactly as printed on the bill (not the address).
 - chargeLines: every charge line with its peso amount, as printed (label in the bill's own words).
 - history: the printed monthly consumption history (kWh per month), if the bill shows one.
 Set readable=false with a short problem if this is not a Meralco bill or the key numbers cannot be read.`;
@@ -25,6 +26,7 @@ const SCHEMA = {
     problem: nullable("string"),
     serviceIdNumber: nullable("string"),
     customerAccountNumber: nullable("string"),
+    accountName: nullable("string"),
     period: nullable("string"),
     billingDays: nullable("integer"),
     kwh: nullable("number"),

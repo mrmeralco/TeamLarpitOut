@@ -8,6 +8,11 @@ export class StartSignupDto {
   /** Philippine mobile number in +63 format, e.g. +639171234567. */
   @Matches(/^\+639\d{9}$/, { message: "Enter a Philippine mobile number, e.g. 917 123 4567." })
   phone: string;
+
+  /** Full name as printed on the Meralco Bill; linking checks the scanned Bill against it. */
+  @IsString()
+  @Matches(/^(?=.*\p{L}.*\p{L})[\p{L}\p{M} .,'-]{2,100}$/u, { message: "Enter your full name as it appears on your Meralco bill." })
+  name: string;
 }
 
 export class ResendOtpDto {

@@ -9,8 +9,9 @@ const TTL_MS = 15 * 60 * 1000;
 /**
  * What a scan proved: the full CAN printed on the Bill (null when it was not readable), and the
  * Bill as read. The Bill is used only in demo mode, as the latest Bill of a demo Household.
+ * The printed account name is kept (15 minutes, memory only) so linking can check it.
  */
-export interface ScanContext { can: string | null; bill: Partial<Bill> }
+export interface ScanContext { can: string | null; bill: Partial<Bill>; accountName: string | null }
 
 /** Formatting separators are accepted; partial numbers or letters never identify an account. */
 export function tenDigits(raw: unknown): string | null {
@@ -24,12 +25,12 @@ export class ScanContextStore {
   private readonly contexts = new Map<string, ScanContext & { expiresAt: number }>();
   constructor(@Inject(AUTH_CLOCK) private readonly clock: AuthClock) {}
 
-  create(rawCan: unknown, bill: Partial<Bill> = {}): string {
+  create(rawCan: unknown, bill: Partial<Bill> = {}, accountName: string | null = null): string {
     const now = this.clock.now();
     for (const [key, value] of this.contexts) if (value.expiresAt <= now) this.contexts.delete(key);
     if (this.contexts.size >= MAX_CONTEXTS) this.contexts.delete(this.contexts.keys().next().value!);
     const token = randomBytes(32).toString("base64url");
-    this.contexts.set(token, { can: tenDigits(rawCan), bill: structuredClone(bill), expiresAt: now + TTL_MS });
+    this.contexts.set(token, { can: tenDigits(rawCan), bill: structuredClone(bill), accountName, expiresAt: now + TTL_MS });
     return token;
   }
 
@@ -39,6 +40,6 @@ export class ScanContextStore {
       this.contexts.delete(token);
       throw new NotFoundException({ error: "The scan expired or was not found. Please scan the Bill again." });
     }
-    return { can: value.can, bill: structuredClone(value.bill) };
+    return { can: value.can, bill: structuredClone(value.bill), accountName: value.accountName };
   }
 }

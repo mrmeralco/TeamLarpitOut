@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ownerIdForEmail } from "../src/auth/auth.service.js";
 import { LogNotifier } from "../src/auth/notifier.interface.js";
-import { bill, harness, TEST_CODE, TEST_PASSWORD, TEST_PHONE, testLogins } from "./utils/test-harness.js";
+import { bill, harness, TEST_CODE, TEST_NAME, TEST_PASSWORD, TEST_PHONE, testLogins } from "./utils/test-harness.js";
 
 const householdPath = (sin: string) => `/api/households/${sin}/bakit-ganito`;
 const pair = [bill("2026-09", 100, 30), bill("2026-10", 100, 30)];
@@ -11,7 +11,7 @@ const NEW = "rosa@example.test";
 type Api = Awaited<ReturnType<typeof harness>>;
 /** Sign-up steps 1–2: email + mobile, then the SMS code; returns the emailed link token. */
 async function toLink(api: Api, email = NEW) {
-  expect((await api.post("/api/auth/signup", { email, phone: TEST_PHONE })).status).toBe(202);
+  expect((await api.post("/api/auth/signup", { email, phone: TEST_PHONE, name: TEST_NAME })).status).toBe(202);
   expect((await api.post("/api/auth/signup/verify", { email, code: api.notifier.codes.at(-1)!.code })).status).toBe(200);
   return api.notifier.links.at(-1)!.token;
 }
@@ -19,7 +19,7 @@ async function toLink(api: Api, email = NEW) {
 describe("sign up (like My Meralco): email + mobile → SMS code → email link → create password", () => {
   it("sends the code by SMS to the mobile number, then a verification link to the email", async () => {
     const api = await harness();
-    const start = await api.post("/api/auth/signup", { email: "Rosa@Example.test", phone: TEST_PHONE });
+    const start = await api.post("/api/auth/signup", { email: "Rosa@Example.test", phone: TEST_PHONE, name: TEST_NAME });
     expect(start).toEqual({ status: 202, body: { channel: "sms", sentTo: "+63 917 ••• 4567", expiresInSeconds: 600 } });
     expect(api.notifier.codes).toEqual([{ channel: "sms", to: TEST_PHONE, code: TEST_CODE }]);
     const verify = await api.post("/api/auth/signup/verify", { email: NEW, code: TEST_CODE });
@@ -30,7 +30,7 @@ describe("sign up (like My Meralco): email + mobile → SMS code → email link 
 
   it("can send the code by email instead", async () => {
     const api = await harness();
-    await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE });
+    await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE, name: TEST_NAME });
     const resend = await api.post("/api/auth/signup/resend", { email: NEW, channel: "email" });
     expect(resend).toEqual({ status: 202, body: { channel: "email", sentTo: "r••a@example.test", expiresInSeconds: 600 } });
     expect(api.notifier.codes.at(-1)).toEqual({ channel: "email", to: NEW, code: TEST_CODE });
@@ -70,7 +70,7 @@ describe("sign up (like My Meralco): email + mobile → SMS code → email link 
     let now = 0;
     let next = 0;
     const api = await harness({ clock: { now: () => now }, codes: () => ["111111", "222222", "333333"][next++]! });
-    await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE });
+    await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE, name: TEST_NAME });
     for (let i = 0; i < 5; i++) expect((await api.post("/api/auth/signup/verify", { email: NEW, code: "999999" })).status).toBe(401);
     expect((await api.post("/api/auth/signup/verify", { email: NEW, code: "111111" })).status).toBe(401);
     await api.post("/api/auth/signup/resend", { email: NEW, channel: "sms" });
@@ -84,13 +84,13 @@ describe("sign up (like My Meralco): email + mobile → SMS code → email link 
   it("tells an existing account to sign in instead", async () => {
     const api = await harness();
     await api.login(NEW);
-    const again = await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE });
+    const again = await api.post("/api/auth/signup", { email: NEW, phone: TEST_PHONE, name: TEST_NAME });
     expect(again.status).toBe(409);
     expect(again.body.reason).toBe("accountExists");
   });
 
   it.each([
-    ["/api/auth/signup", { email: NEW }], ["/api/auth/signup", { email: NEW, phone: "09171234567" }], ["/api/auth/signup", { email: "invalid", phone: TEST_PHONE }],
+    ["/api/auth/signup", { email: NEW }], ["/api/auth/signup", { email: NEW, phone: "09171234567" }], ["/api/auth/signup", { email: "invalid", phone: TEST_PHONE, name: TEST_NAME }],
     ["/api/auth/signup/verify", { email: NEW, code: "12345" }], ["/api/auth/signup/resend", { email: NEW, channel: "fax" }],
     ["/api/auth/signup/password", { token: "short", password: "rosa2026x" }], ["/api/auth/signin", { email: NEW }],
   ])("rejects malformed input to %s: %j", async (path, body) => {
@@ -124,7 +124,7 @@ describe("sign in: email + password", () => {
   it("gives one answer for a wrong password, an unknown email and an unfinished sign-up", async () => {
     const api = await harness();
     await api.login(NEW);
-    await api.post("/api/auth/signup", { email: "half@example.test", phone: TEST_PHONE });
+    await api.post("/api/auth/signup", { email: "half@example.test", phone: TEST_PHONE, name: TEST_NAME });
     const wrong = await api.post("/api/auth/signin", { email: NEW, password: "wrong-pass-9" });
     const unknown = await api.post("/api/auth/signin", { email: "nobody@example.test", password: TEST_PASSWORD });
     const unfinished = await api.post("/api/auth/signin", { email: "half@example.test", password: TEST_PASSWORD });

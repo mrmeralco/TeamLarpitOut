@@ -2,8 +2,10 @@
 
 Deterministic: no model, no network. It looks only for Meralco's printed labels
 ("Billing Period", "Customer Account Number (CAN)", "Current Reading", "Actual Consumption",
-"Charges for this billing period" ... "Total Amount Due") and never extracts the name or
-address. Two strategies, merged field by field:
+"Charges for this billing period" ... "Total Amount Due"). It never extracts the address or
+meter number. The account name is read only from the top-left corner (where every Meralco Bill
+prints it, above the address) so the app can check the Bill is in the name of the person linking
+it. Two strategies, merged field by field:
 
 1. Geometry (first): a value is the box right of, or just below, its label; each charge
    label is paired with the amount on the same (straightened) line. Survives tilted photos
@@ -27,6 +29,36 @@ RANGE = re.compile(DATE + r"\s*(?:to|-|–|—)\s*" + DATE, re.I)
 AMOUNT = r"\(?-?[₱P®?]?\s?\d[\d,]*[.,]\d{2}\)?"
 READING = re.compile(r"\d{1,3}(?:,\d{3})+|\d{3,7}")
 CAN = re.compile(r"(?<!\d)(\d{4}[\s-]?\d{3}[\s-]?\d{3})(?!\d)")
+
+
+# Words that mark an address, the logo or a heading, never a person's name.
+NOT_A_NAME = re.compile(
+    r"\b(meralco|electric|company|bill|invoice|reprint|street|st|avenue|ave|road|rd|barangay|brgy|bgy|city|metro|"
+    r"manila|subdivision|subd|village|vill|phase|blk|block|lot|unit|bldg|building|floor|purok|sitio|zone|province|"
+    r"meter|route|seq|page|customer|account|period|date|back|front|near|beside|corner|cor|hall)\b",
+    re.I,
+)
+NAME_LINE = re.compile(r"^[A-Za-zÀ-ÿÑñ][A-Za-zÀ-ÿÑñ.,'\- ]+$")
+TOP_LEFT_ANCHOR = r"billing\s+period|your\s+electric\s+bill|meter\s+no|route\s+seq"
+
+
+def top_left_name(boxes: list[Box]) -> str | None:
+    """The account name: the first name-like line in the top-left corner, above the bill's first
+    labelled field (or in the top quarter of the page when no label is found)."""
+    if not boxes:
+        return None
+    left, _ = columns(boxes)
+    left = left or boxes  # one column of text (no layout): the whole page is "left"
+    top = min(b.y0 for b in boxes)
+    anchors = [b.y0 for b in left if re.search(TOP_LEFT_ANCHOR, b.text, re.I)]
+    limit = min(anchors) if anchors else top + (max(b.y1 for b in boxes) - top) * 0.25
+    corner = [b for b in left if b.cy < limit]
+    for row in lines(corner):
+        line = re.sub(r"\s+", " ", " ".join(b.text for b in row)).strip(" ,.")
+        words = [w for w in re.split(r"[\s,]+", line) if len(re.sub(r"[^A-Za-zÀ-ÿÑñ]", "", w)) >= 2]
+        if NAME_LINE.match(line) and len(words) >= 2 and not NOT_A_NAME.search(line):
+            return line[:120]
+    return None
 
 
 # ---------- small value parsers ----------
@@ -303,6 +335,7 @@ def parse_bill(boxes: list[Box]) -> dict:
         "estimated": bool(re.search(r"\bestimated\b", everything, re.I)),
         "serviceIdNumber": sin_digits if sin_digits and 10 <= len(sin_digits) <= 12 else None,
         "customerAccountNumber": can,
+        "accountName": top_left_name(boxes),
         "chargeLines": charge_lines or None,
         "history": history,
         "chargesTotal": charges_total,
