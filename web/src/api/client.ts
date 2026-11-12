@@ -407,7 +407,7 @@ export interface PointsHistoryEntry {
   savedKwh: number;
   baselineKwh: number;
   actualKwh: number;
-  /** "bill_verified" (traditional, per Bill), "meter_verified" (smart meter, per day), "welcome", "redemption". */
+  /** "bill_verified" (traditional, per Bill), "meter_verified" (smart meter, per day), "welcome", "demo_bonus" (seeded demo Points), "redemption". */
   source: string;
   hasOutage: boolean;
   excludedReason?: string | null;
