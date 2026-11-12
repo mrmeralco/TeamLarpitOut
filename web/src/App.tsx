@@ -487,7 +487,7 @@ export function App() {
   return (
     <main>
       <header>
-        <h1>KuryenteKo</h1>
+        <h1>Eelio</h1>
         <p>Bakit ganito ang bill ko?</p>
       </header>
 

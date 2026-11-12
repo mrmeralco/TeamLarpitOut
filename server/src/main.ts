@@ -10,4 +10,4 @@ if (existsSync(".env")) process.loadEnvFile(".env");
 const app = configureApp(await NestFactory.create(AppModule));
 const port = Number(process.env.PORT ?? 8787);
 await app.listen(port);
-console.log(`KuryenteKo API on http://localhost:${port}`);
+console.log(`Eelio API on http://localhost:${port}`);
