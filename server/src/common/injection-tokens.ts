@@ -14,5 +14,7 @@ export const AUTH_CLOCK = Symbol("AUTH_CLOCK");
 export const APPLIANCE_REPOSITORY = Symbol("APPLIANCE_REPOSITORY");
 /** Per-Household Target and Missions for a billing period (in-memory now; database later). */
 export const USAGE_PLAN_REPOSITORY = Symbol("USAGE_PLAN_REPOSITORY");
+/** Per-Household typed Mid-month Reading for traditional meters (in-memory now; database later). */
+export const MID_MONTH_READING_REPOSITORY = Symbol("MID_MONTH_READING_REPOSITORY");
 /** Words computed Missions for the household; never supplies a number. */
 export const COACH_PROVIDER = Symbol("COACH_PROVIDER");

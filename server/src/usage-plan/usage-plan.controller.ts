@@ -1,6 +1,19 @@
-import { BadRequestException, Body, Controller, Get, Header, Param, Put, Query, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { SessionGuard } from "../auth/session.guard.js";
 import { HouseholdAccessGuard } from "../households/household-access.guard.js";
+import { SaveMidMonthReadingDto } from "./dto/save-mid-month-reading.dto.js";
 import { SaveUsagePlanDto } from "./dto/save-usage-plan.dto.js";
 import { UsagePlanService } from "./usage-plan.service.js";
 
@@ -41,5 +54,23 @@ export class UsagePlanController {
   @Header("Cache-Control", "no-store")
   savePlan(@Param("sin") sin: string, @Body() body: SaveUsagePlanDto) {
     return this.usagePlan.savePlan(sin, body);
+  }
+
+  @Get("forecast")
+  @Header("Cache-Control", "no-store")
+  forecast(@Param("sin") sin: string) {
+    return this.usagePlan.forecast(sin);
+  }
+
+  @Post("mid-month-reading")
+  @Header("Cache-Control", "no-store")
+  saveReading(@Param("sin") sin: string, @Body() body: SaveMidMonthReadingDto) {
+    return this.usagePlan.saveReading(sin, body);
+  }
+
+  @Delete("mid-month-reading")
+  @Header("Cache-Control", "no-store")
+  deleteReading(@Param("sin") sin: string) {
+    return this.usagePlan.deleteReading(sin);
   }
 }

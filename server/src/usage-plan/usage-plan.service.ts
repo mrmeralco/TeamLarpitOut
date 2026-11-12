@@ -6,16 +6,19 @@ import { TemplateCoachProvider } from "../coach/template-coach.provider.js";
 import {
   BILL_SOURCE,
   COACH_PROVIDER,
+  MID_MONTH_READING_REPOSITORY,
   RATE_SCHEDULES,
   USAGE_PLAN_REPOSITORY,
   WEATHER_PROVIDER,
 } from "../common/injection-tokens.js";
 import { findAppliance } from "../domain/appliance-catalog.js";
 import { baseline, nextPeriod, TARGET_CUTS, targetKwh, type TargetCut } from "../domain/baseline.js";
-import { calculateHeatSensitivity } from "../domain/heat-sensitivity.js";
+import { compareTarget, detectHeatWave, forecastRange, forecastSingle } from "../domain/forecast.js";
+import { calculateHeatSensitivity, predictKwhPerDay } from "../domain/heat-sensitivity.js";
 import { rankMissions, type ApplianceUsage } from "../domain/mission-catalog.js";
 import { cost, type RateScheduleTable } from "../domain/rate-schedule.js";
 import type { WeatherProvider } from "../weather/weather-provider.interface.js";
+import type { MidMonthReading, MidMonthReadingRepository } from "./mid-month-reading-repository.interface.js";
 import type { UsagePlan, UsagePlanRepository } from "./usage-plan-repository.interface.js";
 
 const round2 = (x: number) => Math.round(x * 100) / 100;
@@ -30,6 +33,7 @@ export class UsagePlanService {
     @Inject(RATE_SCHEDULES) private readonly rates: RateScheduleTable,
     @Inject(WEATHER_PROVIDER) private readonly weather: WeatherProvider,
     @Inject(USAGE_PLAN_REPOSITORY) private readonly plans: UsagePlanRepository,
+    @Inject(MID_MONTH_READING_REPOSITORY) private readonly readings: MidMonthReadingRepository,
     @Inject(COACH_PROVIDER) private readonly coach: CoachProvider,
     private readonly appliances: AppliancesService,
   ) {}
@@ -138,5 +142,166 @@ export class UsagePlanService {
       createdAt: new Date().toISOString(),
     };
     return { active: true, plan: await this.plans.save(sin, plan) };
+  }
+
+  /**
+   * Forecast for the upcoming billing period.
+   * Without reading: range based on history and 14-day weather forecast.
+   * With typed reading: narrows to single projected figure compared with Target.
+   * Heat wave raises consumption and flags a warning banner.
+   */
+  async forecast(sin: string) {
+    const history = await this.bills.bills(sin);
+    const latest = history.at(-1);
+    if (!latest) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+    const schedule = this.rates.get(latest.period);
+    if (!schedule) {
+      throw new UnprocessableEntityException({ error: `Walang Rate Schedule para sa ${latest.period}`, period: latest.period });
+    }
+
+    const withWeather = await Promise.all(
+      history.map(async (b) => ({
+        kwh: b.kwh,
+        billingDays: b.billingDays,
+        cddPerDay: (await this.weather.getCddPerDay(b.period)) ?? -1,
+      })),
+    );
+    const sensitivity = calculateHeatSensitivity(withWeather);
+    const period = nextPeriod(latest.period);
+    const billingDays = latest.billingDays;
+    const opts = { lifelineEligible: latest.lifelineEligible };
+
+    const forecastWeather = this.weather.getForecast
+      ? await this.weather.getForecast(period)
+      : null;
+    const cddForecast =
+      forecastWeather?.cddPerDay ??
+      (await this.weather.getCddPerDay(period)) ??
+      (await this.weather.getCddPerDay(latest.period)) ??
+      4.0;
+
+    const heatWave = detectHeatWave({
+      isHeatWave: forecastWeather?.isHeatWave,
+      heatIndexMax: forecastWeather?.heatIndexMax,
+      cddForecast,
+      heatSensitivity: sensitivity.heatSensitivity,
+    });
+
+    const fallbackBaseDaily = latest.kwh / latest.billingDays;
+    const baseDailyKwh = predictKwhPerDay(sensitivity, cddForecast, fallbackBaseDaily);
+    const predictedKwhPerDay = baseDailyKwh + heatWave.kwhAdjustmentPerDay;
+
+    const existingReading = await this.readings.find(sin);
+    const hasActiveReading = Boolean(existingReading && existingReading.period === period);
+
+    const sigma = sensitivity.sigma ?? 1.0;
+    const heatSensitivityInfo = {
+      value: sensitivity.heatSensitivity,
+      source: sensitivity.source,
+      label: sensitivity.label,
+      sigma,
+    };
+
+    if (!hasActiveReading) {
+      const range = forecastRange({
+        predictedKwhPerDay,
+        sigma,
+        billingDays,
+        schedule,
+        lifelineEligible: latest.lifelineEligible,
+      });
+
+      return {
+        currency: "PHP-centavos" as const,
+        period,
+        billingDays,
+        rateSchedulePeriod: latest.period,
+        hasReading: false,
+        lastReading: latest.presentReading ?? null,
+        range,
+        projected: null,
+        targetComparison: null,
+        heatWave,
+        heatSensitivity: heatSensitivityInfo,
+      };
+    }
+
+    const r = existingReading!;
+    const projected = forecastSingle({
+      kwhSoFar: r.kwhSoFar,
+      remainingDays: r.remainingDays,
+      predictedKwhPerDay,
+      billingDays,
+      schedule,
+      lifelineEligible: latest.lifelineEligible,
+      reading: r.reading,
+      elapsedDays: r.elapsedDays,
+      readingDate: r.readingDate,
+    });
+
+    const planState = await this.plan(sin);
+    let targetComparison: ReturnType<typeof compareTarget> | null = null;
+    if (planState.active && planState.plan) {
+      targetComparison = compareTarget({
+        projectedPesos: projected.pesos,
+        projectedKwh: projected.kwh,
+        targetPesos: planState.plan.targetPesos,
+        targetKwh: planState.plan.targetKwh,
+      });
+    }
+
+    return {
+      currency: "PHP-centavos" as const,
+      period,
+      billingDays,
+      rateSchedulePeriod: latest.period,
+      hasReading: true,
+      lastReading: latest.presentReading ?? null,
+      range: null,
+      projected,
+      targetComparison,
+      heatWave,
+      heatSensitivity: heatSensitivityInfo,
+    };
+  }
+
+  /** Save a typed cumulative meter reading for the mid-month reading. */
+  async saveReading(sin: string, input: { reading: number; elapsedDays?: number; readingDate?: string }) {
+    const history = await this.bills.bills(sin);
+    const latest = history.at(-1);
+    if (!latest) throw new NotFoundException({ error: "Walang Bill para sa Household na ito." });
+
+    if (latest.presentReading !== undefined && input.reading < latest.presentReading) {
+      throw new BadRequestException({
+        error: `Ang reading ay hindi maaaring mas mababa sa huling reading sa bill (${latest.presentReading}).`,
+      });
+    }
+
+    const period = nextPeriod(latest.period);
+    const billingDays = latest.billingDays;
+    const elapsedDays = input.elapsedDays !== undefined
+      ? Math.max(1, Math.min(billingDays - 1, input.elapsedDays))
+      : Math.floor(billingDays / 2);
+    const remainingDays = Math.max(1, billingDays - elapsedDays);
+    const kwhSoFar = latest.presentReading !== undefined ? input.reading - latest.presentReading : input.reading;
+
+    const reading: MidMonthReading = {
+      sin,
+      period,
+      reading: input.reading,
+      kwhSoFar: round2(kwhSoFar),
+      elapsedDays,
+      remainingDays,
+      readingDate: input.readingDate ?? null,
+      createdAt: new Date().toISOString(),
+    };
+
+    await this.readings.save(sin, reading);
+    return this.forecast(sin);
+  }
+
+  async deleteReading(sin: string) {
+    await this.readings.delete(sin);
+    return this.forecast(sin);
   }
 }

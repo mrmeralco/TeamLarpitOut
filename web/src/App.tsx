@@ -20,6 +20,7 @@ import { BillHistory } from "./components/BillHistory";
 import { SmartMeterUsage } from "./components/SmartMeterUsage";
 import { Appliances } from "./components/Appliances";
 import { UsagePlan } from "./components/UsagePlan";
+import { Forecast } from "./components/Forecast";
 import { Home } from "./components/Home";
 import { ScanLinkageNotice } from "./components/ScanLinkageNotice";
 import { BillBreakdown } from "./components/BillBreakdown";
@@ -500,7 +501,12 @@ export function App() {
       {session && selected && <BillHistory key={`${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} renderExplanation={(r) => <Result r={r} />} />}
       {session && selected?.meter_type === "smart" && <SmartMeterUsage key={`usage:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />}
       {session && selected && <Appliances key={`appliances:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} onSaved={() => setApplianceVersion((v) => v + 1)} />}
-      {session && selected && selected.meter_type === "traditional" && <UsagePlan key={`plan:${session.token}:${selected.sin}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />}
+      {session && selected && selected.meter_type === "traditional" && (
+        <>
+          <UsagePlan key={`plan:${session.token}:${selected.sin}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired} />
+          <Forecast key={`forecast:${session.token}:${selected.sin}`} token={session.token} household={selected} onExpired={onExpired} />
+        </>
+      )}
 
       <section className="card hero-scan">
         <h2>Quick verdict · walang login</h2>
