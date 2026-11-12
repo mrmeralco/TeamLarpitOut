@@ -8,9 +8,8 @@ import { AuthFlow, CreatePassword } from "./components/auth/AuthScreens";
 import { AuthLayout } from "./components/auth/AuthLayout";
 import { GuestBillFlow } from "./components/GuestBillFlow";
 import { ScanBill } from "./components/ScanBill";
-import { HouseholdPicker } from "./components/HouseholdPicker";
-import { SmartMeterUsage } from "./components/SmartMeterUsage";
-import { Appliances } from "./components/Appliances";
+import { AccountProfile } from "./components/AccountProfile";
+import { Leaderboards } from "./components/Leaderboards";
 import { clearPlanCache, MissionPlan, PlanSummaryCard } from "./components/MissionPlan";
 import { EelioLoader } from "./components/EelioLoader";
 import { clearHomeCache, Home } from "./components/Home";
@@ -98,11 +97,6 @@ export function App() {
     return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setupKey]);
-  /** After appliances change elsewhere (Account), re-read setup without blanking the Missions tab. */
-  const refreshSetup = () => {
-    if (!session || !selectedSin) return;
-    setupApi.status(session.token, selectedSin).then(setSetup).catch((err) => { if (err instanceof ApiError && err.status === 401) onExpired(); });
-  };
 
   const select = (sin: string) => { setSelectedSin(sin); setAsking(null); stored.set("household", sin); };
   const selected: Household | undefined = session?.households.find((h) => h.sin === selectedSin);
@@ -174,23 +168,29 @@ export function App() {
             })} />
           {asking && <ChargeChat key={`chat:${key}:${asking.line.id}`} token={session.token} sin={selected.sin} line={asking.line}
             previousMonth={asking.previousMonth} onClose={() => setAsking(null)} onExpired={onExpired} />}
-          {selected.meter_type === "smart" && <SmartMeterUsage key={`usage:${key}`} token={session.token} household={selected} onExpired={onExpired} />}
         </>}
         {tab === "missions" && <MissionsTab token={session.token} household={selected} sub={route.sub} go={go}
           setup={setup} onSetup={(s) => { setSetup(s); setApplianceVersion((v) => v + 1); }} onExpired={onExpired}
           appliancesStep={(done, back) => setup && <SetupAppliances token={session.token} sin={selected.sin} status={setup} onSaved={done} onBack={back} onExpired={onExpired} />}
           routineAgreement={(aircon) => <AirconAgreement token={session.token} sin={selected.sin} aircon={aircon} />}>
-          <MissionPlan key={`plan:${key}:${applianceVersion}`} token={session.token} household={selected} onExpired={onExpired}
-            missionId={route.sub[0] === "m" ? route.sub[1] : undefined} onOpen={(id) => go("missions", "m", id)} onBack={() => go("missions")} />
+          <MissionPlan key={`plan:${key}:${applianceVersion}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired}
+            missionId={route.sub[0] === "m" ? route.sub[1] : undefined} onOpen={(id) => go("missions", "m", id)} onBack={() => go("missions")}
+            onRewards={() => go("rewards")} />
         </MissionsTab>}
-        {tab === "rewards" && <Rewards key={`rewards:${key}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => setRewardsVersion((v) => v + 1)} />}
-        {tab === "account" && <>
-          <HouseholdPicker households={session.households} selected={selected.sin} onSelect={select} onLogout={logout} />
-          <button type="button" className="ghost wide" onClick={() => setLinking(true)}>+ Link another Household</button>
-          <Appliances key={`appliances:${key}`} token={session.token} household={selected} onExpired={onExpired} onSaved={() => { setApplianceVersion((v) => v + 1); refreshSetup(); }} />
-        </>}
+        {tab === "rewards" && <Rewards key={`rewards:${key}:${rewardsVersion}`} token={session.token} household={selected} onExpired={onExpired} onPointsChanged={() => { clearPlanCache(); setRewardsVersion((v) => v + 1); }} />}
+        {tab === "leaderboards" && <Leaderboards key={`lb:${key}`} household={selected} setup={setup} />}
+        {tab === "account" && (
+          <AccountProfile
+            households={session.households}
+            selected={selected}
+            setup={setup}
+            onSelect={select}
+            onLogout={logout}
+            onLink={() => setLinking(true)}
+          />
+        )}
       </main>
-      <TabBar tab={tab} onLogout={logout} collapsed={navCollapsed} onToggle={toggleNav} />
+      <TabBar tab={tab} onSelect={(t) => go(t)} onLogout={logout} collapsed={navCollapsed} onToggle={toggleNav} />
     </div>
   );
 }

@@ -12,6 +12,7 @@ const plan = (missions: PlanMission[], over: Partial<Plan> = {}): Plan => ({
   period: "2026-11", goal: { cut: 5, kwh: 31, pesos: 34100, baselineKwh: 620, targetKwh: 589, targetPesos: 600000 },
   covered: 1, coveredPercent: 5, source: "ai", points: "Each mission is worth 1 point per ₱1 it saves.", missions,
   rewardPoints: missions.reduce((s, x) => s + x.rewardPoints, 0),
+  pointsBalance: 100,
   climate: { phase: "elNino", label: "Very strong El Niño", multiplier: 1.3, source: "PAGASA climate advisory, 23 Sep 2026" }, ...over,
 });
 const first = [
@@ -36,9 +37,11 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearPlanCache(); });
 
 describe("Missions tab: the 5% plan", () => {
-  it("shows the goal, how much the plan covers, and the plan list", async () => {
+  it("shows the collected points, goal, how much the plan covers, and the plan list", async () => {
     render(<MissionPlan token="t" household={household} onOpen={() => {}} onBack={() => {}} onExpired={() => {}} />);
     expect(await screen.findByRole("heading", { name: "Use 5% less electricity" })).toBeTruthy();
+    expect(screen.getByText(/100 pts/)).toBeTruthy();
+    expect(screen.getByText("Points collected")).toBeTruthy();
     expect(screen.getByText("About 31 kWh, or ~₱341 off your bill")).toBeTruthy();
     expect(screen.getByText("Your plan covers 5.0% · Goal reached")).toBeTruthy();
     expect(screen.getByRole("progressbar").getAttribute("aria-valuenow")).toBe("100");
@@ -54,12 +57,11 @@ describe("Missions tab: the 5% plan", () => {
     expect(screen.getByText(/Brownout month = 0 pts/)).toBeTruthy();
   });
 
-  it("Shuffle asks for another combination", async () => {
-    render(<MissionPlan token="t" household={household} onOpen={() => {}} onBack={() => {}} onExpired={() => {}} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Shuffle" }));
-    expect(await screen.findByRole("button", { name: /Lights off in empty rooms/ })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Turn off the aircon/ })).toBeNull();
-    expect(fetchMock.mock.calls.some(([url, init]) => url.endsWith("/plan/shuffle") && init?.method === "POST")).toBe(true);
+  it("Check rewards button navigates to the Rewards tab", async () => {
+    const onRewards = vi.fn();
+    render(<MissionPlan token="t" household={household} onOpen={() => {}} onBack={() => {}} onRewards={onRewards} onExpired={() => {}} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Check rewards" }));
+    expect(onRewards).toHaveBeenCalledTimes(1);
   });
 
   it("shows a brownout on Meralco's record for the plan's month", async () => {

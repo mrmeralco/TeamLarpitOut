@@ -642,7 +642,7 @@ export interface PointsHistoryEntry {
   savedKwh: number;
   baselineKwh: number;
   actualKwh: number;
-  /** "bill_verified" (traditional, per Bill), "meter_verified" (smart meter, per day), "welcome", "redemption". */
+  /** "bill_verified" (traditional, per Bill), "meter_verified" (smart meter, per day), "welcome", "demo_bonus" (seeded demo Points), "redemption". */
   source: string;
   hasOutage: boolean;
   excludedReason?: string | null;
@@ -902,6 +902,8 @@ export interface MissionPlan {
   outage?: { date: string | null; durationHours: number | null; description: string | null } | null;
   /** Points the whole plan is worth (noise band, goal cap and climate applied). */
   rewardPoints: number;
+  /** Total Points collected by this Household so far. */
+  pointsBalance?: number;
   /** This month's climate (PAGASA ENSO advisories) and its Points multiplier. */
   climate?: { phase: "elNino" | "laNina" | "neutral"; label: string; multiplier: number; source: string };
   points: string;

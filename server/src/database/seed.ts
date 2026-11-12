@@ -8,6 +8,7 @@ import demo from "../data/meralco-demo.json" with { type: "json" };
 import rateTable from "../data/rate-schedules.json" with { type: "json" };
 import type { Bill } from "../domain/bill.js";
 import { datesBetween } from "../domain/daily-points.js";
+import { DEMO_BONUS_POINTS, demoBonusId } from "../domain/demo-points.js";
 import { DEMO_CLIMATE_DATES, DEMO_SMART_SIN, demoTemperatureC } from "../domain/demo-climate.js";
 import type { HourlyReading } from "../domain/meter-reading.js";
 import type { RateSchedule } from "../domain/rate-schedule.js";
@@ -61,7 +62,10 @@ export async function buildReferenceData(areas: string[]): Promise<ReferenceData
 const chunks = <T>(items: T[], size = 2000): T[][] =>
   Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size));
 
-/** What `pnpm db:seed` loads: the real-Bill Household, the two sample Households, the test logins. */
+/**
+ * What `pnpm db:seed` loads: the real-Bill Household, the two sample Households, and the two test
+ * logins (traditional@ holds the real-Bill Household, smart-meter@ the smart sample one).
+ */
 export async function buildSeed(local: LocalSeed = readLocalSeed()): Promise<SeedData> {
   const real = realBillHousehold(local);
   const samples = DEMO_ACCOUNTS.map((account): MeralcoHouseholdRecord => ({
@@ -73,19 +77,35 @@ export async function buildSeed(local: LocalSeed = readLocalSeed()): Promise<See
     households: [real, ...samples],
     accounts: await demoAccounts(),
     links: demoLinks(meralcoAccountOf(real)),
-    resetLinksFor: [real.account.sin],
+    resetLinksFor: [real.account.sin, DEMO_SMART_SIN],
     reference: await buildReferenceData([real, ...samples].map((h) => h.account.area)),
   };
 }
 
 /**
  * Loads the seed in one transaction. Re-running replaces each seeded Household's Meralco records,
- * resets the test logins' passwords and who holds the real-Bill Household; other sign-ups and
- * their links to other Households are left alone.
+ * resets the test logins' passwords and who holds the seeded Households; other sign-ups and their
+ * links to other Households are left alone.
+ *
+ * `fresh` (`pnpm db:reseed`) first deletes every login (with its sessions and links), every
+ * Household's Setup, appliances, Mission Plans, readings typed in and Points, and every Meralco
+ * Household that is not seeded, so only the seeded data and the test logins remain.
  */
-export async function seedDatabase(sql: Sql, data: SeedData) {
+export async function seedDatabase(sql: Sql, data: SeedData, { fresh = false }: { fresh?: boolean } = {}) {
   let bills = 0;
+  let removedLogins = 0;
   await sql.begin(async (tx) => {
+    if (fresh) {
+      removedLogins = (await tx`delete from public.accounts`).count; // sessions and links cascade
+      await tx`delete from public.household_setup`;
+      await tx`delete from public.appliances`;
+      await tx`delete from public.usage_plans`; // its Missions cascade
+      await tx`delete from public.points_entries`;
+      await tx`delete from public.mid_month_readings`;
+      await tx`delete from public.mission_reminders`;
+      await tx`delete from public.household_changes`;
+      await tx`delete from meralco.accounts where sin not in ${tx(data.households.map((h) => h.account.sin))}`;
+    }
     for (const { account, bills: records, payments } of data.households) {
       await tx`delete from meralco.accounts where can = ${account.can} or sin = ${account.sin}`;
       await tx`
@@ -133,13 +153,22 @@ export async function seedDatabase(sql: Sql, data: SeedData) {
         on conflict (owner_id, sin) do update set can = excluded.can, status = excluded.status`;
     }
     await seedReferenceData(tx, data.reference);
+    for (const { account } of data.households) await grantDemoBonus(tx, account.sin);
   });
   const ref = data.reference;
   return {
-    households: data.households.length, bills, accounts: data.accounts.length, links: data.links.length,
+    households: data.households.length, bills, accounts: data.accounts.length, links: data.links.length, removedLogins,
     readings: ref.readings.reduce((s, r) => s + r.rows.length, 0), outages: ref.outages.length,
     rateSchedules: ref.rateSchedules.length, weatherDays: ref.weather.length, rewards: ref.rewards.length,
   };
+}
+
+/** Gives a demo Household DEMO_BONUS_POINTS of spendable Points (set, not added, on every re-seed). */
+export async function grantDemoBonus(tx: Sql, sin: string, points = DEMO_BONUS_POINTS) {
+  await tx`
+    insert into public.points_entries (id, sin, points, source, description)
+    values (${demoBonusId(sin)}, ${sin}, ${points}, 'demo_bonus', ${`Demo Points: ${points.toLocaleString("en-PH")} to try the Rewards shop`})
+    on conflict (id) do update set points = excluded.points, description = excluded.description`;
 }
 
 /**
