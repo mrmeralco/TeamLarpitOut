@@ -266,3 +266,91 @@ label.check input { width: auto; accent-color: var(--primary); }
 .history th:first-child { text-align: left; }
 .history small { display: block; color: var(--muted-foreground); font-weight: normal; }
 .history tbody th { font-weight: 500; }
+
+/* Bill Checks (Tama ba ito?) */
+.bill-checks { margin-top: 16px; }
+.status-badge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.status-badge.green { background: var(--down); color: #fff; }
+.status-badge.red { background: var(--up); color: #fff; }
+
+.checks-banner {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+}
+.banner-green {
+  background: oklch(0.92 0.05 150 / 20%);
+  border: 1px solid var(--down);
+}
+.banner-red {
+  background: oklch(0.92 0.08 27 / 20%);
+  border: 1px solid var(--up);
+}
+
+.checks-list { list-style: none; margin: 0; padding: 0; }
+.check-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.check-item:last-child { border-bottom: none; }
+.check-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.check-title { font-weight: 600; font-size: 0.95rem; }
+.check-icon { margin-right: 4px; }
+.check-pass .check-icon { color: var(--down); }
+.check-fail .check-icon { color: var(--up); }
+.check-skipped .check-icon { color: var(--muted-foreground); }
+
+.tag.check-pass { background: oklch(0.9 0.05 150 / 25%); color: var(--down); border-color: var(--down); }
+.tag.check-fail { background: oklch(0.9 0.08 27 / 25%); color: var(--up); border-color: var(--up); }
+.tag.check-skipped { background: var(--muted); color: var(--muted-foreground); border-color: var(--border); }
+
+.check-message { margin: 2px 0 6px; font-size: 0.85rem; color: var(--muted-foreground); }
+
+.discrepancy-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--muted);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  margin-top: 6px;
+  border-left: 3px solid var(--up);
+}
+.discrepancy-col { display: flex; flex-direction: column; flex: 1; }
+.discrepancy-val { font-size: 0.95rem; font-variant-numeric: tabular-nums; color: var(--foreground); }
+.discrepancy-vs { font-weight: 700; font-size: 0.8rem; color: var(--muted-foreground); }
+
+.itanong-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+.itanong-section h3 { margin: 0 0 4px; font-size: 1rem; color: var(--up); }
+.summary-pre {
+  background: var(--muted);
+  color: var(--foreground);
+  padding: 10px;
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  margin: 10px 0;
+}
+.copy-btn { width: 100%; margin-top: 6px; }
+.adr-note { display: block; margin-top: 8px; font-size: 0.75rem; }
+

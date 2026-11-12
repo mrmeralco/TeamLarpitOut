@@ -11,7 +11,7 @@ import {
   Min,
   ValidateNested,
 } from "class-validator";
-import type { Bill, ChargeLine } from "../../domain/bill.js";
+import type { Bill, ChargeLine, PaymentRecord } from "../../domain/bill.js";
 
 export class ChargeLineDto implements ChargeLine {
   @IsString()
@@ -19,6 +19,19 @@ export class ChargeLineDto implements ChargeLine {
   label: string;
 
   @IsNumber()
+  amount: number;
+
+  @IsOptional()
+  @IsNumber()
+  rate?: number;
+}
+
+export class PaymentRecordDto implements PaymentRecord {
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "date must be YYYY-MM-DD" })
+  date: string;
+
+  @IsNumber()
+  @Min(0)
   amount: number;
 }
 
@@ -41,8 +54,20 @@ export class BillDto implements Bill {
   chargeLines?: ChargeLineDto[];
 
   @IsOptional()
+  @IsNumber()
+  totalAmount?: number;
+
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "billDate must be YYYY-MM-DD" })
+  billDate?: string;
+
+  @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: "dueDate must be YYYY-MM-DD" })
   dueDate?: string;
+
+  @IsOptional()
+  @IsString()
+  meterSerialNumber?: string;
 
   @IsOptional()
   @IsNumber()
@@ -53,6 +78,16 @@ export class BillDto implements Bill {
   @IsNumber()
   @Min(0)
   presentReading?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PaymentRecordDto)
+  payments?: PaymentRecordDto[];
+
+  @IsOptional()
+  @IsNumber()
+  paymentsCredited?: number;
 
   @IsOptional()
   @IsBoolean()

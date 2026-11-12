@@ -7,6 +7,7 @@ import {
   type LoginResult,
   type BakitGanito,
   type BillBreakdown as BillBreakdownData,
+  type BillChecksResult,
   type BillInput,
   type ChargeLine,
   type DraftBill,
@@ -18,6 +19,7 @@ import { HouseholdPicker } from "./components/HouseholdPicker";
 import { BillHistory } from "./components/BillHistory";
 import { ScanLinkageNotice } from "./components/ScanLinkageNotice";
 import { BillBreakdown } from "./components/BillBreakdown";
+import { BillChecks } from "./components/BillChecks";
 import { peso, monthLabel } from "./lib/format";
 
 const EFFECT_HINT: Record<string, string> = {
@@ -375,6 +377,7 @@ export function App() {
   const [scanning, setScanning] = useState<Slot | null>(null);
   const [result, setResult] = useState<BakitGanito | null>(null);
   const [breakdown, setBreakdown] = useState<BillBreakdownData | null>(null);
+  const [checks, setChecks] = useState<BillChecksResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const scanVersion = useRef(0);
@@ -397,6 +400,7 @@ export function App() {
     setScanning(slot);
     setResult(null);
     setBreakdown(null);
+    setChecks(null);
     setScan((st) => ({ ...st, pending: true, references: { ...st.references, [slot]: undefined }, problem: null }));
     const out: ScanOutcome = await scanBill(photo);
     if (version !== scanVersion.current) return;
@@ -435,6 +439,7 @@ export function App() {
     set(b);
     setResult(null);
     setBreakdown(null);
+    setChecks(null);
   };
 
   const b = toInput(before);
@@ -448,18 +453,21 @@ export function App() {
     setBusy(true);
     setError(null);
     try {
-      const [r, l] = await Promise.all([
+      const [r, l, c] = await Promise.all([
         api.bakitGanito(b, n),
         n.chargeLines.length ? fetchBillBreakdown(n, b) : Promise.resolve(null),
+        api.billChecks(n, b).catch(() => null),
       ]);
       if (version === verdictVersion.current) {
         setResult(r);
         setBreakdown(l);
+        setChecks(c);
       }
     } catch (err) {
       if (version === verdictVersion.current) {
         setResult(null);
         setBreakdown(null);
+        setChecks(null);
         setError((err as Error).message);
       }
     } finally {
@@ -554,6 +562,7 @@ export function App() {
       {error && <p className="error">{error}</p>}
       {result && <Result r={result} />}
       {result && <BillBreakdown data={breakdown} missingLines={!n?.chargeLines.length} />}
+      {result && <BillChecks data={checks} />}
       {session && !scan.pending && scanning === null && (scan.references.now || scan.references.before) &&
         <ScanLinkageNotice key={`${session.token}:${scan.references.now}:${scan.references.before}`} token={session.token}
           now={scan.references.now} before={scan.references.before} onExpired={onExpired} onSelect={setSelectedSin} />}
