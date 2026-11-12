@@ -101,6 +101,7 @@ export interface DraftBill {
   previousReading?: number;
   presentReading?: number;
   chargeLines?: ChargeLine[];
+  totalAmount?: number;
   estimated?: boolean;
 }
 

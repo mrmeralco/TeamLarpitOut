@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { ApiError, linkApi, scanBill, simulateBill, type DraftBill, type LinkCorrections, type ScanOutcome } from "../api/client";
 import { BackButton, Icon, ICON } from "./auth/AuthScreens";
+import { pesoValue } from "../lib/format";
 
 type ReadScan = Extract<ScanOutcome, { kind: "read" }>;
 
@@ -9,7 +10,9 @@ const month = (period?: string) => (period && /^\d{4}-\d{2}$/.test(period)
 const shortDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-PH", { month: "short", day: "numeric" }) : "");
 const totalOf = (b: DraftBill | null | undefined) => {
   const lines = b?.chargeLines ?? [];
-  return lines.length ? `₱${Math.round(lines.reduce((s, l) => s + l.amount, 0)).toLocaleString("en-PH")}` : "";
+  const sum = lines.length ? lines.reduce((s, l) => s + l.amount, 0) : undefined;
+  const total = b?.totalAmount ?? sum;
+  return total !== undefined ? pesoValue(total) : "";
 };
 const GALLERY = "M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM21 15l-5-5L5 21";
 const CARD = "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM7 9h10M7 13h6";

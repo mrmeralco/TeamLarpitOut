@@ -4,7 +4,7 @@ import {
   type ApplianceBreakdown, type HomeChargeLine, type Household, type HomeSummary, type MissionPlan, type SetupStatus, type UsageMonth,
 } from "../api/client";
 import { peso } from "../lib/format";
-import { greeting, HomeWrapped, month, plainPeso, wholePeso } from "./HomeWrapped";
+import { greeting, HomeWrapped, month, plainPeso } from "./HomeWrapped";
 
 /** Eelio's gamified states (docs/mascot/mascot-branding-eelio.md). Always active and helpful; never low battery. */
 type Mood = "charged" | "detective";
@@ -97,7 +97,7 @@ function ChargesBreakdown({ data, onAsk }: { data: HomeSummary; onAsk?: (line: H
   const [page, setPage] = useState(0);
   const all = [...data.chargeLines.all].sort((a, b) => b.amount - a.amount);
   if (all.length === 0) return null;
-  const lines = all.filter((l) => Math.round(l.amount / 100) !== 0);
+  const lines = all.filter((l) => l.amount !== 0);
   const zero = all.length - lines.length;
   const total = lines.reduce((s, l) => s + Math.max(0, l.amount), 0) || 1;
   const groupOf = (l: HomeChargeLine) => (GROUPS.some((g) => g.key === l.goesTo) ? l.goesTo! : "Other");
@@ -115,9 +115,9 @@ function ChargesBreakdown({ data, onAsk }: { data: HomeSummary; onAsk?: (line: H
           aria-label={`${l.label}: ${peso(l.amount)}${l.change !== null ? `, ${peso(l.change, true)} vs. last month` : ""}${l.goesTo ? `, ${l.goesTo}` : ""}.${i === 0 ? " Biggest charge." : ""} Ask about this charge`}>
           <span className="charge-tile-top">
             <span className={`charge-tile-icon g-${tone}`} aria-hidden="true"><Svg d={g.icon} />{i === 0 && <span className="charge-tile-crown" title="Biggest charge">★</span>}</span>
-            {l.change !== null && Math.round(l.change / 100) !== 0 && <span className={`charge-tile-change ${l.change > 0 ? "up" : "down"}`}>{l.change > 0 ? "▲" : "▼"} {wholePeso(Math.abs(l.change), false)}</span>}
+            {l.change !== null && l.change !== 0 && <span className={`charge-tile-change ${l.change > 0 ? "up" : "down"}`}>{l.change > 0 ? "▲" : "▼"} {peso(Math.abs(l.change))}</span>}
           </span>
-          <strong className="charge-tile-amount">{wholePeso(l.amount, false)}</strong>
+          <strong className="charge-tile-amount">{peso(l.amount)}</strong>
           <strong className="charge-tile-name">{l.label}</strong>
           <span className="charge-tile-meter" aria-hidden="true"><span className={`g-${tone}`} style={{ width: `${Math.max(3, share)}%` }} /></span>
           <span className="charge-tile-meta">{Math.round(share)}% of the bill</span>
@@ -132,7 +132,7 @@ function ChargesBreakdown({ data, onAsk }: { data: HomeSummary; onAsk?: (line: H
           <h3>Charges on your bill</h3>
           <span className="muted small">Tap a charge to ask Eelio what it is</span>
         </div>
-        <strong className="charges-total">{wholePeso(total, false)}</strong>
+        <strong className="charges-total">{peso(total)}</strong>
       </div>
       <div className="split-bar" role="img" aria-label={groups.map((g) => `${g.label} ${Math.round((g.amount / total) * 100)}%`).join(", ")}>
         {groups.map((g) => <span key={g.key} className={`seg g-${toneOf(g.key)}`} style={{ width: `${(g.amount / total) * 100}%` }} />)}
@@ -142,7 +142,7 @@ function ChargesBreakdown({ data, onAsk }: { data: HomeSummary; onAsk?: (line: H
           <li key={g.key} title={g.note}>
             <span className={`swatch g-${toneOf(g.key)}`} aria-hidden="true" />
             <span>{g.label}</span>
-            <strong>{wholePeso(g.amount, false)}</strong>
+            <strong>{peso(g.amount)}</strong>
             <span className="muted">{Math.round((g.amount / total) * 100)}%</span>
           </li>
         ))}
@@ -183,7 +183,7 @@ function AppliancesCard({ data }: { data: ApplianceBreakdown }) {
           <li key={r.index}>
             <span className="appliance-name"><strong>{r.label}{r.quantity > 1 ? ` ×${r.quantity}` : ""}</strong><span>{r.sourceLabel}</span></span>
             <span className="appliance-track" aria-hidden="true"><span style={{ width: `${(r.share / top) * 100}%` }} /></span>
-            <span className="appliance-amount"><strong>{Math.round(r.share * 100)}%</strong><span>{Math.round(r.kwh)} kWh · {wholePeso(r.pesos, false)}</span></span>
+            <span className="appliance-amount"><strong>{Math.round(r.share * 100)}%</strong><span>{Math.round(r.kwh)} kWh · {peso(r.pesos)}</span></span>
           </li>
         ))}
       </ul>
@@ -280,7 +280,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
           <div className="hero-copy">
             <p className="hero-hello">{greeting()} · {data.area} home</p>
             <h2>Your {month(data.bill.period)} bill</h2>
-            <p className="hero-amount">{data.bill.amountDue === null ? "—" : wholePeso(data.bill.amountDue, false)}
+            <p className="hero-amount">{data.bill.amountDue === null ? "—" : peso(data.bill.amountDue)}
               {change && change.total !== 0 && <span className={`hero-change ${change.total < 0 ? "down" : "up"}`}>
                 {change.total < 0 ? "▼" : "▲"} {plainPeso(change.total)} vs. {month(change.previousPeriod)}
               </span>}
