@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { App } from "../src/App";
+import { clearHomeCache } from "../src/components/Home";
 
 const households = [
   { sin: "1234567890", masked_address: "••• Caloocan City", meter_type: "traditional" },
@@ -109,7 +110,7 @@ beforeEach(() => {
   });
   vi.stubGlobal("fetch", fetchMock);
 });
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); clearHomeCache(); });
 
 /** Home's Wrapped story is showing this Household's bill (the area is on the first slide). */
 const homeShows = (area: "Caloocan City" | "Quezon City") => screen.findByText(new RegExp(`· ${area} home`));
@@ -249,6 +250,17 @@ describe("My Meralco PWA", () => {
     await screen.findByRole("heading", { name: "Welcome back" });
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/auth/logout")).toBe(true));
   });
+  it("folds the sidebar into an icon rail and back, keeping every tab reachable", async () => {
+    render(<App />); await login(); await select(households[0]!.sin);
+    await screen.findByRole("heading", { name: /bill/i });
+    fireEvent.click(screen.getByRole("button", { name: "Collapse the sidebar" }));
+    expect(document.querySelector(".shell")!.classList.contains("nav-collapsed")).toBe(true);
+    const nav = within(screen.getByRole("navigation", { name: "Main" }));
+    expect(nav.getByRole("link", { name: "Missions" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Expand the sidebar" }));
+    expect(document.querySelector(".shell")!.classList.contains("nav-collapsed")).toBe(false);
+  });
+
   it("clears the session when a protected request returns 401", async () => {
     homeRequest = async () => expired();
     render(<App />); await signIn();
