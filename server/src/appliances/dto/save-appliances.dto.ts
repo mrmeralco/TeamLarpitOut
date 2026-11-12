@@ -1,6 +1,7 @@
 import { Type } from "class-transformer";
 import {
   ArrayMaxSize,
+  Equals,
   IsArray,
   IsIn,
   IsInt,
@@ -9,8 +10,28 @@ import {
   IsOptional,
   IsString,
   ValidateNested,
+  ValidateIf,
 } from "class-validator";
-import type { DaysOfWeek, TimeRange } from "../../domain/appliance-usage.js";
+import type { DaysOfWeek, EnergyLabelInput, TimeRange } from "../../domain/appliance-usage.js";
+
+export class EnergyLabelDto implements EnergyLabelInput {
+  @IsNumber()
+  consumptionKwh: number;
+
+  @IsIn(["monthly", "daily"])
+  period: "monthly" | "daily";
+
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsNumber()
+  referenceDays?: number;
+
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsNumber()
+  referenceHoursPerDay?: number;
+
+  @Equals(true)
+  confirmed: true;
+}
 
 export class TimeRangeDto implements TimeRange {
   @IsString()
@@ -46,6 +67,13 @@ export class ApplianceDto {
   @IsOptional()
   @IsNumber()
   usesPerWeek?: number;
+
+  // Unlike IsOptional, this rejects explicit null instead of silently removing a label.
+  @ValidateIf((_object, value) => value !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => EnergyLabelDto)
+  energyLabel?: EnergyLabelDto;
 }
 
 export class SaveAppliancesDto {

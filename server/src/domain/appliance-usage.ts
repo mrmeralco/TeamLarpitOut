@@ -14,6 +14,17 @@ export interface TimeRange {
   days: DaysOfWeek;
 }
 
+/** User-confirmed consumption for one appliance, with the label's reference basis. */
+export interface EnergyLabelInput {
+  consumptionKwh: number;
+  period: "monthly" | "daily";
+  /** Required for monthly consumption; daily consumption already covers one day. */
+  referenceDays?: number;
+  /** Required for aircon; refrigerators run for the full 24-hour day. */
+  referenceHoursPerDay?: number;
+  confirmed: true;
+}
+
 export interface ApplianceInput {
   type: ApplianceType;
   /** How many of this appliance run on the same routine. */
@@ -21,11 +32,13 @@ export interface ApplianceInput {
   answers?: Record<string, string>;
   timeRanges?: TimeRange[];
   usesPerWeek?: number;
+  energyLabel?: EnergyLabelInput;
 }
 
-export type ApplianceSource = "answers" | "default";
+export type ApplianceSource = "label" | "answers" | "default";
 
 export const SOURCE_LABEL: Record<ApplianceSource, string> = {
+  label: "Mula sa energy label",
   answers: "Tantya mula sa sagot mo",
   default: "Hula (default)",
 };
@@ -42,6 +55,14 @@ export interface ApplianceEstimate {
 
 const DAY_SHARE: Record<DaysOfWeek, number> = { everyday: 1, weekdays: 5 / 7, weekends: 2 / 7 };
 const TIME = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const positive = (value: number | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
+
+/** Average consumption per running hour (aircon) or clock hour (refrigerator). Validated input only. */
+export function labelKwhPerHour(type: ApplianceType, label: EnergyLabelInput): number {
+  const days = label.period === "monthly" ? label.referenceDays! : 1;
+  const hours = type === "aircon" ? label.referenceHoursPerDay! : 24;
+  return label.consumptionKwh / days / hours;
+}
 
 const minutes = (t: string) => {
   const m = TIME.exec(t)!;
@@ -79,6 +100,21 @@ export function validateAppliance(a: ApplianceInput): string[] {
   const quantity = a.quantity ?? 1;
   if (!Number.isInteger(quantity) || quantity < 1 || quantity > 20) errors.push(`${def.label}: 1 hanggang 20 lang ang bilang`);
 
+  if (a.energyLabel !== undefined) {
+    const label = a.energyLabel;
+    const supported = a.type === "aircon" || a.type === "refrigerator";
+    const valid = label && supported && label.confirmed === true && positive(label.consumptionKwh)
+      && (label.period === "monthly" || label.period === "daily")
+      && (label.period === "monthly" ? positive(label.referenceDays) : label.referenceDays === undefined || label.referenceDays === 1)
+      && (a.type === "aircon"
+        ? positive(label.referenceHoursPerDay) && label.referenceHoursPerDay <= 24
+        : label.referenceHoursPerDay === undefined || label.referenceHoursPerDay === 24);
+    const normalized = valid ? labelKwhPerHour(a.type, label) : NaN;
+    if (!positive(normalized) || !Number.isFinite(normalized * 24 * quantity)) {
+      errors.push(`${def.label}: kumpirmahin ang positibong kWh at tamang batayan ng energy label`);
+    }
+  }
+
   for (const [key, value] of Object.entries(a.answers ?? {})) {
     const q = def.questions.find((x) => x.key === key);
     if (!q) errors.push(`${def.label}: walang tanong na "${key}"`);
@@ -106,8 +142,10 @@ export function estimateAppliance(a: ApplianceInput): ApplianceEstimate {
   const def = findAppliance(a.type)!;
   const answers = Object.fromEntries(def.questions.map((q) => [q.key, a.answers?.[q.key] ?? UNKNOWN]));
   const fromAnswers = def.questions.length > 0 ? def.rating(answers) : null;
-  const source: ApplianceSource = fromAnswers === null ? "default" : "answers";
-  const rating = fromAnswers ?? def.defaultRating;
+  const source: ApplianceSource = a.energyLabel ? "label" : fromAnswers === null ? "default" : "answers";
+  const rating = a.energyLabel
+    ? labelKwhPerHour(a.type, a.energyLabel) * (def.routine === "alwaysOn" ? 24 : 1)
+    : fromAnswers ?? def.defaultRating;
   const quantity = a.quantity ?? 1;
 
   let perDay: number;

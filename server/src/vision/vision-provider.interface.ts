@@ -1,5 +1,5 @@
 /**
- * The vision seam: a hosted model reads a Bill photo into raw fields.
+ * The vision seam: a hosted model reads Bill or energy-label photos into raw fields.
  * Only this box touches images; every peso afterwards comes from code.
  */
 
@@ -27,8 +27,19 @@ export interface RawBillReading {
   history?: { period: string; kwh: number }[] | null;
 }
 
+/** Printed values only. Missing/ambiguous fields stay null; code handles normalization. */
+export interface RawEnergyLabelReading {
+  readable: boolean;
+  type?: "aircon" | "refrigerator" | null;
+  consumptionKwh?: number | null;
+  period?: "monthly" | "daily" | null;
+  referenceDays?: number | null;
+  referenceHoursPerDay?: number | null;
+}
+
 export interface VisionProvider {
   readBill(image: BillImage): Promise<RawBillReading>;
+  readEnergyLabel(image: BillImage): Promise<RawEnergyLabelReading>;
 }
 
 /** Thrown when no vision model is configured (e.g. no API key). */

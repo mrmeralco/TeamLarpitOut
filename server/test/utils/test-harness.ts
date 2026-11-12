@@ -20,7 +20,7 @@ import type { CoachProvider } from "../../src/coach/coach-provider.interface.js"
 import { TemplateCoachProvider } from "../../src/coach/template-coach.provider.js";
 import type { AuthClock } from "../../src/auth/auth.service.js";
 import { mockMyMeralcoSource, type MockMeralcoLogin, type MyMeralcoSource } from "../../src/bills/myMeralcoSource.js";
-import type { RawBillReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
+import type { RawBillReading, RawEnergyLabelReading, VisionProvider } from "../../src/vision/vision-provider.interface.js";
 import { FakeWeatherProvider } from "../../src/weather/fake-weather.provider.js";
 import type { WeatherProvider } from "../../src/weather/weather-provider.interface.js";
 
@@ -84,15 +84,20 @@ export interface HarnessOptions {
 }
 
 /** Fake vision provider: returns a fixed reading and records the images it got. */
-export function fakeVision(reading: RawBillReading) {
+export function fakeVision(reading: RawBillReading, labelReading: RawEnergyLabelReading = { readable: false }) {
   const seen: { mimeType: string; bytes: number }[] = [];
+  const labelsSeen: { mimeType: string; bytes: number }[] = [];
   const provider: VisionProvider = {
     async readBill(image) {
       seen.push({ mimeType: image.mimeType, bytes: image.data.length });
       return reading;
     },
+    async readEnergyLabel(image) {
+      labelsSeen.push({ mimeType: image.mimeType, bytes: image.data.length });
+      return labelReading;
+    },
   };
-  return Object.assign(provider, { seen });
+  return Object.assign(provider, { seen, labelsSeen });
 }
 
 const isProvider = (v: unknown): v is VisionProvider => typeof (v as VisionProvider)?.readBill === "function";
@@ -155,9 +160,12 @@ export async function harness(opts: HarnessOptions = {}) {
       return { status: res.status, body: res.body as any };
     },
     /** Upload a photo as multipart form data, like the PWA does. */
-    async upload(path: string, photo: Buffer = Buffer.from("fake-jpeg"), mimeType = "image/jpeg") {
-      const res = await request(server).post(path).attach("photo", photo, { filename: "bill.jpg", contentType: mimeType });
-      return { status: res.status, body: res.body as any };
+    async upload(path: string, photo: Buffer = Buffer.from("fake-jpeg"), mimeType = "image/jpeg", token?: string, fields: Record<string, string> = {}) {
+      const req = request(server).post(path);
+      if (token !== undefined) req.set("Authorization", `Bearer ${token}`);
+      for (const [name, value] of Object.entries(fields)) req.field(name, value);
+      const res = await req.attach("photo", photo, { filename: "photo.jpg", contentType: mimeType });
+      return { status: res.status, body: res.body as any, headers: res.headers };
     },
     async get(path: string, token?: string) {
       const req = request(server).get(path);

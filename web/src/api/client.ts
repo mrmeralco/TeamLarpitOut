@@ -278,17 +278,41 @@ export interface CatalogAppliance {
   routine: RoutineKind;
   questions: { key: string; label: string; options: { value: string; label: string }[] }[];
 }
+/** Confirmed label values for one aircon or refrigerator; normalized by the server. */
+export interface EnergyLabelInput {
+  consumptionKwh: number;
+  period: "monthly" | "daily";
+  referenceDays?: number;
+  referenceHoursPerDay?: number;
+  confirmed: true;
+}
+export interface EnergyLabelDraft {
+  status: "read";
+  type: "aircon" | "refrigerator";
+  label: {
+    consumptionKwh: number | null;
+    period: "monthly" | "daily" | null;
+    referenceDays: number | null;
+    referenceHoursPerDay: number | null;
+  };
+  kwhPerHour: number | null;
+  missing: string[];
+  assumptions: { field: string; value: number; reason: string }[];
+  needsConfirmation: true;
+}
 export interface ApplianceInput {
   type: string;
   quantity?: number;
   answers?: Record<string, string>;
   timeRanges?: TimeRange[];
   usesPerWeek?: number;
+  energyLabel?: EnergyLabelInput;
 }
 export interface SavedAppliance extends ApplianceInput {
+  energyLabel?: EnergyLabelInput & { kwhPerHour: number };
   label: string;
   routine: RoutineKind;
-  source: "answers" | "default";
+  source: "label" | "answers" | "default";
   sourceLabel: string;
   hoursPerDay: number | null;
   estimatedKwhPerDay: number;
@@ -336,6 +360,13 @@ const authed = (token: string, signal?: AbortSignal): RequestInit => ({
 const householdPath = (sin: string) => `/api/households/${encodeURIComponent(sin)}/appliances`;
 
 export const appliancesApi = {
+  scanLabel: (token: string, sin: string, type: "aircon" | "refrigerator", photo: File, signal?: AbortSignal) => {
+    const body = new FormData();
+    body.append("type", type);
+    body.append("photo", photo);
+    return fetch(`${householdPath(sin)}/scan-label`, { ...authed(token, signal), method: "POST", body })
+      .then((r) => json<EnergyLabelDraft>(r));
+  },
   catalog: (signal?: AbortSignal) =>
     fetch("/api/appliances/catalog", { signal }).then((r) => json<{ appliances: CatalogAppliance[] }>(r)),
   list: (token: string, sin: string, signal?: AbortSignal) =>

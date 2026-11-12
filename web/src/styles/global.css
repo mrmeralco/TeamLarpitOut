@@ -457,6 +457,17 @@ button.wide { width: 100%; margin-top: 10px; }
 .usage-total { border-top: 2px solid var(--foreground); padding-top: 10px; margin: 8px 0 4px; }
 .tag.source-answers { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border); }
 .tag.source-default { color: var(--muted-foreground); border-style: dashed; }
+.tag.source-label { color: var(--down); border-color: var(--down); background: var(--muted); }
+.survey-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.energy-label-scan { margin: 12px 0; }
+.label-photo { display: none; }
+.label-review { background: var(--muted); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-top: 10px; }
+.label-review h4 { margin: 0 0 8px; }
+.label-review p, .confirmed-label p { font-size: 0.85rem; overflow-wrap: anywhere; }
+.label-review input, .label-review select { min-width: 0; width: 100%; box-sizing: border-box; }
+.label-assumptions { font-size: 0.85rem; border-left: 3px solid var(--primary); padding-left: 10px; }
+.label-assumptions ul { padding-left: 18px; }
+.label-preview { font-weight: 600; }
 
 /* Target and Missions */
 .usage-plan h3 { font-size: 0.95rem; margin: 16px 0 8px; }

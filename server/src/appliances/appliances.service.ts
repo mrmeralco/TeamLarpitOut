@@ -12,6 +12,7 @@ import { findAppliance, type ApplianceType } from "../domain/appliance-catalog.j
 import {
   calibrateToBill,
   estimateAppliance,
+  labelKwhPerHour,
   validateAppliance,
   type ApplianceInput,
 } from "../domain/appliance-usage.js";
@@ -172,6 +173,7 @@ export class AppliancesService {
   private normalize(a: ApplianceDto): ApplianceInput {
     const def = findAppliance(a.type);
     const out: ApplianceInput = { type: a.type as ApplianceType, quantity: a.quantity ?? 1, answers: a.answers ?? {} };
+    if (a.energyLabel !== undefined) out.energyLabel = a.energyLabel;
     // Keep only the routine this appliance is asked for.
     if (def?.routine === "timeRanges") out.timeRanges = a.timeRanges ?? [];
     if (def?.routine === "usesPerWeek") out.usesPerWeek = a.usesPerWeek;
@@ -183,6 +185,7 @@ export class AppliancesService {
     const e = estimateAppliance(a);
     return {
       ...a,
+      ...(a.energyLabel ? { energyLabel: { ...a.energyLabel, kwhPerHour: labelKwhPerHour(a.type, a.energyLabel) } } : {}),
       label: def.label,
       routine: def.routine,
       source: e.source,
