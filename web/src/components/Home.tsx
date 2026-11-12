@@ -6,18 +6,16 @@ import {
 import { peso } from "../lib/format";
 import { greeting, HomeWrapped, month, plainPeso, wholePeso } from "./HomeWrapped";
 
-/** Eelio's three gamified states (docs/mascot/mascot-branding-eelio.md). */
-type Mood = "charged" | "detective" | "sleepy";
+/** Eelio's gamified states (docs/mascot/mascot-branding-eelio.md). Always active and helpful; never low battery. */
+type Mood = "charged" | "detective";
 const MOOD: Record<Mood, { img: string; title: string; line: string }> = {
   charged: { img: "/mascot/eelio-hero.png", title: "Fully Charged", line: "You used less power than last month. Eelio is buzzing!" },
-  detective: { img: "/mascot/eelio-detective.png", title: "Bill Detective", line: "Eelio read your bill. Tap play to see what happened." },
-  sleepy: { img: "/mascot/eelio-sleepy.png", title: "Low Battery", line: "Eelio is running low. Set up your home to charge Eelio up." },
+  detective: { img: "/mascot/eelio-detective.png", title: "Bill Detective", line: "Eelio read your bill and is ready to help you save." },
 };
 
-function moodFor(data: HomeSummary, setup: SetupStatus | null): Mood {
+function moodFor(data: HomeSummary, _setup: SetupStatus | null): Mood {
   const habit = data.bakitGanito?.habit ?? 0;
   if (habit < 0) return "charged";
-  if (setup && !setup.complete) return "sleepy";
   return "detective";
 }
 
@@ -252,7 +250,7 @@ export function Home({ token, household, onExpired, onAskCharge, onSave, saveCar
           <img className="hero-mascot" src={MOOD[mood].img} alt={`Eelio, ${MOOD[mood].title}`} />
         </div>
 
-        <ul className="skills" aria-label="Your energy skills">
+        <ul className="skills sr-only" aria-label="Your energy skills">
           <li><span className="skill-icon tone-a"><Svg d={ICON.bolt} /></span><Stars value={starsFrom(change?.habit, base)} label="Usage control" /><strong>Usage control</strong></li>
           <li><span className="skill-icon tone-b"><Svg d={ICON.sun} /></span><Stars value={starsFrom(effect("weather"), base)} label="Weather-proof" /><strong>Weather-proof</strong></li>
           <li><span className="skill-icon tone-c"><Svg d={ICON.target} /></span><Stars value={setupStars} label="Mission ready" /><strong>Mission ready</strong></li>

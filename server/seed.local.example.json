@@ -1,0 +1,8 @@
+{
+  "_note": "Copy to server/seed.local.json (git-ignored) and set LOCAL_SEED_FILE=seed.local.json in server/.env. These are the real identifiers printed on the real-Bill Household's Bill; with them, scanning the paper Bill finds the seeded Household. Leave out any you don't need.",
+  "realBill": {
+    "can": "0000000000",
+    "sin": "000000000000",
+    "meterNumber": "XXXXXXXX"
+  }
+}

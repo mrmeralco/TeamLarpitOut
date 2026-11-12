@@ -54,9 +54,15 @@ export function ChargeChat({ token, sin, line, previousMonth, onClose, onExpired
       <div className="sheet" role="dialog" aria-modal="true" aria-label={`Ask about ${line.label} charge`} tabIndex={-1} ref={dialog}>
         <div className="sheet-grip" aria-hidden="true" />
         <div className="sheet-head">
-          <div>
-            <span className="muted small">Ask about this charge</span>
-            <h2>{line.label} charge</h2>
+          <div className="sheet-title-group">
+            <img src="/mascot/eelio-detective.png" alt="" className="sheet-eelio-avatar" aria-hidden="true" />
+            <div>
+              <span className="sheet-eelio-tag">
+                <span className="badge-spark" aria-hidden="true">⚡</span>
+                Eelio Bill Detective
+              </span>
+              <h2>{line.label} charge</h2>
+            </div>
           </div>
           <button type="button" className="icon-button" aria-label="Close" onClick={onClose}>×</button>
         </div>
@@ -68,20 +74,53 @@ export function ChargeChat({ token, sin, line, previousMonth, onClose, onExpired
         </dl>
 
         <div className="sheet-thread" aria-live="polite">
-          {asked && <p className="bubble me">{asked}</p>}
-          {busy && <p className="bubble them muted">Answering…</p>}
-          {answer && <div className="bubble them">
-            <p>{answer.answer}</p>
-            {answer.kind === "askMeralco" && answer.summary && <>
-              <p className="small muted">{answer.summary}</p>
-              <button type="button" className="ghost wide" onClick={() => copy(answer.summary!)}>{copied ? "Copied ✓" : "Copy the summary for Meralco"}</button>
-            </>}
-            {answer.sources?.[0] && <details className="small muted">
-              <summary>From Meralco's bill guide: {answer.sources[0].title}</summary>
-              <p>{answer.sources[0].text}</p>
-              <a href={answer.sources[0].url} target="_blank" rel="noreferrer">meralco.com.ph</a>
-            </details>}
-          </div>}
+          {!asked && !answer && (
+            <div className="bubble-row them">
+              <img src="/mascot/eelio-detective.png" alt="" className="bubble-avatar" aria-hidden="true" />
+              <div className="bubble them intro">
+                <span className="bubble-author">Eelio</span>
+                <p>Hi! Ask me anything about your {line.label} charge, or pick one of the quick questions below.</p>
+              </div>
+            </div>
+          )}
+          {asked && (
+            <div className="bubble-row me">
+              <p className="bubble me">{asked}</p>
+            </div>
+          )}
+          {busy && (
+            <div className="bubble-row them">
+              <img src="/mascot/eelio-detective.png" alt="" className="bubble-avatar thinking" aria-hidden="true" />
+              <div className="bubble them muted">
+                <span className="bubble-author">Eelio</span>
+                <p>Answering…</p>
+              </div>
+            </div>
+          )}
+          {answer && (
+            <div className="bubble-row them">
+              <img src="/mascot/eelio-detective.png" alt="" className="bubble-avatar" aria-hidden="true" />
+              <div className="bubble them">
+                <span className="bubble-author">Eelio</span>
+                <p>{answer.answer}</p>
+                {answer.kind === "askMeralco" && answer.summary && (
+                  <>
+                    <p className="small muted">{answer.summary}</p>
+                    <button type="button" className="ghost wide" onClick={() => copy(answer.summary!)}>
+                      {copied ? "Copied ✓" : "Copy the summary for Meralco"}
+                    </button>
+                  </>
+                )}
+                {answer.sources?.[0] && (
+                  <details className="small muted">
+                    <summary>From Meralco's bill guide: {answer.sources[0].title}</summary>
+                    <p>{answer.sources[0].text}</p>
+                    <a href={answer.sources[0].url} target="_blank" rel="noreferrer">meralco.com.ph</a>
+                  </details>
+                )}
+              </div>
+            </div>
+          )}
           {error && <p className="error" role="alert">{error}</p>}
         </div>
 
